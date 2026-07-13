@@ -5,5 +5,7 @@ type DesktopWindow = Window & {
 };
 
 export function isDesktopRuntime(): boolean {
-  return typeof window !== "undefined" && Boolean((window as DesktopWindow).zj?.desktop);
+  const electronDesktop = typeof window !== "undefined" && Boolean((window as DesktopWindow).zj?.desktop);
+  const browserDesktop = typeof import.meta !== "undefined" && import.meta.env?.VITE_DESKTOP_MODE === "true";
+  return electronDesktop || browserDesktop;
 }

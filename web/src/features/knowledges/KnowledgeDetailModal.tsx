@@ -43,11 +43,11 @@ export function KnowledgeDetailModal({
       try {
         if (target.kind === "document") {
           const response = await getKnowledgeDocument(target.id);
-          if (!response.data) throw new Error("document details are unavailable");
+    if (!response.data) throw new Error("文档详情不可用");
           if (!cancelled) setDetail({ kind: "document", data: response.data });
         } else {
           const response = await getKnowledgeVector(target.id);
-          if (!response.data) throw new Error("vector details are unavailable");
+    if (!response.data) throw new Error("向量详情不可用");
           if (!cancelled) setDetail({ kind: "vector", data: response.data });
         }
       } catch (error) {
@@ -66,7 +66,7 @@ export function KnowledgeDetailModal({
       centered
       title={(
         <div className="knowledge-detail-title">
-          <strong>{target?.kind === "vector" ? "Vector Details" : "Document Details"}</strong>
+      <strong>{target?.kind === "vector" ? "向量详情" : "文档详情"}</strong>
           <span>{target?.label}</span>
         </div>
       )}
@@ -88,7 +88,7 @@ export function KnowledgeDetailModal({
           <Empty
             className="empty-state"
             image={target?.kind === "vector" ? <Braces size={42} /> : <FileText size={42} />}
-            title="Details are unavailable"
+    title="详情不可用"
             description=""
           />
         ) : null}
@@ -100,44 +100,44 @@ export function KnowledgeDetailModal({
 function DocumentDetail({ detail }: { detail: KnowledgeDocumentDetail }) {
   return (
     <div className="knowledge-detail-content">
-      <section className="knowledge-detail-facts" aria-label="Document metadata">
-        <DetailFact label="Status">
+      <section className="knowledge-detail-facts" aria-label="文档元数据">
+        <DetailFact label="状态">
           <Tag color={KNOWLEDGE_STATUS_COLORS[detail.status]}>{detail.status}</Tag>
         </DetailFact>
-        <DetailFact label="Content">{detail.content_length.toLocaleString()} chars</DetailFact>
-        <DetailFact label="Chunks">{detail.chunks_count.toLocaleString()}</DetailFact>
-        <DetailFact label="Created">{formatDateTime(detail.created_at)}</DetailFact>
-        <DetailFact label="Updated">{formatDateTime(detail.updated_at)}</DetailFact>
-        <DetailFact label="Parser">{detail.parse_engine || detail.parse_format || "-"}</DetailFact>
+        <DetailFact label="内容">{detail.content_length.toLocaleString()} 字符</DetailFact>
+        <DetailFact label="分块">{detail.chunks_count.toLocaleString()}</DetailFact>
+        <DetailFact label="创建时间">{formatDateTime(detail.created_at)}</DetailFact>
+        <DetailFact label="更新时间">{formatDateTime(detail.updated_at)}</DetailFact>
+        <DetailFact label="解析器">{detail.parse_engine || detail.parse_format || "-"}</DetailFact>
       </section>
 
-      <section className="knowledge-detail-identifiers" aria-label="Document identifiers">
-        <DetailIdentifier label="Document ID" value={detail.id} />
-        <DetailIdentifier label="Track ID" value={detail.track_id || "-"} />
-        <DetailIdentifier label="Content Hash" value={detail.content_hash || "-"} />
+      <section className="knowledge-detail-identifiers" aria-label="文档标识">
+        <DetailIdentifier label="文档 ID" value={detail.id} />
+        <DetailIdentifier label="跟踪 ID" value={detail.track_id || "-"} />
+        <DetailIdentifier label="内容哈希" value={detail.content_hash || "-"} />
       </section>
 
-      <DetailSection title="Content Summary">
-        <pre className="knowledge-detail-text">{detail.content_summary || "No summary is available."}</pre>
+      <DetailSection title="内容摘要">
+        <pre className="knowledge-detail-text">{detail.content_summary || "暂无摘要。"}</pre>
       </DetailSection>
 
-      <DetailSection title="Extracted Document Content">
+      <DetailSection title="提取后的文档内容">
         {detail.content ? (
           <Editor value={detail.content} filename={detail.file_name} />
         ) : (
-          <DetailEmpty icon={<FileText size={36} />} title="No extracted content is available" />
+        <DetailEmpty icon={<FileText size={36} />} title="暂无提取内容" />
         )}
       </DetailSection>
 
       {detail.error ? (
-        <DetailSection title="Processing Error">
+      <DetailSection title="处理错误">
           <pre className="knowledge-detail-text is-error">{detail.error}</pre>
         </DetailSection>
       ) : null}
 
-      <DetailJsonSection title="Chunk IDs" value={detail.chunk_ids} />
-      <DetailJsonSection title="Document Metadata" value={detail.metadata} />
-      <DetailJsonSection title="Chunking Options" value={detail.chunk_options} />
+      <DetailJsonSection title="分块 ID" value={detail.chunk_ids} />
+      <DetailJsonSection title="文档元数据" value={detail.metadata} />
+      <DetailJsonSection title="分块选项" value={detail.chunk_options} />
     </div>
   );
 }
@@ -145,30 +145,30 @@ function DocumentDetail({ detail }: { detail: KnowledgeDocumentDetail }) {
 function VectorDetail({ detail }: { detail: KnowledgeVectorDetail }) {
   return (
     <div className="knowledge-detail-content">
-      <section className="knowledge-detail-facts" aria-label="Vector metadata">
-        <DetailFact label="Chunk Index">{detail.chunk_index.toLocaleString()}</DetailFact>
-        <DetailFact label="Tokens">{detail.tokens.toLocaleString()}</DetailFact>
-        <DetailFact label="Dimensions">{detail.dimension.toLocaleString()}</DetailFact>
-        <DetailFact label="Created">{formatDateTime(detail.created_at)}</DetailFact>
-        <DetailFact label="Updated">{formatDateTime(detail.updated_at)}</DetailFact>
+      <section className="knowledge-detail-facts" aria-label="向量元数据">
+        <DetailFact label="分块索引">{detail.chunk_index.toLocaleString()}</DetailFact>
+        <DetailFact label="Token 数">{detail.tokens.toLocaleString()}</DetailFact>
+        <DetailFact label="维度">{detail.dimension.toLocaleString()}</DetailFact>
+        <DetailFact label="创建时间">{formatDateTime(detail.created_at)}</DetailFact>
+        <DetailFact label="更新时间">{formatDateTime(detail.updated_at)}</DetailFact>
       </section>
 
-      <section className="knowledge-detail-identifiers" aria-label="Vector identifiers">
-        <DetailIdentifier label="Chunk ID" value={detail.id} />
-        <DetailIdentifier label="Document ID" value={detail.document_id} />
-        <DetailIdentifier label="Source Document" value={detail.file_name} />
+      <section className="knowledge-detail-identifiers" aria-label="向量标识">
+        <DetailIdentifier label="分块 ID" value={detail.id} />
+        <DetailIdentifier label="文档 ID" value={detail.document_id} />
+        <DetailIdentifier label="源文档" value={detail.file_name} />
       </section>
 
-      <DetailSection title="Chunk Content">
+      <DetailSection title="分块内容">
         {detail.content ? (
           <Editor value={detail.content} filename={detail.file_name} compact />
         ) : (
-          <DetailEmpty icon={<Braces size={36} />} title="This chunk has no text content" />
+        <DetailEmpty icon={<Braces size={36} />} title="该分块没有文本内容" />
         )}
       </DetailSection>
 
-      <DetailJsonSection title="Heading" value={detail.heading} />
-      <DetailJsonSection title="Source Metadata" value={detail.source_metadata} />
+      <DetailJsonSection title="标题" value={detail.heading} />
+      <DetailJsonSection title="来源元数据" value={detail.source_metadata} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
-import { BookOpenText, Eye, FolderKanban, LogOut, MessageSquareCode, Settings, Users } from "lucide-react";
+import { BookOpenText, Eye, FolderKanban, MessageSquareCode, Settings, Users } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
@@ -22,15 +22,15 @@ export function useRefreshWorkProjects() {
 }
 
 const navItems = [
-  { path: "/playground", label: "Playground", eyebrow: "Agent Workbench", icon: MessageSquareCode },
-  { path: "/work-projects", label: "Work Projects", eyebrow: "Project Operations", icon: FolderKanban, adminOnly: true },
-  { path: "/knowledges", label: "Knowledges", eyebrow: "Retrieval Context", icon: BookOpenText, adminOnly: true },
-  { path: "/system-users", label: "System Users", eyebrow: "Access Control", icon: Users, adminOnly: true },
-  { path: "/system-config", label: "System Config", eyebrow: "Runtime Configuration", icon: Settings, adminOnly: true },
+  { path: "/playground", label: "智能体工作台", eyebrow: "对话与任务执行", icon: MessageSquareCode },
+  { path: "/work-projects", label: "工作项目", eyebrow: "项目与资产管理", icon: FolderKanban, adminOnly: true },
+  { path: "/knowledges", label: "知识库", eyebrow: "检索与知识图谱", icon: BookOpenText, adminOnly: true },
+  { path: "/system-users", label: "系统用户", eyebrow: "访问控制", icon: Users, adminOnly: true },
+  { path: "/system-config", label: "系统配置", eyebrow: "运行时与模型配置", icon: Settings, adminOnly: true },
 ];
 
 export function AdminLayout() {
-  const { isDesktop, signOut, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [headerActions, setHeaderActionsState] = useState<ReactNode>(null);
@@ -71,11 +71,6 @@ export function AdminLayout() {
     [refreshWorkProjects, setHeaderActions],
   );
 
-  const handleSignOut = () => {
-    signOut();
-    navigate("/login", { replace: true });
-  };
-
   const isAdmin = user?.role === "admin";
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
   const activeItem = visibleNavItems.find((item) => location.pathname.startsWith(item.path));
@@ -88,7 +83,7 @@ export function AdminLayout() {
           <Eye className="brand-logo" aria-hidden="true" />
           <div>
             <div className="brand-name">ZJ</div>
-            <div className="brand-kicker">Cyber Operations Workbench</div>
+            <div className="brand-kicker">网络安全协作工作台</div>
           </div>
         </div>
 
@@ -102,7 +97,7 @@ export function AdminLayout() {
               onPointerEnter={() => preloadAdminRoute("/playground")}
             >
               <MessageSquareCode size={18} />
-              <span>Playground</span>
+              <span>智能体工作台</span>
             </NavLink>
             <div className="admin-sidebar-secondary">
               <SessionList
@@ -119,7 +114,7 @@ export function AdminLayout() {
             </div>
           </div>
 
-          <nav className="admin-nav admin-nav-bottom" aria-label="Primary navigation">
+          <nav className="admin-nav admin-nav-bottom" aria-label="主导航">
             {visibleNavItems.slice(1).map((item) => {
               const Icon = item.icon;
               return (
@@ -143,16 +138,13 @@ export function AdminLayout() {
       <div className="admin-main">
         <header className="admin-topbar">
           <div>
-            <div className="page-eyebrow">{activeItem?.eyebrow || "Operations"}</div>
-            <h1>{activeItem?.label || "Console"}</h1>
+            <div className="page-eyebrow">{activeItem?.eyebrow || "运行管理"}</div>
+            <h1>{activeItem?.label || "控制台"}</h1>
           </div>
           <div className="topbar-actions">
             {headerActions ? <div className="topbar-resource-actions">{headerActions}</div> : null}
             <div className="topbar-session-actions">
               <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
-              {!isDesktop ? (
-                <Button icon={<LogOut size={16} />} theme="borderless" type="tertiary" onClick={handleSignOut} aria-label="Sign out" />
-              ) : null}
             </div>
           </div>
         </header>

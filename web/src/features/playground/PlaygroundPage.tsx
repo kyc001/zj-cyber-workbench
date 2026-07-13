@@ -12,10 +12,10 @@ import { useSubagentPanel } from "./useSubagentPanel";
 
 
 const STATUS_LABEL: Record<string, string> = {
-  open: "Live",
-  connecting: "Connecting",
-  closed: "Disconnected",
-  idle: "Idle",
+  open: "已连接",
+  connecting: "连接中",
+  closed: "已断开",
+  idle: "空闲",
 };
 
 
@@ -71,7 +71,7 @@ export function PlaygroundPage() {
         <div className="playground-conversation-frame">
           <div className="playground-main-column">
             <MessageScrollPanel
-              ariaLabel="Conversation messages"
+              ariaLabel="对话消息"
               className="playground-canvas-shell"
               contentClassName="playground-canvas"
               loading={historyLoading}

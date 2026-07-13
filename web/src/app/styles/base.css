@@ -746,7 +746,6 @@ a,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .login-panel,
   .session-row,
   .chat-row,
   .agent-picker,

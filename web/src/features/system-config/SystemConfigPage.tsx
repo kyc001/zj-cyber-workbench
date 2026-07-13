@@ -43,29 +43,29 @@ type AgentTextField = {
 };
 
 const RUNTIME_FIELDS: ConfigField<AgentRuntimeConfig>[] = [
-  { kind: "number", key: "main_max_turns", label: "Main Max Turns", min: 1 },
-  { kind: "number", key: "subordinate_max_turns", label: "Subordinate Max Turns", min: 1 },
-  { kind: "number", key: "model_stream_idle_timeout_seconds", label: "Stream Idle Timeout", min: 30 },
-  { kind: "number", key: "report_retention_seconds", label: "Report Retention Seconds", min: 0 },
-  { kind: "number", key: "context_compression_trigger_ratio", label: "Trigger Ratio", min: 0.01, max: 0.99, step: 0.01 },
-  { kind: "number", key: "context_compression_hard_stop_ratio", label: "Hard Stop Ratio", min: 0.01, max: 0.99, step: 0.01 },
-  { kind: "number", key: "context_compression_target_ratio", label: "Target Ratio", min: 0.01, max: 0.99, step: 0.01 },
-  { kind: "number", key: "context_budget_model_call_ratio", label: "Model Call Budget", min: 0.01, max: 0.99, step: 0.01 },
-  { kind: "number", key: "context_compression_preserve_recent_ratio", label: "Preserve Recent Ratio", min: 0.01, max: 0.99, step: 0.01 },
-  { kind: "number", key: "context_compression_preserve_recent_items", label: "Preserve Recent Items", min: 1 },
-  { kind: "number", key: "context_compression_min_items", label: "Minimum Items", min: 1 },
-  { kind: "number", key: "context_compression_summary_max_tokens", label: "Summary Max Tokens", min: 512 },
-  { kind: "toggle", key: "context_compression_enabled", label: "Context Compression" },
+  { kind: "number", key: "main_max_turns", label: "主智能体最大轮数", min: 1 },
+  { kind: "number", key: "subordinate_max_turns", label: "子智能体最大轮数", min: 1 },
+  { kind: "number", key: "model_stream_idle_timeout_seconds", label: "流式空闲超时", min: 30 },
+  { kind: "number", key: "report_retention_seconds", label: "报告保留秒数", min: 0 },
+  { kind: "number", key: "context_compression_trigger_ratio", label: "压缩触发比例", min: 0.01, max: 0.99, step: 0.01 },
+  { kind: "number", key: "context_compression_hard_stop_ratio", label: "压缩硬停止比例", min: 0.01, max: 0.99, step: 0.01 },
+  { kind: "number", key: "context_compression_target_ratio", label: "压缩目标比例", min: 0.01, max: 0.99, step: 0.01 },
+  { kind: "number", key: "context_budget_model_call_ratio", label: "模型调用预算比例", min: 0.01, max: 0.99, step: 0.01 },
+  { kind: "number", key: "context_compression_preserve_recent_ratio", label: "保留近期内容比例", min: 0.01, max: 0.99, step: 0.01 },
+  { kind: "number", key: "context_compression_preserve_recent_items", label: "保留近期条数", min: 1 },
+  { kind: "number", key: "context_compression_min_items", label: "最少内容条数", min: 1 },
+  { kind: "number", key: "context_compression_summary_max_tokens", label: "摘要最大 Token 数", min: 512 },
+  { kind: "toggle", key: "context_compression_enabled", label: "启用上下文压缩" },
 ];
 
 const POOL_FIELDS: ConfigField<AgentPoolConfig>[] = [
-  { kind: "number", key: "max_size", label: "Max Size", min: 1 },
-  { kind: "number", key: "ttl_seconds", label: "TTL Seconds", min: 0 },
-  { kind: "number", key: "sweep_interval_seconds", label: "Sweep Interval Seconds", min: 1 },
+  { kind: "number", key: "max_size", label: "最大会话数", min: 1 },
+  { kind: "number", key: "ttl_seconds", label: "过期时间（秒）", min: 0 },
+  { kind: "number", key: "sweep_interval_seconds", label: "清理间隔（秒）", min: 1 },
 ];
 
 const AGENT_TEXT_FIELDS: AgentTextField[] = [
-  { key: "name", label: "Name", maxLength: 128 },
+  { key: "name", label: "名称", maxLength: 128 },
   { key: "base_url", label: "Base URL" },
   { key: "api_key", label: "API Key", password: true },
 ];
@@ -159,11 +159,11 @@ export function SystemConfigPage() {
   const metrics = useMemo(() => {
     const agentCount = values?.agents.length ?? 0;
     return [
-      { label: "Agents", value: agentCount },
-      { label: "Pool Size", value: values?.agent_pool.max_size ?? "-" },
-      { label: "Main Turns", value: values?.agent_runtime.main_max_turns ?? "-" },
+        { label: "智能体数", value: agentCount },
+        { label: "池大小", value: values?.agent_pool.max_size ?? "-" },
+        { label: "主轮数", value: values?.agent_runtime.main_max_turns ?? "-" },
       {
-        label: "Graph / Chunks",
+        label: "图谱 / 分块",
         value: values ? `${values.lightrag.graph_matches} / ${values.lightrag.chunk_matches}` : "-",
       },
     ];
@@ -257,16 +257,16 @@ export function SystemConfigPage() {
   const headerActions = useMemo(() => (
     <>
       <Button icon={<X size={16} />} type="tertiary" disabled={!savedValues || saving || loading} onClick={handleCancel}>
-        Cancel
+        取消修改
       </Button>
       <Button icon={<Save size={16} />} theme="solid" type="primary" loading={saving} disabled={!values} onClick={handleSave}>
-        Save
+        保存配置
       </Button>
     </>
   ), [handleCancel, loading, savedValues, saving, values]);
 
   useAdminResourceHeader({
-    refreshLabel: "Refresh config",
+    refreshLabel: "刷新配置",
     loading,
     onRefresh: loadConfig,
     extraActions: headerActions,
@@ -280,19 +280,19 @@ export function SystemConfigPage() {
       <Spin spinning={loading} wrapperClassName="system-config-spin">
         {values ? (
           <div className="system-config-layout">
-            <ConfigPanel icon={<Settings size={18} />} title="Runtime">
+            <ConfigPanel icon={<Settings size={18} />} title="运行时">
               <ConfigFieldGrid fields={RUNTIME_FIELDS} values={values.agent_runtime} onChange={updateRuntime} />
             </ConfigPanel>
 
-            <ConfigPanel icon={<RotateCcw size={18} />} title="Agent Pool">
+            <ConfigPanel icon={<RotateCcw size={18} />} title="智能体池">
               <ConfigFieldGrid compact fields={POOL_FIELDS} values={values.agent_pool} onChange={updatePool} />
             </ConfigPanel>
 
-            <ConfigPanel icon={<DatabaseZap size={18} />} title="LightRAG">
+            <ConfigPanel icon={<DatabaseZap size={18} />} title="知识检索（LightRAG）">
               <LightRAGConfigEditor value={values.lightrag} onChange={updateLightRAG} />
             </ConfigPanel>
 
-            <ConfigPanel icon={<Bot size={18} />} title="Agents">
+            <ConfigPanel icon={<Bot size={18} />} title="智能体与模型">
               <ProviderQuickSetup
                 value={sharedProvider}
                 models={sharedModels}
@@ -332,13 +332,13 @@ function ProviderQuickSetup({ value, models, loading, onChange, onFetch, onApply
   return (
     <div className="provider-quick-setup">
       <div className="provider-quick-grid">
-        <Field kind="text" label="Base URL" value={value.base_url}
+        <Field kind="text" label="基础 URL" value={value.base_url}
           onChange={(base_url) => onChange({ base_url })}
         />
         <Field kind="text" label="API Key" value={value.api_key} password
           onChange={(api_key) => onChange({ api_key })}
         />
-        <ModelSelectField label="Model" value={value.model} models={models} loading={loading}
+        <ModelSelectField label="模型" value={value.model} models={models} loading={loading}
           onChange={(model) => onChange({ model })} onFetch={onFetch}
         />
       </div>
@@ -346,9 +346,9 @@ function ProviderQuickSetup({ value, models, loading, onChange, onFetch, onApply
         <Button icon={<CopyCheck size={16} />} theme="solid" type="primary"
           disabled={!value.base_url.trim() || !value.model.trim()} onClick={onApply}
         >
-          Apply to all agents
+          应用到全部智能体
         </Button>
-        <span>{models.length ? `${models.length} models` : ""}</span>
+        <span>{models.length ? `${models.length} 个模型` : ""}</span>
       </div>
     </div>
   );
@@ -360,23 +360,23 @@ function LightRAGConfigEditor({ value, onChange }: {
 }) {
   return (
     <div className="config-grid lightrag-config-grid">
-      <Field kind="text" label="Embedding API" value={value.embedding_api}
+        <Field kind="text" label="嵌入 API" value={value.embedding_api}
         onChange={(embedding_api) => onChange({ embedding_api })} />
-      <Field kind="text" label="Embedding Key" value={value.embedding_key} password
+      <Field kind="text" label="嵌入 Key" value={value.embedding_key} password
         onChange={(embedding_key) => onChange({ embedding_key })} />
-      <Field kind="text" label="Embedding Model" value={value.embedding_model}
+      <Field kind="text" label="嵌入模型" value={value.embedding_model}
         onChange={(embedding_model) => onChange({ embedding_model })} />
-      <Field kind="number" label="Embedding Dimension" value={value.embedding_dim} min={1}
+      <Field kind="number" label="嵌入维度" value={value.embedding_dim} min={1}
         onChange={(embedding_dim) => onChange({ embedding_dim })} />
-      <Field kind="text" label="Extraction LLM API" value={value.llm_api}
+      <Field kind="text" label="抽取 LLM API" value={value.llm_api}
         onChange={(llm_api) => onChange({ llm_api })} />
-      <Field kind="text" label="Extraction LLM Key" value={value.llm_key} password
+      <Field kind="text" label="抽取 LLM Key" value={value.llm_key} password
         onChange={(llm_key) => onChange({ llm_key })} />
-      <Field kind="text" label="Extraction LLM Model" value={value.llm_model}
+      <Field kind="text" label="抽取 LLM 模型" value={value.llm_model}
         onChange={(llm_model) => onChange({ llm_model })} />
-      <Field kind="number" label="Graph Matches" value={value.graph_matches} min={1} max={50}
+      <Field kind="number" label="图谱匹配数" value={value.graph_matches} min={1} max={50}
         onChange={(graph_matches) => onChange({ graph_matches })} />
-      <Field kind="number" label="Chunk Matches" value={value.chunk_matches} min={1} max={50}
+      <Field kind="number" label="分块匹配数" value={value.chunk_matches} min={1} max={50}
         onChange={(chunk_matches) => onChange({ chunk_matches })} />
     </div>
   );
@@ -443,7 +443,7 @@ function AgentConfigEditor({ agent, models, loadingModels, onChange, onFetchMode
   return (
     <div className="agent-config-card">
       <div className="agent-config-card-header">
-        <strong>{agent.name || agent.code || "New Agent"}</strong>
+        <strong>{agent.name || agent.code || "新智能体"}</strong>
         <span>{agent.code}</span>
       </div>
       <div className="agent-form-grid">
@@ -458,17 +458,17 @@ function AgentConfigEditor({ agent, models, loadingModels, onChange, onFetchMode
             onChange={(value) => onChange({ [field.key]: value })}
           />
         ))}
-        <ModelSelectField label="Model" value={agent.model} models={models} loading={loadingModels}
+        <ModelSelectField label="模型" value={agent.model} models={models} loading={loadingModels}
           onChange={(model) => onChange({ model })} onFetch={onFetchModels}
         />
-        <Field kind="number" label="Context Window" value={agent.context_window} min={0}
+        <Field kind="number" label="上下文窗口" value={agent.context_window} min={0}
           onChange={(context_window) => onChange({ context_window })}
         />
-        <Field kind="toggle" label="Use Responses API" value={agent.use_responses}
+        <Field kind="toggle" label="使用 Responses API" value={agent.use_responses}
           onChange={(use_responses) => onChange({ use_responses })}
         />
         <label className="field full">
-          <span>Description</span>
+          <span>描述</span>
           <TextArea value={agent.description} autosize={{ minRows: 2, maxRows: 4 }} onChange={(description) => onChange({ description })} />
         </label>
       </div>
@@ -497,7 +497,7 @@ function ModelSelectField({ label, value, models, loading, onChange, onFetch }: 
           onChange={(model) => typeof model === "string" && onChange(model)}
         />
         <Button icon={<RefreshCw size={15} />} loading={loading} disabled={loading}
-          theme="borderless" type="tertiary" onClick={onFetch} aria-label="Fetch models"
+          theme="borderless" type="tertiary" onClick={onFetch} aria-label="拉取模型列表" title="拉取模型列表"
         />
       </div>
     </label>

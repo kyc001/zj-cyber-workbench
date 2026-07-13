@@ -2,6 +2,7 @@ import { Button, Empty, Input, Spin } from "@douyinfe/semi-ui";
 import { Search } from "lucide-react";
 import { FormEvent, ReactNode } from "react";
 import { cx } from "../lib/className";
+import { UI_TEXT } from "../lib/uiText";
 
 export type ResourceMetric = {
   label: string;
@@ -119,7 +120,7 @@ export function ResourceSearchForm({ value, placeholder, onChange, onSearch }: {
   return (
     <form onSubmit={handleSearch}>
       <Input prefix={<Search size={16} />} value={value} onChange={onChange} placeholder={placeholder} showClear />
-      <Button htmlType="submit" theme="solid" type="primary" icon={<Search size={16} />}>Search</Button>
+      <Button htmlType="submit" theme="solid" type="primary" icon={<Search size={16} />}>{UI_TEXT.search}</Button>
     </form>
   );
 }
@@ -139,10 +140,10 @@ export function ResourcePager({
 }) {
   return (
     <div className="pager-row">
-      <span>Page {page} · {rangeStart}-{rangeEnd} of {total}</span>
+      <span>第 {page} 页 · {rangeStart}-{rangeEnd} / 共 {total} 条</span>
       <div>
-        <Button type="tertiary" disabled={!canGoBack || loading} onClick={onPrevious}>Previous</Button>
-        <Button type="tertiary" disabled={!canGoNext || loading} onClick={onNext}>Next</Button>
+        <Button type="tertiary" disabled={!canGoBack || loading} onClick={onPrevious}>{UI_TEXT.previous}</Button>
+        <Button type="tertiary" disabled={!canGoNext || loading} onClick={onNext}>{UI_TEXT.next}</Button>
       </div>
     </div>
   );

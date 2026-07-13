@@ -116,9 +116,9 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
   return (
     <ResourceModal
       open={open}
-      title={editing ? "Edit Work Project" : "Create Work Project"}
+      title={editing ? "编辑工作项目" : "创建工作项目"}
       saving={saving}
-      submitLabel={editing ? "Save" : "Create"}
+      submitLabel={editing ? "保存" : "创建"}
       submitDisabled={!canSubmit}
       width={980}
       onCancel={onCancel}
@@ -126,26 +126,26 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
     >
       <div className="project-form-grid">
         <label>
-          <span>Name</span>
+          <span>名称</span>
           <Input prefix={<FolderKanban size={16} />} value={values.name} maxLength={255} required
             onChange={(name) => setValues((v) => ({ ...v, name }))}
           />
         </label>
         <label>
-          <span>Type</span>
+          <span>类型</span>
           <Select prefix={<ScanSearch size={16} />} value={values.type}
             onChange={(type) => isWorkProjectType(type) && setValues((v) => ({ ...v, type }))}
             optionList={projectTypes.map((type) => ({ label: WORK_PROJECT_TYPE_LABEL[type], value: type }))}
           />
         </label>
         <label>
-          <span>Owners</span>
+          <span>负责人</span>
           <Select
             prefix={<UserRound size={16} />}
             value={values.owner_user_ids}
             optionList={userOptionList}
-            placeholder={usersLoading ? "Loading users" : "Select project owners"}
-            emptyContent={usersLoading ? <Spin size="small" /> : "No users"}
+            placeholder={usersLoading ? "正在加载用户" : "选择项目负责人"}
+            emptyContent={usersLoading ? <Spin size="small" /> : "暂无用户"}
             loading={usersLoading}
             multiple
             renderSelectedItem={(option: SelectedOption) => ({
@@ -163,7 +163,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       </div>
 
       <label>
-        <span>Description</span>
+        <span>描述</span>
         <TextArea value={values.description} maxLength={2000} autosize={{ minRows: 3, maxRows: 6 }}
           onChange={(description) => setValues((v) => ({ ...v, description }))}
         />
@@ -171,7 +171,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
 
       <section className="project-assets-editor">
         <header>
-          <span>Assets</span>
+          <span>资产</span>
           <Button
             icon={<Plus size={14} />}
             size="small"
@@ -179,14 +179,14 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             type="tertiary"
             onClick={() => setValues((v) => ({ ...v, assets: [...v.assets, { ...EMPTY_ASSET }] }))}
           >
-            Add Asset
+            添加资产
           </Button>
         </header>
         <div className="project-assets-rows">
           {values.assets.map((asset, index) => (
             <article key={index} className="project-asset-row">
               <label>
-                <span>Type</span>
+                <span>类型</span>
                 <Select
                   value={asset.type}
                   disabled={Boolean(asset.existingId)}
@@ -196,7 +196,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
               </label>
               {asset.type === WORK_PROJECT_ASSET_TYPE.BINARY ? (
                 <label>
-                  <span>Path</span>
+                  <span>路径</span>
                   <Input
                     value={asset.path}
                     maxLength={500}
@@ -212,7 +212,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
                   </label>
                   {asset.type === WORK_PROJECT_ASSET_TYPE.SERVICE ? (
                     <label>
-                      <span>Port</span>
+                      <span>端口</span>
                       <InputNumber value={asset.port ?? undefined} min={1} max={65535} onChange={(port) => updateAsset(index, { port: typeof port === "number" ? port : null })} />
                     </label>
                   ) : null}
@@ -223,7 +223,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
                 theme="borderless"
                 type="danger"
                 disabled={values.assets.length <= 1}
-                aria-label="Remove asset"
+                aria-label="移除资产"
                 onClick={() => removeAsset(index)}
               />
             </article>
@@ -238,7 +238,7 @@ function UserOption({ user }: { user: SystemUser }) {
   return (
     <div className="project-user-option">
       <span>{user.username}</span>
-      <small>{user.email || "No email"}</small>
+       <small>{user.email || "无邮箱"}</small>
       <Tag color={SYSTEM_USER_ROLE_COLOR[user.role]}>{SYSTEM_USER_ROLE_LABEL[user.role]}</Tag>
     </div>
   );

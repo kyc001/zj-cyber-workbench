@@ -130,7 +130,7 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
     <div ref={containerRef} className="project-graph-frame">
       <CytoscapeGraph
         className="project-graph"
-        ariaLabel="Work project relationship graph"
+       ariaLabel="工作项目关系图"
         elements={elements}
         stylesheet={stylesheet}
         layoutOptions={layoutOptions}
@@ -322,7 +322,7 @@ function GraphLegend() {
   return (
     <div className="project-graph-legend">
       <div className="project-graph-legend-group">
-        <span className="project-graph-legend-title">Nodes</span>
+        <span className="project-graph-legend-title">节点</span>
         {WORK_PROJECT_ASSET_TYPES.map((type) => (
           <span key={type} className="project-graph-legend-item">
             <i className="project-graph-legend-dot" style={graphColorStyle(ASSET_TYPE_COLOR[type])} />
@@ -331,7 +331,7 @@ function GraphLegend() {
         ))}
       </div>
       <div className="project-graph-legend-group">
-        <span className="project-graph-legend-title">Edges</span>
+        <span className="project-graph-legend-title">边</span>
         {WORK_PROJECT_GRAPH_EDGE_CATEGORIES.map((category) => (
           <span key={category} className="project-graph-legend-item">
             <i
@@ -413,7 +413,7 @@ function tooltipStyle(hover: HoverState, size: { width: number; height: number }
 
 function nodeRows(asset: WorkProjectAsset): TooltipRows {
   const items: DetailItem[] = [
-    ["Type", WORK_PROJECT_ASSET_TYPE_LABEL[asset.type]],
+    ["类型", WORK_PROJECT_ASSET_TYPE_LABEL[asset.type]],
     ["Origin", WORK_PROJECT_ASSET_ORIGIN_LABEL[asset.origin]],
     asset.type === WORK_PROJECT_ASSET_TYPE.BINARY ? ["Path", asset.path] : ["Host", asset.host],
     ["Port", asset.port ? String(asset.port) : undefined],

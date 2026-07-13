@@ -63,7 +63,7 @@ Electron Main / Preload / React Renderer
 
 - 构建产物为 `desktop/release/ZJ-<version>-win-x64-portable.exe`；桌面主进程名为
   `zhenjun.exe`，Python Sidecar 进程名为 `zj-core.exe`。
-- Portable 模式直接进入 `/playground`，不显示登录页，也不要求用户设置或输入密码。
+- 浏览器开发模式和 Portable 模式都直接进入 `/playground`，不显示登录页，也不要求用户设置或输入密码。
   本地管理会话由回环接口自动建立，不能从非本机地址获取。
 - 首次启动时 Provider Key 为空。在 **System Config** 中可分别配置每个 Agent 的
   Base URL、API Key 和 Model，也可通过顶部统一配置一键应用到全部 Agent。
@@ -90,6 +90,15 @@ Development services are deliberately separate:
 ./scripts/dev.ps1 web
 ./scripts/dev.ps1 desktop
 ```
+
+日常修改前端时使用快速模式：
+
+```powershell
+./scripts/dev.ps1 ui
+```
+
+它运行源码后端和 Vite 浏览器界面，不执行 PyInstaller/Electron 打包；浏览器打开
+`http://127.0.0.1:5173/playground` 即可交互。Portable EXE 只在发布验收时构建。
 
 The backend uses embedded SQLite and local LightRAG storage. Put provider secrets
 in an ignored `.env` based on `.env.example`. First start creates `.zj/config.json`;

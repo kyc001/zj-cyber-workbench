@@ -37,7 +37,7 @@ import { formatDateTime } from "../../shared/lib/date";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { KnowledgeDetailModal, type KnowledgeDetailTarget } from "./KnowledgeDetailModal";
 import { KnowledgeGraphView } from "./KnowledgeGraphView";
-import { KNOWLEDGE_STATUS_COLORS } from "./knowledgeUi";
+import { KNOWLEDGE_STATUS_COLORS, KNOWLEDGE_STATUS_LABEL } from "./knowledgeUi";
 
 type KnowledgeTab = "documents" | "vectors" | "graph";
 
@@ -288,19 +288,19 @@ export function KnowledgesPage() {
     || (activeTab === "graph" && graphLoading);
 
   useAdminResourceHeader({
-    createLabel: "Upload Documents",
+    createLabel: "上传文档",
     createIcon: <Upload size={16} />,
-    refreshLabel: "Refresh knowledges",
+    refreshLabel: "刷新知识库",
     loading: activeLoading,
     onCreate: () => fileInputRef.current?.click(),
     onRefresh: refreshActive,
   });
 
   const metrics = useMemo(() => [
-    { label: "Documents", value: statusCounts.all ?? documents.total },
-    { label: "Processed", value: statusCounts.processed ?? 0 },
-    { label: "Vectors", value: vectors.total },
-    { label: "Visible Graph", value: `${graph.nodes.length} / ${graph.edges.length}` },
+    { label: "文档", value: statusCounts.all ?? documents.total },
+    { label: "已处理", value: statusCounts.processed ?? 0 },
+    { label: "向量", value: vectors.total },
+    { label: "可见图谱", value: `${graph.nodes.length} / ${graph.edges.length}` },
   ], [documents.total, graph.edges.length, graph.nodes.length, statusCounts, vectors.total]);
 
   return (
@@ -315,7 +315,7 @@ export function KnowledgesPage() {
       />
       <MetricStrip metrics={metrics} />
       <Tabs type="line" activeKey={activeTab} onChange={handleTabChange} className="knowledge-tabs">
-        <TabPane itemKey="documents" tab={<TabLabel icon={<FileText size={15} />} text="Documents" />}>
+        <TabPane itemKey="documents" tab={<TabLabel icon={<FileText size={15} />} text="文档" />}>
           <DocumentsTab
             items={documents.items}
             status={status}
@@ -341,7 +341,7 @@ export function KnowledgesPage() {
             onDelete={deleteDocument}
           />
         </TabPane>
-        <TabPane itemKey="vectors" tab={<TabLabel icon={<Braces size={15} />} text="Vectors" />}>
+        <TabPane itemKey="vectors" tab={<TabLabel icon={<Braces size={15} />} text="向量" />}>
           <VectorsTab
             vectors={vectors}
             onView={(vector) => setDetailTarget({
@@ -351,13 +351,13 @@ export function KnowledgesPage() {
             })}
           />
         </TabPane>
-        <TabPane itemKey="graph" tab={<TabLabel icon={<Network size={15} />} text="Knowledge Graph" />}>
+        <TabPane itemKey="graph" tab={<TabLabel icon={<Network size={15} />} text="知识图谱" />}>
           <ResourcePanel
             className="knowledge-graph-panel"
             toolbar={(
               <ResourceSearchForm
                 value={graphQuery}
-                placeholder="Search entities and relationships"
+                placeholder="搜索实体和关系"
                 onChange={setGraphQuery}
                 onSearch={() => {
                   const query = graphQuery.trim();
@@ -367,7 +367,7 @@ export function KnowledgesPage() {
               />
             )}
             empty={graph.nodes.length === 0}
-            emptyTitle={activeGraphQuery ? "No graph results found" : "No graph loaded"}
+            emptyTitle={activeGraphQuery ? "未找到图谱结果" : "尚未加载图谱"}
             emptyIcon={<Network size={42} />}
           >
             <KnowledgeGraphView
@@ -439,27 +439,27 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
   onDelete: (document: KnowledgeDocument) => Promise<void>;
 }) {
   const columns: ResourceColumn<KnowledgeDocument>[] = [
-    { key: "document", header: "Document", width: "minmax(260px, 1fr)", render: (item) => <ResourceIdentity icon={<FileText size={18} />} title={item.file_name} detail={item.content_summary || item.id} /> },
-    { key: "status", header: "Status", width: "120px", render: (item) => <Tag color={KNOWLEDGE_STATUS_COLORS[item.status]}>{item.status}</Tag> },
-    { key: "size", header: "Content", width: "150px", render: (item) => <ResourceText>{item.content_length.toLocaleString()} chars</ResourceText> },
-    { key: "chunks", header: "Chunks", width: "90px", render: (item) => item.chunks_count },
-    { key: "updated", header: "Updated", width: "170px", render: (item) => formatDateTime(item.updated_at) },
+    { key: "document", header: "文档", width: "minmax(260px, 1fr)", render: (item) => <ResourceIdentity icon={<FileText size={18} />} title={item.file_name} detail={item.content_summary || item.id} /> },
+    { key: "status", header: "状态", width: "120px", render: (item) => <Tag color={KNOWLEDGE_STATUS_COLORS[item.status]}>{KNOWLEDGE_STATUS_LABEL[item.status]}</Tag> },
+    { key: "size", header: "内容", width: "150px", render: (item) => <ResourceText>{item.content_length.toLocaleString()} 字符</ResourceText> },
+    { key: "chunks", header: "分块", width: "90px", render: (item) => item.chunks_count },
+    { key: "updated", header: "更新时间", width: "170px", render: (item) => formatDateTime(item.updated_at) },
     {
-      key: "actions", header: "Actions", width: "104px",
+      key: "actions", header: "操作", width: "104px",
       render: (item) => (
         <RowActions>
-          <Tooltip content="View document details">
+          <Tooltip content="查看文档详情">
             <Button
               icon={<Eye size={15} />}
               theme="borderless"
               type="tertiary"
-              aria-label={`View details for ${item.file_name}`}
+              aria-label={`查看 ${item.file_name} 详情`}
               onClick={() => onView(item)}
             />
           </Tooltip>
           <Popconfirm
-            title="Delete document"
-            content={`Delete ${item.file_name} and all indexed vectors and graph data?`}
+            title="删除文档"
+            content={`确定删除 ${item.file_name} 及其全部向量和图谱数据吗？`}
             okType="danger"
             cancelText={UI_TEXT.cancel}
             onConfirm={() => void onDelete(item)}
@@ -469,7 +469,7 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
               theme="borderless"
               type="danger"
               loading={deletingId === item.id}
-              aria-label={`Delete ${item.file_name}`}
+              aria-label={`删除 ${item.file_name}`}
             />
           </Popconfirm>
         </RowActions>
@@ -481,7 +481,7 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
       toolbar={(
         <Select
           value={status}
-          placeholder="All statuses"
+          placeholder="全部状态"
           showClear
           optionList={KNOWLEDGE_DOCUMENT_STATUSES.map((value) => ({ label: value, value }))}
           onChange={(value) => onStatus(value as KnowledgeDocumentStatus | undefined)}
@@ -489,11 +489,11 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
       )}
       loading={page.loading}
       empty={items.length === 0}
-      emptyTitle="No documents found"
+      emptyTitle="未找到文档"
       emptyIcon={<FileText size={42} />}
       footer={<ResourcePager {...page} />}
     >
-      <ResourceTable ariaLabel="Knowledge documents" columns={columns} rows={items} rowKey={(item) => item.id} />
+      <ResourceTable ariaLabel="知识库文档" columns={columns} rows={items} rowKey={(item) => item.id} />
     </ResourcePanel>
   );
 }
@@ -506,21 +506,21 @@ function VectorsTab({
   onView: (vector: KnowledgeVector) => void;
 }) {
   const columns: ResourceColumn<KnowledgeVector>[] = [
-    { key: "vector", header: "Vector", width: "minmax(260px, 0.8fr)", render: (item) => <ResourceIdentity icon={<Braces size={18} />} title={item.file_name} detail={item.id} /> },
-    { key: "content", header: "Chunk Content", width: "minmax(320px, 1.4fr)", render: (item) => <ResourceText>{item.content}</ResourceText> },
-    { key: "index", header: "Index", width: "80px", render: (item) => item.chunk_index },
-    { key: "tokens", header: "Tokens", width: "90px", render: (item) => item.tokens },
-    { key: "dimension", header: "Dim", width: "80px", render: (item) => item.dimension },
+    { key: "vector", header: "向量", width: "minmax(260px, 0.8fr)", render: (item) => <ResourceIdentity icon={<Braces size={18} />} title={item.file_name} detail={item.id} /> },
+    { key: "content", header: "分块内容", width: "minmax(320px, 1.4fr)", render: (item) => <ResourceText>{item.content}</ResourceText> },
+    { key: "index", header: "索引", width: "80px", render: (item) => item.chunk_index },
+    { key: "tokens", header: "Token 数", width: "90px", render: (item) => item.tokens },
+    { key: "dimension", header: "维度", width: "80px", render: (item) => item.dimension },
     {
-      key: "actions", header: "Actions", width: "64px",
+      key: "actions", header: "操作", width: "64px",
       render: (item) => (
         <RowActions>
-          <Tooltip content="View vector details">
+          <Tooltip content="查看向量详情">
             <Button
               icon={<Eye size={15} />}
               theme="borderless"
               type="tertiary"
-              aria-label={`View vector details for ${item.file_name}`}
+              aria-label={`查看 ${item.file_name} 向量详情`}
               onClick={() => onView(item)}
             />
           </Tooltip>
@@ -532,7 +532,7 @@ function VectorsTab({
     <ResourcePanel
       loading={vectors.loading}
       empty={vectors.items.length === 0}
-      emptyTitle="No vectors found"
+      emptyTitle="未找到向量"
       emptyIcon={<DatabaseZap size={42} />}
       footer={(
         <ResourcePager
@@ -548,7 +548,7 @@ function VectorsTab({
         />
       )}
     >
-      <ResourceTable ariaLabel="Knowledge vectors" columns={columns} rows={vectors.items} rowKey={(item) => item.id} />
+      <ResourceTable ariaLabel="知识库向量" columns={columns} rows={vectors.items} rowKey={(item) => item.id} />
     </ResourcePanel>
   );
 }

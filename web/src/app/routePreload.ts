@@ -1,5 +1,4 @@
 const routeLoaders = {
-  login: () => import("../features/auth/LoginPage"),
   protectedAdminShell: () => import("./layouts/ProtectedAdminShell"),
   knowledges: () => import("../features/knowledges/KnowledgesPage"),
   playground: () => import("../features/playground/PlaygroundPage"),
@@ -20,7 +19,6 @@ const adminRouteLoaders: Record<string, () => Promise<unknown>> = {
 
 const preloadedRoutes = new Set<string>();
 
-export const loadLoginPage = routeLoaders.login;
 export const loadProtectedAdminShell = routeLoaders.protectedAdminShell;
 export const loadKnowledgesPage = routeLoaders.knowledges;
 export const loadPlaygroundPage = routeLoaders.playground;

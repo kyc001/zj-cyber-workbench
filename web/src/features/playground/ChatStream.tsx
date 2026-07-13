@@ -42,7 +42,7 @@ export function ChatStream({
   const openImagePreview = (image: AgentImageInputPart, index: number) => {
     setPreview({
       src: imageDataUrl(image),
-      alt: `User attachment ${index + 1}`,
+      alt: `用户附件 ${index + 1}`,
     });
   };
 
@@ -97,11 +97,11 @@ function ChatEmptyState() {
       <div className="chat-empty-mark">
         <Sparkles size={28} />
       </div>
-      <h2>Start a new conversation</h2>
+      <h2>开始新对话</h2>
       <p>
-        Ask the security operations agent anything
+        可以向安全运维智能体提出任务
         <br />
-        - penetration tests, code audits, or threat triage.
+        包括授权测试、代码审计与威胁分析。
       </p>
     </div>
   );
@@ -178,12 +178,12 @@ function UserBubble({
                   type="button"
                   className="user-bubble-image-button"
                   onClick={() => onPreviewImage(part, index)}
-                  aria-label={`Preview attachment ${index + 1}`}
+                  aria-label={`预览附件 ${index + 1}`}
                 >
                   <img
                     className="user-bubble-image"
                     src={imageDataUrl(part)}
-                    alt="User attachment"
+                    alt="用户附件"
                   />
                 </button>
               ))}

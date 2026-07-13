@@ -20,7 +20,7 @@ export class ApiError extends Error {
   readonly response?: CommonResponsePayload;
 
   constructor(status: number, response?: CommonResponsePayload) {
-    super(response?.message || "Request failed");
+    super(response?.message || "请求失败");
     this.name = "ApiError";
     this.status = status;
     this.response = response;
@@ -66,7 +66,7 @@ export async function apiRequest<ResponsePayload>(path: string, options: Request
   } catch (error) {
     throw new ApiError(0, {
       code: 0,
-      message: error instanceof Error ? error.message : "Network request failed",
+      message: error instanceof Error ? error.message : "网络请求失败",
     });
   }
 
@@ -104,7 +104,7 @@ async function rawApiRequest(path: string, options: RawRequestOptions = {}) {
   } catch (error) {
     throw new ApiError(0, {
       code: 0,
-      message: error instanceof Error ? error.message : "Network request failed",
+      message: error instanceof Error ? error.message : "网络请求失败",
     });
   }
 }
@@ -141,7 +141,7 @@ function handleAuthExpired(status: number, payloadCode: number) {
 }
 
 export function buildAuthenticatedWebSocketUrl(path: string, token = getStoredAccessToken()) {
-  if (!token) throw new Error("missing access token");
+  if (!token) throw new Error("缺少访问令牌");
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
   return `${wsScheme}://${window.location.host}${path}?token=${encodeURIComponent(token)}`;
 }
@@ -155,10 +155,10 @@ function addAccessTokenHeader(headers: Headers, auth = true) {
 }
 
 function parseContentDispositionFilename(header: string | null) {
-  if (!header) return "download";
+  if (!header) return "下载文件";
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
   if (encoded?.[1]) return decodeURIComponent(encoded[1]);
   const quoted = /filename="([^"]+)"/i.exec(header);
   if (quoted?.[1]) return quoted[1];
-  return "download";
+  return "下载文件";
 }

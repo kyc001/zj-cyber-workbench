@@ -1,9 +1,8 @@
 import { lazy, Suspense, type ComponentType } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useOutletContext } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
 import {
   loadKnowledgesPage,
-  loadLoginPage,
   loadPlaygroundPage,
   loadProtectedAdminShell,
   loadSystemConfigPage,
@@ -19,7 +18,6 @@ function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends key
   return lazy(() => loader().then((module) => ({ default: module[key] })));
 }
 
-const LoginPage = lazyRoute(loadLoginPage, "LoginPage");
 const ProtectedAdminShell = lazyRoute(loadProtectedAdminShell, "ProtectedAdminShell");
 const KnowledgesPage = lazyRoute(loadKnowledgesPage, "KnowledgesPage");
 const PlaygroundPage = lazyRoute(loadPlaygroundPage, "PlaygroundPage");
@@ -29,13 +27,9 @@ const SystemConfigPage = lazyRoute(loadSystemConfigPage, "SystemConfigPage");
 const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
 
 function ProtectedRoute() {
-  const { isAuthenticated, isDesktop, ready } = useAuth();
-  const location = useLocation();
+  const { isAuthenticated, ready } = useAuth();
   if (!ready) return <RouteFallback />;
-  if (!isAuthenticated) {
-    if (isDesktop) return <DesktopSessionUnavailable />;
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
+  if (!isAuthenticated) return <LocalSessionUnavailable />;
   return <Outlet />;
 }
 
@@ -48,17 +42,8 @@ function AdminOnlyRoute() {
   return <Outlet context={outletContext} />;
 }
 
-function PublicOnlyRoute() {
-  const { isAuthenticated, isDesktop } = useAuth();
-  if (isDesktop || isAuthenticated) {
-    return <Navigate to="/playground" replace />;
-  }
-  return <Outlet />;
-}
-
 function HomeRoute() {
-  const { isDesktop } = useAuth();
-  return <Navigate to={isDesktop ? "/playground" : "/login"} replace />;
+  return <Navigate to="/playground" replace />;
 }
 
 export function App() {
@@ -68,9 +53,6 @@ export function App() {
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<HomeRoute />} />
-            <Route element={<PublicOnlyRoute />}>
-              <Route path="/login" element={<LoginPage />} />
-            </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<ProtectedAdminShell />}>
                 <Route path="/playground" element={<PlaygroundPage />} />
@@ -91,10 +73,10 @@ export function App() {
   );
 }
 
-function DesktopSessionUnavailable() {
+function LocalSessionUnavailable() {
   return (
     <div className="route-fallback">
-      <span>Unable to start the local desktop session.</span>
+      <span>无法建立本机工作会话，请确认后端正在运行。</span>
     </div>
   );
 }

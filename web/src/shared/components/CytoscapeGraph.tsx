@@ -133,13 +133,13 @@ export function CytoscapeGraph({
     <div className={cx("cytoscape-graph", className)}>
       <div ref={canvasRef} className="cytoscape-graph-canvas" role="img" aria-label={ariaLabel} />
       <div className="cytoscape-graph-controls">
-        <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => zoom(DEFAULT_ZOOM_FACTOR)}>
+      <button type="button" aria-label="放大" title="放大" onClick={() => zoom(DEFAULT_ZOOM_FACTOR)}>
           <Plus size={15} />
         </button>
-        <button type="button" aria-label="Zoom out" title="Zoom out" onClick={() => zoom(1 / DEFAULT_ZOOM_FACTOR)}>
+      <button type="button" aria-label="缩小" title="缩小" onClick={() => zoom(1 / DEFAULT_ZOOM_FACTOR)}>
           <Minus size={15} />
         </button>
-        <button type="button" aria-label="Fit graph" title="Fit graph" onClick={fit}>
+      <button type="button" aria-label="适配图谱" title="适配图谱" onClick={fit}>
           <Maximize2 size={14} />
         </button>
       </div>

@@ -115,7 +115,7 @@ export function KnowledgeGraphView({
   return (
     <CytoscapeGraph
       className="knowledge-graph"
-      ariaLabel="Knowledge graph"
+      ariaLabel="知识图谱"
       elements={elements}
       stylesheet={GRAPH_STYLES}
       layoutOptions={LAYOUT_OPTIONS}
@@ -141,12 +141,12 @@ export function KnowledgeGraphView({
             onClick={() => onExpand(selected)}
           >
             {nodeLimitReached
-              ? "Node limit reached"
+              ? "已达到节点上限"
               : selectedExpanded
-                ? "Expanded"
+                ? "已展开"
                 : selectedExpansionLimit > 0
-                  ? "Load more"
-                  : "Expand"}
+                  ? "加载更多"
+                  : "展开"}
           </Button>
         </aside>
       ) : null}

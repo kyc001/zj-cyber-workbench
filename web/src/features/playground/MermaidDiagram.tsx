@@ -44,7 +44,7 @@ export const MermaidDiagram = memo(function MermaidDiagram({ source }: { source:
   if (result && "error" in result) {
     return (
       <div className="mermaid-diagram mermaid-diagram-error" title={result.error}>
-        <div className="mermaid-error-label">Mermaid render failed</div>
+        <div className="mermaid-error-label">Mermaid 图表渲染失败</div>
         <pre>
           <code className="language-mermaid">{source}</code>
         </pre>
@@ -56,7 +56,7 @@ export const MermaidDiagram = memo(function MermaidDiagram({ source }: { source:
     <div
       className="mermaid-diagram"
       aria-busy={!result}
-      aria-label="Mermaid diagram"
+        aria-label="Mermaid 图表"
       dangerouslySetInnerHTML={result && "svg" in result ? { __html: result.svg } : undefined}
     />
   );

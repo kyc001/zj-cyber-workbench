@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isDesktop = isDesktopRuntime();
   const [token, setToken] = useState<string | null>(() => getStoredAccessToken());
-  const [ready, setReady] = useState(!isDesktop);
+  const [ready, setReady] = useState(false);
 
   const startDesktopSession = useCallback(async () => {
     const nextToken = await bootstrapDesktopSession();
@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isDesktop) return;
     let active = true;
     setReady(false);
     void startDesktopSession()
@@ -47,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [isDesktop, startDesktopSession]);
+  }, [startDesktopSession]);
 
   const signIn = useCallback((nextToken: string) => {
     storeAccessToken(nextToken);
@@ -57,13 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(() => {
     clearStoredAccessToken();
     setToken(null);
-    if (isDesktop) {
-      setReady(false);
-      void startDesktopSession()
-        .catch((error) => console.error(error))
-        .finally(() => setReady(true));
-    }
-  }, [isDesktop, startDesktopSession]);
+    setReady(false);
+    void startDesktopSession()
+      .catch((error) => console.error(error))
+      .finally(() => setReady(true));
+  }, [startDesktopSession]);
 
   useEffect(() => {
     const handleAuthExpired = () => signOut();

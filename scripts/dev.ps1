@@ -1,6 +1,6 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("doctor", "install", "backend", "web", "desktop", "test", "e2e", "package")]
+[ValidateSet("doctor", "install", "backend", "web", "ui", "desktop", "test", "e2e", "package")]
     [string]$Command = "doctor"
 )
 
@@ -42,8 +42,40 @@ switch ($Command) {
         uv sync
         pnpm install
     }
-    "backend" { uv run python main.py }
-    "web" { pnpm --filter @zj-security/web dev }
+    "backend" {
+        $env:ZJ_DESKTOP_MODE = "true"
+        $env:ZJ_BIND_HOST = "127.0.0.1"
+        $env:ZJ_BIND_PORT = "8000"
+        uv run python main.py
+    }
+    "web" {
+        $env:VITE_DESKTOP_MODE = "true"
+        pnpm --filter @zj-security/web dev
+    }
+    "ui" {
+        # Fast browser UI loop: run the real backend from source and Vite with desktop auth enabled.
+        # This path never builds PyInstaller or Electron and is the default development feedback loop.
+        $previousDesktopMode = $env:ZJ_DESKTOP_MODE
+        $previousBindHost = $env:ZJ_BIND_HOST
+        $previousBindPort = $env:ZJ_BIND_PORT
+        $previousViteDesktopMode = $env:VITE_DESKTOP_MODE
+        $env:ZJ_DESKTOP_MODE = "true"
+        $env:ZJ_BIND_HOST = "127.0.0.1"
+        $env:ZJ_BIND_PORT = "8000"
+        $env:VITE_DESKTOP_MODE = "true"
+        $backend = Start-Process -FilePath "uv" -ArgumentList @("run", "python", "main.py") -WorkingDirectory $RepoRoot -PassThru -NoNewWindow
+        try {
+            pnpm --filter @zj-security/web dev
+        } finally {
+            if ($backend -and -not $backend.HasExited) {
+                Stop-Process -Id $backend.Id -Force -ErrorAction SilentlyContinue
+            }
+            $env:ZJ_DESKTOP_MODE = $previousDesktopMode
+            $env:ZJ_BIND_HOST = $previousBindHost
+            $env:ZJ_BIND_PORT = $previousBindPort
+            $env:VITE_DESKTOP_MODE = $previousViteDesktopMode
+        }
+    }
     "desktop" {
         $env:ZJ_START_SIDECAR = "0"
         pnpm --filter @zj-security/desktop dev

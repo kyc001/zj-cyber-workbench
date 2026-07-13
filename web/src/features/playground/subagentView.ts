@@ -52,13 +52,13 @@ export function subagentStatusColor(status: SubagentExecutionItem["status"]): "r
 export function subordinateStatusLabel(status: SubagentExecutionItem["status"]) {
   switch (status) {
     case "running":
-      return "Running";
+      return "运行中";
     case "completed":
-      return "Completed";
+      return "已完成";
     case "canceled":
-      return "Canceled";
+      return "已取消";
     case "failed":
-      return "Failed";
+      return "失败";
   }
 }
 

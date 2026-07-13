@@ -46,10 +46,10 @@ export function SubagentSidePanel({
         <div className="subagent-side-header">
           <div className="subagent-side-heading">
             <GitBranch size={15} />
-            <span>Subagents</span>
+            <span>子智能体</span>
           </div>
           {tabs.length > 0 ? (
-            <div className="subagent-side-tabs" role="tablist" aria-label="Subagent messages">
+            <div className="subagent-side-tabs" role="tablist" aria-label="子智能体消息">
               {tabs.map((tab) => {
                 const active = selection === tab.agentCode;
                 return (
@@ -61,18 +61,18 @@ export function SubagentSidePanel({
                     aria-selected={active}
                     onClick={() => onSelect(tab.agentCode)}
                   >
-                    <span className="subagent-tab-name" title={tab.agentCode || "subagent"}>
-                      {agentNameByCode.get(tab.agentCode) || tab.agentCode || "Subagent"}
+                    <span className="subagent-tab-name" title={tab.agentCode || "子智能体"}>
+                      {agentNameByCode.get(tab.agentCode) || tab.agentCode || "子智能体"}
                     </span>
                   </button>
                 );
               })}
             </div>
           ) : null}
-          <Button icon={<X size={14} />} theme="borderless" type="tertiary" onClick={onClose} aria-label="Close subagent panel" />
+          <Button icon={<X size={14} />} theme="borderless" type="tertiary" onClick={onClose} aria-label="关闭子智能体面板" />
         </div>
         <MessageScrollPanel
-          ariaLabel="Subagent messages"
+          ariaLabel="子智能体消息"
           className="subagent-side-body-shell"
           contentClassName="subagent-side-body"
           enabled={open}
@@ -82,7 +82,7 @@ export function SubagentSidePanel({
         >
           {(tailRef) => (
             <>
-              {target ? <SubagentTargetView target={target} /> : <div className="transcript-empty">Subagent output is no longer available.</div>}
+              {target ? <SubagentTargetView target={target} /> : <div className="transcript-empty">子智能体输出已不可用。</div>}
               <div ref={tailRef} className="chat-tail" />
             </>
           )}
@@ -107,7 +107,7 @@ function SubagentRunView({ run }: { run: SubagentTarget["runs"][number] }) {
     <TranscriptContent
       transcript={run.transcript}
       live={run.live}
-      emptyText="No subagent output yet."
+      emptyText="暂无子智能体输出。"
       allowSubagentOpen={false}
     />
   ) : (
@@ -124,17 +124,17 @@ function SubagentRunView({ run }: { run: SubagentTarget["runs"][number] }) {
 
 function SubagentFallbackResult({ task }: { task: SubagentExecutionItem }) {
   const failed = task.status === "failed" || task.status === "canceled";
-  const label = task.status === "running" ? "Progress" : failed ? "Error Preview" : "Result Preview";
+  const label = task.status === "running" ? "进度" : failed ? "错误预览" : "结果预览";
   const body = task.status === "running"
-    ? task.progress || "Running"
+    ? task.progress || "运行中"
     : previewBody(task);
 
   return <ExecutionSection label={label} body={body} tone={failed ? "error" : undefined} />;
 }
 
 function previewBody(task: SubagentExecutionItem): string {
-  const body = task.resultPreview || task.errorPreview || "(empty)";
-  return task.truncated ? `${body}\n\n[Preview truncated]` : body;
+  const body = task.resultPreview || task.errorPreview || "（空）";
+  return task.truncated ? `${body}\n\n[预览内容已截断]` : body;
 }
 
 function SubagentTaskMeta({ item }: { item: SubagentExecutionItem }) {

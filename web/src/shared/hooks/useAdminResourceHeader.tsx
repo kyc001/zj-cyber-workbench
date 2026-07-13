@@ -41,7 +41,7 @@ export function useAdminResourceHeader({
 
   useEffect(() => {
     const refreshButton = (
-      <Button icon={<RefreshCw size={16} />} type="tertiary" onClick={refresh} loading={loading} aria-label={refreshLabel} />
+      <Button icon={<RefreshCw size={16} />} type="tertiary" onClick={refresh} loading={loading} aria-label={refreshLabel} title={refreshLabel} />
     );
     const createButton = createLabel && hasCreate ? (
       <Button icon={createIcon ?? <Plus size={16} />} theme="solid" type="primary" onClick={create}>

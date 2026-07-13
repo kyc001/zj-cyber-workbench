@@ -29,6 +29,17 @@
 ./scripts/dev.ps1 web
 ```
 
+日常开发使用快速 UI 模式，不需要等待 PyInstaller 或 Electron 打包：
+
+```powershell
+./scripts/dev.ps1 ui
+```
+
+该命令直接运行源码后端和 Vite，浏览器访问 `http://127.0.0.1:5173/playground`。网页不再
+加载登录页，通过回环接口自动建立本机会话；`VITE_DESKTOP_MODE=true` 复用便携版免登录流程，
+支持完整的前端交互、REST 和 WebSocket 调试。只有发布验收或验证 EXE 生命周期时才运行
+`pnpm package:portable`。
+
 桌面开发模式：
 
 ```powershell

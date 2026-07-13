@@ -46,16 +46,16 @@ export function WorkProjectRecordTabs({
       className={cx("project-record-tabs", className)}
       defaultActiveKey={initialTab}
     >
-      <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="Assets" />} itemKey="assets">
+      <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="资产" />} itemKey="assets">
         <AssetList assets={records.assets} />
       </TabPane>
-      <TabPane tab={<TabLabel icon={<Bug size={14} />} text="Findings" />} itemKey="findings">
+      <TabPane tab={<TabLabel icon={<Bug size={14} />} text="发现" />} itemKey="findings">
         <FindingList findings={records.findings} assets={records.assets} />
       </TabPane>
-      <TabPane tab={<TabLabel icon={<Route size={14} />} text="Attack Paths" />} itemKey="attack-paths">
+      <TabPane tab={<TabLabel icon={<Route size={14} />} text="攻击路径" />} itemKey="attack-paths">
         <AttackPathList assets={records.assets} graph={records.graph} />
       </TabPane>
-      <TabPane tab={<TabLabel icon={<Network size={14} />} text="Graph" />} itemKey="graph">
+      <TabPane tab={<TabLabel icon={<Network size={14} />} text="关系图" />} itemKey="graph">
         <GraphView assets={records.assets} graph={records.graph} />
       </TabPane>
     </Tabs>
@@ -63,7 +63,7 @@ export function WorkProjectRecordTabs({
 }
 
 export function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
-  if (!assets.length) return <RecordEmpty title="No assets." />;
+  if (!assets.length) return <RecordEmpty title="暂无资产。" />;
   return (
     <div className="project-record-list">
       {assets.map((asset) => (
@@ -77,7 +77,7 @@ export function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
           </header>
           <RecordDetails items={assetBaseMeta(asset)} />
           <RecordDetails className="project-record-details-extension" items={[
-            ["Banner", asset.extra?.banner],
+            ["服务信息", asset.extra?.banner],
           ]} />
         </article>
       ))}
@@ -87,7 +87,7 @@ export function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
 
 export function FindingList({ findings, assets }: { findings: WorkProjectFinding[]; assets: WorkProjectAsset[] }) {
   const assetLabels = useAssetLabels(assets);
-  if (!findings.length) return <RecordEmpty title="No findings." />;
+  if (!findings.length) return <RecordEmpty title="暂无发现。" />;
   return (
     <div className="project-record-list">
       {findings.map((finding) => (
@@ -99,11 +99,11 @@ export function FindingList({ findings, assets }: { findings: WorkProjectFinding
               <Tag color={WORK_PROJECT_FINDING_STATUS_COLOR[finding.status]}>{WORK_PROJECT_FINDING_STATUS_LABEL[finding.status]}</Tag>
             </div>
           </header>
-          <p>{finding.description || finding.impact || "No description"}</p>
+          <p>{finding.description || finding.impact || "暂无描述"}</p>
           <RecordDetails items={[
-            ["Asset", finding.asset_id ? assetLabels.get(finding.asset_id) ?? `#${finding.asset_id}` : undefined],
-            ["Substantiates edge", finding.edge_id ? `#${finding.edge_id}` : undefined],
-            ["Updated", formatDateTime(finding.updated_at)],
+            ["资产", finding.asset_id ? assetLabels.get(finding.asset_id) ?? `#${finding.asset_id}` : undefined],
+            ["支持关系边", finding.edge_id ? `#${finding.edge_id}` : undefined],
+            ["更新时间", formatDateTime(finding.updated_at)],
           ]} />
         </article>
       ))}
@@ -114,7 +114,7 @@ export function FindingList({ findings, assets }: { findings: WorkProjectFinding
 export function AttackPathList({ assets, graph }: { assets: WorkProjectAsset[]; graph: WorkProjectGraphSnapshot }) {
   const assetLabels = useAssetLabels(assets);
   const edgesById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge])), [graph.edges]);
-  if (!graph.attack_paths.length) return <RecordEmpty title="No attack paths." />;
+  if (!graph.attack_paths.length) return <RecordEmpty title="暂无攻击路径。" />;
   const stepsByPath = groupSteps(graph.attack_path_steps);
   return (
     <div className="project-record-list">
@@ -143,7 +143,7 @@ export function AttackPathList({ assets, graph }: { assets: WorkProjectAsset[]; 
 }
 
 export function GraphView({ assets, graph }: { assets: WorkProjectAsset[]; graph: WorkProjectGraphSnapshot }) {
-  if (!assets.length) return <RecordEmpty title="No assets to graph." />;
+  if (!assets.length) return <RecordEmpty title="暂无可绘制的资产。" />;
   return <ProjectGraphCanvas assets={assets} edges={graph.edges} />;
 }
 
@@ -152,7 +152,7 @@ function useAssetLabels(assets: WorkProjectAsset[]) {
 }
 
 function edgeLabel(edge: WorkProjectGraphEdge | undefined, assetLabels: Map<number, string>): string {
-  if (!edge) return "Unknown edge";
+  if (!edge) return "未知关系边";
   const source = assetLabels.get(edge.source_asset_id) ?? `#${edge.source_asset_id}`;
   const target = assetLabels.get(edge.target_asset_id) ?? `#${edge.target_asset_id}`;
   return `${source} → ${target}`;

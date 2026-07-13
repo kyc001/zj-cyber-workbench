@@ -94,7 +94,7 @@ export function Composer({
     if (!imageFiles.length) return;
     const available = Math.max(0, MAX_IMAGES - images.length);
     if (available === 0) {
-      Toast.warning(`At most ${MAX_IMAGES} images allowed`);
+      Toast.warning(`最多允许上传 ${MAX_IMAGES} 张图片`);
       return;
     }
     const next: AgentImageInputPart[] = [];
@@ -102,18 +102,18 @@ export function Composer({
     let nextBytes = 0;
     for (const file of imageFiles.slice(0, available)) {
       if (file.size > MAX_IMAGE_BYTES) {
-        Toast.warning(`${file.name} exceeds 3.75 MB, skipped`);
+        Toast.warning(`${file.name} 超过 3.75 MB，已跳过`);
         continue;
       }
       if (currentBytes + nextBytes + file.size > MAX_TOTAL_IMAGE_BYTES) {
-        Toast.warning("Total image size exceeds 6 MB, some images skipped");
+        Toast.warning("图片总大小超过 6 MB，部分图片已跳过");
         continue;
       }
       try {
         next.push(await fileToImagePart(file));
         nextBytes += file.size;
       } catch {
-        Toast.error(`Failed to read ${file.name}`);
+        Toast.error(`读取 ${file.name} 失败`);
       }
     }
     if (next.length) {
@@ -141,7 +141,7 @@ export function Composer({
     focusTextarea();
   };
 
-  const agentSwitchDisabledReason = "Finish or cancel running subagent tasks before switching agents";
+  const agentSwitchDisabledReason = "请先完成或取消正在运行的子智能体任务，再切换智能体";
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (pickerOpen) {
@@ -182,11 +182,11 @@ export function Composer({
   };
 
   const action = streaming
-    ? { icon: <Square size={16} />, type: "danger" as const, title: "Stop", onClick: onInterrupt, disabled: false }
+    ? { icon: <Square size={16} />, type: "danger" as const, title: "停止生成", onClick: onInterrupt, disabled: false }
     : {
         icon: <Send size={16} />,
         type: "primary" as const,
-        title: "Send",
+        title: "发送",
         onClick: () => void submit(),
         disabled: disabled || (!text.trim() && images.length === 0),
       };
@@ -211,12 +211,12 @@ export function Composer({
             <div className="composer-attachments">
               {images.map((image, index) => (
                 <div key={`${image.media_type}:${index}:${image.data.length}`} className="composer-attachment">
-                  <img src={`data:${image.media_type};base64,${image.data}`} alt="Attachment preview" />
+                  <img src={`data:${image.media_type};base64,${image.data}`} alt="附件预览" />
                   <button
                     type="button"
                     className="composer-attachment-remove"
                     onClick={() => setImages((current) => current.filter((_, i) => i !== index))}
-                    aria-label="Remove image"
+                    aria-label="移除图片"
                   >
                     <X size={12} />
                   </button>
@@ -234,10 +234,10 @@ export function Composer({
             disabled={disabled && !streaming}
             placeholder={
               disabled
-                ? "Loading conversation history…"
+                ? "正在加载对话历史…"
                 : streaming
-                  ? "Streaming response… press Enter or stop to interrupt"
-                  : "Send a message · Shift+Enter for newline"
+                  ? "正在生成回复…按 Enter 或点击停止可中断"
+                  : "输入消息，Shift+Enter 换行"
             }
           />
           <input
@@ -258,11 +258,11 @@ export function Composer({
               className="composer-agent-chip"
               onClick={toggleChip}
               disabled={agentSwitchDisabled}
-              aria-label={activeAgent ? `Speaking to ${activeAgent.name}` : "Pick an agent"}
-              title={agentSwitchDisabled ? agentSwitchDisabledReason : activeAgent ? "Click to switch agent" : "Pick an agent"}
+              aria-label={activeAgent ? `当前智能体：${activeAgent.name}` : "选择智能体"}
+              title={agentSwitchDisabled ? agentSwitchDisabledReason : activeAgent ? "点击切换智能体" : "选择智能体"}
             >
               <AtSign size={14} />
-              <span>{activeAgent?.name || "Agent"}</span>
+              <span>{activeAgent?.name || "智能体"}</span>
             </button>
             <div className="composer-actions">
               <Button
@@ -272,8 +272,8 @@ export function Composer({
                 type="tertiary"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled || streaming || images.length >= MAX_IMAGES}
-                aria-label="Attach image"
-                title="Attach image"
+                aria-label="添加图片"
+                title="添加图片"
               />
               <Button
                 className="composer-action-button"
@@ -282,7 +282,7 @@ export function Composer({
                 type={action.type}
                 onClick={action.onClick}
                 disabled={action.disabled}
-                aria-label={streaming ? "Interrupt streaming" : "Send message"}
+                aria-label={streaming ? "停止生成" : "发送消息"}
                 title={action.title}
               />
               <Button
@@ -292,8 +292,8 @@ export function Composer({
                 type="danger"
                 onClick={onCancelAll}
                 disabled={disabled || !canCancelAll}
-                aria-label="Cancel all running subagent tasks"
-                title={canCancelAll ? "Cancel all running subagent tasks" : "No running subagent tasks"}
+                aria-label="取消全部子智能体任务"
+                title={canCancelAll ? "取消全部正在运行的子智能体任务" : "没有正在运行的子智能体任务"}
               />
             </div>
           </div>
@@ -316,7 +316,7 @@ function fileToImagePart(file: File): Promise<AgentImageInputPart> {
       const [prefix, data] = value.split(",", 2);
       const match = /^data:(image\/(?:png|jpeg|webp));base64$/.exec(prefix);
       if (!match || !data) {
-        reject(new Error("invalid image data"));
+        reject(new Error("图片数据无效"));
         return;
       }
       resolve({
@@ -326,7 +326,7 @@ function fileToImagePart(file: File): Promise<AgentImageInputPart> {
         detail: "auto",
       });
     };
-    reader.onerror = () => reject(reader.error ?? new Error("failed to read image"));
+    reader.onerror = () => reject(reader.error ?? new Error("读取图片失败"));
     reader.readAsDataURL(file);
   });
 }

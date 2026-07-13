@@ -202,7 +202,7 @@ function ThinkingGroup({
     <div className={cx("thinking-block", live && "transcript-panel-live", active && "thinking-block-active")}>
       <PanelHeader
         icon={<Brain size={13} />}
-        title={active ? "Thinking..." : "Thought"}
+        title={active ? "思考中…" : "思考过程"}
         count={items.length > 1 ? items.length : undefined}
         open={open}
         onToggle={() => setOpen((next) => !next)}
@@ -335,7 +335,7 @@ function ReportAttachment({
       className="report-attachment"
       disabled={disabled}
       title={`${report.filename} · ${formatBytes(report.size)}`}
-      aria-label={`Download ${report.filename}`}
+        aria-label={`下载 ${report.filename}`}
       onClick={onDownload}
     >
       <span className="report-attachment-icon">
