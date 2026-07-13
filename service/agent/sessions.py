@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from core.agent.constants import DEFAULT_AGENT_CODE
 from core.delegation.subagents import cancel_session_subagent_runs
 from core.runtime.session import get_agent_pool, get_agent_registry
+from core.sandbox.command_jobs import cancel_session_async_sandbox_commands
 from database import get_async_session
 from logger import get_logger
 from model.agent.sessions import AgentSessionMeta
@@ -215,8 +216,12 @@ def _summary_from_row(row, meta: AgentSessionMeta | None) -> AgentSessionSummary
         agent_code=meta.agent_code if meta else "",
         owner_id=meta.owner_id if meta else 0,
         project_id=meta.project_id if meta else None,
+        selected_sandbox_container_id=meta.selected_sandbox_container_id if meta else None,
+        selected_sandbox_container_generation=meta.selected_sandbox_container_generation if meta else 0,
         is_running=meta.is_running if meta else False,
         runtime_agent_code=meta.runtime_agent_code if meta else "",
+        runtime_sandbox_container_id=meta.runtime_sandbox_container_id if meta else None,
+        runtime_sandbox_container_generation=meta.runtime_sandbox_container_generation if meta else 0,
         run_started_at=meta.run_started_at if meta else None,
         run_finished_at=meta.run_finished_at if meta else None,
         run_error=meta.run_error if meta else "",
@@ -237,6 +242,8 @@ async def mark_session_running(
     session_id: str,
     *,
     agent_code: str,
+    sandbox_container_id: int | None = None,
+    sandbox_container_generation: int = 0,
 ) -> None:
     async with get_async_session() as session:
         meta = await session.get(AgentSessionMeta, session_id)
@@ -244,11 +251,32 @@ async def mark_session_running(
             return
         meta.is_running = True
         meta.runtime_agent_code = agent_code
+        meta.runtime_sandbox_container_id = sandbox_container_id
+        meta.runtime_sandbox_container_generation = sandbox_container_generation
         meta.run_started_at = datetime.now()
         meta.run_finished_at = None
         meta.run_error = ""
         session.add(meta)
         await session.commit()
+
+
+async def update_session_sandbox_container(
+    session_id: str,
+    *,
+    sandbox_container_id: int | None,
+    sandbox_container_generation: int,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> AgentSessionSummarySchema | None:
+    async with get_async_session() as session:
+        meta = await session.get(AgentSessionMeta, session_id)
+        if meta is None or not await _can_access_meta(session, meta, user_id, user_role):
+            return None
+        meta.selected_sandbox_container_id = sandbox_container_id
+        meta.selected_sandbox_container_generation = sandbox_container_generation
+        session.add(meta)
+        await session.commit()
+    return await session_summary(session_id, user_id=user_id, user_role=user_role)
 
 
 async def mark_session_stopped(session_id: str, *, error: str = "") -> None:
@@ -404,6 +432,7 @@ async def delete_session(
             return False
 
     await cancel_session_subagent_runs(session_id)
+    await cancel_session_async_sandbox_commands(session_id)
     await get_agent_pool().discard(session_id)
 
     async with get_async_session() as session:

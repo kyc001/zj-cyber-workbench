@@ -18,9 +18,9 @@ import {
   listAgentEvents,
   listAgentSessions,
   submitAgentSessionTurn,
+  updateAgentSessionSandboxContainer,
 } from "../../shared/api/agentSessions";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
-import { getStoredAccessToken } from "../../shared/auth/session";
 import type {
   AgentInfo,
   AgentInputPart,
@@ -96,7 +96,8 @@ type AgentSessionContextValue = {
   activeAgentCode: string;
   setActiveAgentCode: (code: string) => void;
 
-  send: (content: AgentInputPart[], sessionId: string | null) => Promise<void>;
+  send: (content: AgentInputPart[], sessionId: string | null, sandboxContainerId: number | null) => Promise<void>;
+  updateSelectedSandboxContainer: (sessionId: string, sandboxContainerId: number | null) => Promise<AgentSessionSummary | null>;
   interrupt: (sessionId?: string | null) => Promise<void>;
   cancelAll: (sessionId?: string | null) => Promise<void>;
   loadPreviousHistory: (sessionId?: string | null) => Promise<void>;
@@ -339,10 +340,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       return existing;
     }
 
-    const token = getStoredAccessToken();
-    if (!token) throw new Error("missing access token");
-
-    const socket = new WebSocket(buildAgentStreamUrl(sessionId, token));
+    const socket = new WebSocket(buildAgentStreamUrl(sessionId));
     socketsRef.current.set(sessionId, socket);
     initRuntime(sessionId);
     updateRuntime(sessionId, (r) => ({ ...r, status: "connecting" }));
@@ -579,6 +577,13 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   }, [defaultAgentCode, pendingAgentCode, runtimes, sessionAgentCode]);
 
   // ------------------------------------------------------------- commands
+  const updateSelectedSandboxContainer = useCallback(async (sessionId: string, sandboxContainerId: number | null) => {
+    const response = await updateAgentSessionSandboxContainer(sessionId, { sandbox_container_id: sandboxContainerId });
+    const summary = response.data ?? null;
+    if (summary) syncSession(summary);
+    return summary;
+  }, [syncSession]);
+
   const applyTurnEvents = useCallback((sessionId: string, events: readonly AgentStreamEvent[]) => {
     if (events.length) applyStore(sessionId, (store) => ingestEvents(store, events));
   }, [applyStore]);
@@ -586,6 +591,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   const send = useCallback(async (
     content: AgentInputPart[],
     sessionId: string | null,
+    sandboxContainerId: number | null,
   ) => {
     const agentCode = getSessionAgentCode(sessionId);
     try {
@@ -593,6 +599,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
         const response = await submitAgentSessionTurn(sessionId, {
           content,
           agent_code: agentCode || null,
+          sandbox_container_id: sandboxContainerId,
         });
         const data = requireTurnData(response.data);
         syncSession(data.session);
@@ -604,6 +611,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       const response = await createAgentSessionTurn({
         content,
         agent_code: agentCode || null,
+        sandbox_container_id: sandboxContainerId,
       });
       const data = requireTurnData(response.data);
       syncSession(data.session);
@@ -696,14 +704,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     historyHasMore: activeRuntime.historyHasMore,
     historyVersion: activeRuntime.historyVersion,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
-    send, interrupt, cancelAll, loadPreviousHistory,
+    send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   }), [
     sessions, sessionsLoading, refreshSessions, syncSessionSummaries, deleteSession,
     dropSessionRuntime,
     activeSessionId, activeSessionSummary, selectSession,
     activeRuntime,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
-    send, interrupt, cancelAll, loadPreviousHistory,
+    send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   ]);
 
   return <AgentSessionContext.Provider value={value}>{children}</AgentSessionContext.Provider>;
@@ -712,7 +720,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
 function websocketCloseMessage(event: CloseEvent | Event): string {
   if (event instanceof CloseEvent) {
     if (event.reason) return `Agent stream connection closed: ${event.reason}`;
-    if (event.code === 1009) return "Agent stream connection closed because the image payload is too large";
+    if (event.code === 1009) return "图片内容过大，智能体连接已关闭";
     if (event.code !== 1000 && event.code !== 1005) {
       return `Agent stream connection closed unexpectedly (code ${event.code})`;
     }
@@ -721,6 +729,6 @@ function websocketCloseMessage(event: CloseEvent | Event): string {
 }
 
 function requireTurnData(data: AgentTurnData | null | undefined): AgentTurnData {
-  if (!data) throw new Error("agent session turn response missing data");
+  if (!data) throw new Error("智能体会话响应缺少数据");
   return data;
 }

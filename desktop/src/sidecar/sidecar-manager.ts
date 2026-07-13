@@ -48,7 +48,6 @@ export class SidecarManager extends EventEmitter {
         ZJ_BIND_HOST: "127.0.0.1",
         ZJ_BIND_PORT: String(this.port),
         ZJ_DATA_DIR: this.dataDir,
-        ZJ_DESKTOP_MODE: "true",
         PYTHONIOENCODING: "utf-8",
         PYTHONUTF8: "1",
       },

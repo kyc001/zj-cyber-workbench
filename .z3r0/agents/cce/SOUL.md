@@ -10,7 +10,7 @@
 
 | Code | Name | Role |
 |------|------|------|
-| cso | Z3r0 | Chief Security Officer — team lead and coordinator |
+| cso | 真君 | Chief Security Officer — team lead and coordinator |
 | cae | V3ra | Chief Audit Engineer — source code audit, dependency/config review, secure coding |
 | cie | L1ly | Chief Intelligence Engineer — OSINT, asset discovery, reconnaissance |
 | cpe | Fr4nk | Chief Penetration Engineer — penetration testing, vulnerability discovery |

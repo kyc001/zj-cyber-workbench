@@ -27,10 +27,10 @@ Remote remediation · Evidence-driven operations
 基础上，增加 Incident、授权范围、风险策略、人工审批、远程运维、变更回滚和
 独立验证能力，并通过 Electron 交付桌面产品。
 
-当前仓库处于工程基线阶段：上游代码已迁移，桌面壳、运维领域契约、
-SQLite 便携持久化以及 Electron + PyInstaller Portable EXE 打包链路已建立，
-但业务 API、SSH Transport 和正式 Agent Prompt 仍需按团队分工实现。
-不要把当前骨架误认为可对生产环境执行变更的正式版本。
+当前仓库已经迁入 Z3r0 的 Control、Runtime、Evidence 与 Sandbox 用户能力，并将
+Docker Sandbox 替换为 Windows 本机与 SSH Linux 双后端执行工作区。HTTP/Web 检查、端口探测、SSH、
+同步/异步命令、文件管理、项目绑定、审批和审计已接通；生产写操作和高风险工具仍
+必须经过 Scope 与审批，不得把当前版本用于未授权目标。
 
 ## Architecture
 
@@ -49,22 +49,24 @@ Electron Main / Preload / React Renderer
 ## Workspace
 
 - `core/`, `service/`, `model/`, `schema/`, `router/`, `handler/`: migrated and adapted Z3r0 control plane.
-- `web/`: migrated React workbench; B owns the desktop product experience and remaining rebrand.
-- `desktop/`: Electron Main/Preload and sidecar lifecycle skeleton.
-- `toolpacks/`: portable, manifest-driven operations and security tools (implemented by C).
+- `web/`: 已迁移并汉化的 React 工作台，覆盖 Agent、项目、知识、主机、出口和执行工作区。
+- `desktop/`: Electron Main/Preload、Sidecar 生命周期和 Portable 发布配置。
+- `skills/`: 完整迁入的上游 Skill 契约；运行时按 Windows 本机或 SSH Linux 后端解析。
 - `tests/`: shared contract and policy tests; every owner adds module tests here.
 - `docs/role-a-lead.md`: A/组长的职责、关键路径与实施顺序。
 - `docs/upstream-migration.md`: 上游逐文件扫描方法、迁移结论和风险。
 - `docs/team-handoff.md`: A/B/C/D 接口冻结与交接规则。
 - `docs/no-docker-portable-architecture.md`: 无 Docker 与 Portable EXE 的覆盖性架构决策。
 - `docs/development-environment.md`: Windows 开发、验证和本地文件规则。
+- `docs/migration-validation.md`: 完整迁移范围、真实 Agent 工具案例和验证结果。
+- `docs/tool-capability-matrix.md`: 25 个 Skill 的 Windows/SSH 实际执行路径。
 
 ## Portable Desktop
 
 - 构建产物为 `desktop/release/ZJ-<version>-win-x64-portable.exe`；桌面主进程名为
   `zhenjun.exe`，Python Sidecar 进程名为 `zj-core.exe`。
 - 浏览器开发模式和 Portable 模式都直接进入 `/playground`，不显示登录页，也不要求用户设置或输入密码。
-  本地管理会话由回环接口自动建立，不能从非本机地址获取。
+  Sidecar 只监听回环地址，并将本机请求直接映射为内置管理员身份；前端不申请、不保存也不传递登录 Token。
 - 首次启动时 Provider Key 为空。在 **System Config** 中可分别配置每个 Agent 的
   Base URL、API Key 和 Model，也可通过顶部统一配置一键应用到全部 Agent。
 - Model 控件可调用 OpenAI-compatible `<baseURL>/models` 拉取列表、搜索、下拉选择，
@@ -100,10 +102,29 @@ Development services are deliberately separate:
 它运行源码后端和 Vite 浏览器界面，不执行 PyInstaller/Electron 打包；浏览器打开
 `http://127.0.0.1:5173/playground` 即可交互。Portable EXE 只在发布验收时构建。
 
+安装便携扫描器（下载到忽略的 `.zj/tools`，不进入 Git；发布构建只将该工具子目录打入 EXE）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install-portable-tools.ps1 -Proxy http://127.0.0.1:7897
+powershell -ExecutionPolicy Bypass -File scripts/validate-portable-tools.ps1
+```
+
 The backend uses embedded SQLite and local LightRAG storage. Put provider secrets
 in an ignored `.env` based on `.env.example`. First start creates `.zj/config.json`;
 never commit `.env`, `.zj/`, databases, logs, or artifacts. The original `/Z3r0/`
 checkout is fully ignored.
+
+逐文件复核上游迁移和 Skill 结构：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/audit-upstream-migration.ps1
+powershell -ExecutionPolicy Bypass -File scripts/validate-portable-skills.ps1
+./scripts/dev.ps1 e2e
+```
+
+`e2e` 会执行 Python 回归、OpenAPI/TypeScript 生成、Web/Desktop 构建、静态检查、
+432 文件与 API 对账、Skill 校验及 Git 空白检查；不会重复打包 EXE。已安装便携工具的
+机器可额外运行 `scripts/validate-migration.ps1 -IncludePortableTools` 验证真实命令运行时。
 
 Build the single-file Windows package with `pnpm package:portable`. End users should
 configure providers in the desktop UI; the repository `.env` is only a local

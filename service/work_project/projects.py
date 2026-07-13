@@ -9,11 +9,16 @@ from core.agent.constants import DEFAULT_AGENT_CODE
 from database import get_async_session
 from logger import get_logger
 from model.agent.sessions import AgentSessionMeta
+from model.egress_proxy.proxies import EgressProxy
+from model.host.hosts import ManagedHost
+from model.sandbox.containers import SandboxContainer
+from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
 from model.work_project.assets import WorkProjectAsset
 from model.work_project.findings import WorkProjectFinding
-from model.work_project.projects import WorkProject, WorkProjectOwner
+from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
 from schema.agent.sessions import AgentSessionSummarySchema, SessionType
+from schema.sandbox.containers import SandboxContainerSchema, SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from schema.work_project.assets import WorkProjectAssetOrigin, WorkProjectAssetRequest, WorkProjectAssetType
 from schema.work_project.findings import WorkProjectFindingSchema
@@ -29,10 +34,13 @@ from schema.work_project.projects import (
 from schema.work_project.records import WorkProjectRecordSnapshotSchema, WorkProjectRecordsSchema
 from service.agent.sessions import cancel_sessions, delete_session, ensure_sdk_session_row, list_sessions
 from service.common.pagination import Page, paginate_statement
+from service.sandbox.egress import sandbox_egress_label
+from service.sandbox.records import sandbox_container_schema
+from service.sandbox.status import status_generation
+from service.sandbox.types import SandboxContainerRecord
 from service.work_project.assets import apply_asset_request
 from service.work_project.graph import get_work_project_graph_snapshot_in_tx, purge_edges_touching_asset
 from service.work_project.progress import derive_work_project_status
-
 
 logger = get_logger(__name__)
 _PROJECT_SESSION_TITLE_PATTERN = re.compile(r"^session (?P<number>\d+)$")
@@ -93,6 +101,7 @@ async def create_work_project(
         await session.flush()
         project_id = project.id or 0
         _set_project_owner_rows(session, project_id, request.owner_user_ids)
+        _set_project_sandbox_container_row(session, project_id, request.sandbox_container_id)
         _set_project_asset_rows(session, project_id, request.assets)
         await session.commit()
         await session.refresh(project)
@@ -158,7 +167,9 @@ async def update_work_project_metadata(
         project.updated_at = datetime.now()
         session.add(project)
         await _replace_project_owners(session, id, request.owner_user_ids)
+        await _replace_project_sandbox_container(session, id, request.sandbox_container_id)
         await _upsert_project_assets(session, id, request.assets)
+        await _sync_project_session_sandbox_selection(session, id, request.sandbox_container_id)
         await session.commit()
         await session.refresh(project)
         schema = await _project_schema(session, project, user_id=user_id, user_role=user_role)
@@ -283,6 +294,12 @@ async def create_work_project_session(
         if not can_create_work_project_session(project.status):
             return WorkProjectSessionCreateResult(inactive=True)
         title = await _next_project_session_title(session, project_id)
+        sandbox_id = await _sandbox_container_id_for_project_in_tx(session, project_id)
+        sandbox_generation = 0
+        if sandbox_id is not None:
+            sandbox = await session.get(SandboxContainer, sandbox_id)
+            if sandbox is not None:
+                sandbox_generation = status_generation(sandbox)
         await ensure_sdk_session_row(session, session_id)
         session.add(AgentSessionMeta(
             session_id=session_id,
@@ -291,6 +308,8 @@ async def create_work_project_session(
             agent_code=DEFAULT_AGENT_CODE,
             owner_id=owner_id,
             project_id=project_id,
+            selected_sandbox_container_id=sandbox_id,
+            selected_sandbox_container_generation=sandbox_generation,
         ))
         await session.commit()
 
@@ -350,6 +369,29 @@ async def delete_work_project_session(
     )
 
 
+async def work_project_allows_sandbox_container(
+    project_id: int,
+    sandbox_container_id: int,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> bool:
+    if not await can_access_work_project(project_id, user_id, user_role):
+        return False
+    async with get_async_session() as session:
+        bound = await _sandbox_container_id_for_project_in_tx(session, project_id)
+        container = await session.get(SandboxContainer, sandbox_container_id)
+        return (
+            bound == sandbox_container_id
+            and container is not None
+            and container.status == SandboxContainerStatus.RUNNING
+        )
+
+
+async def sandbox_container_id_for_work_project(project_id: int) -> int | None:
+    async with get_async_session() as session:
+        return await _sandbox_container_id_for_project_in_tx(session, project_id)
+
+
 async def _project_schema(
     session,
     project: WorkProject,
@@ -360,6 +402,12 @@ async def _project_schema(
     return WorkProjectSchema(**_project_schema_payload(
         project=project,
         owners=await _owners_for_project(session, project.id or 0),
+        sandbox_container=await _sandbox_container_for_project(
+            session,
+            project.id or 0,
+            user_id=user_id,
+            user_role=user_role,
+        ),
         assets=await _assets_for_project(session, project.id or 0),
         session_count=await _session_count_in_tx(session, project.id or 0),
     ))
@@ -427,12 +475,19 @@ async def _query_work_projects(
     async with get_async_session() as session:
         counts = await _session_counts(session, [project.id or 0 for project in projects])
         owners = await _owners_by_project(session, [project.id or 0 for project in projects])
+        sandboxes = await _sandbox_container_by_project(
+            session,
+            [project.id or 0 for project in projects],
+            user_id=user_id,
+            user_role=user_role,
+        )
         assets = await _assets_by_project(session, [project.id or 0 for project in projects])
 
         items = [
             WorkProjectSchema(**_project_schema_payload(
                 project=project,
                 owners=owners.get(project.id or 0, []),
+                sandbox_container=sandboxes.get(project.id or 0),
                 assets=assets.get(project.id or 0, []),
                 session_count=counts.get(project.id or 0, 0),
             ))
@@ -444,6 +499,7 @@ async def _query_work_projects(
 def _project_schema_payload(
     project: WorkProject,
     owners: list[WorkProjectOwnerSchema],
+    sandbox_container: SandboxContainerSchema | None,
     assets: list[WorkProjectAsset],
     session_count: int,
 ) -> dict[str, object]:
@@ -453,6 +509,8 @@ def _project_schema_payload(
         "description": project.description,
         "owner_user_ids": [owner.id for owner in owners],
         "owners": owners,
+        "sandbox_container_id": sandbox_container.id if sandbox_container else None,
+        "sandbox_container": sandbox_container,
         "assets": assets,
         "tasks": [WorkProjectTaskSchema.model_validate(item) for item in project.tasks],
         "agent_summaries": [
@@ -494,6 +552,67 @@ async def _owners_for_project(session, project_id: int) -> list[WorkProjectOwner
     return (await _owners_by_project(session, [project_id])).get(project_id, [])
 
 
+async def _sandbox_container_by_project(
+    session,
+    project_ids: list[int],
+    *,
+    user_id: int | None = None,
+    user_role: SystemUserRole | None = None,
+) -> dict[int, SandboxContainerSchema | None]:
+    ids = [project_id for project_id in project_ids if project_id > 0]
+    if not ids:
+        return {}
+    rows = (await session.exec(
+        select(
+            WorkProjectSandboxContainer,
+            SandboxContainer,
+            SandboxImage.image_name,
+            SandboxImage.supports_tor,
+            SandboxImage.control_proxy_port,
+            SystemUser.username,
+            ManagedHost.ip_address,
+            EgressProxy,
+        )
+        .join(SandboxContainer, SandboxContainer.id == WorkProjectSandboxContainer.sandbox_container_id)
+        .join(SandboxImage, SandboxImage.id == SandboxContainer.image_id)
+        .join(SystemUser, SystemUser.id == SandboxContainer.owner_id)
+        .join(ManagedHost, ManagedHost.id == SandboxContainer.host_id)
+        .outerjoin(EgressProxy, EgressProxy.id == SandboxContainer.egress_proxy_id)
+        .where(WorkProjectSandboxContainer.project_id.in_(ids))
+        .order_by(WorkProjectSandboxContainer.project_id, WorkProjectSandboxContainer.position)
+    )).all()
+    result: dict[int, SandboxContainerSchema | None] = {project_id: None for project_id in ids}
+    for link, container, image_name, supports_tor, control_proxy_port, owner_username, host_ip, proxy in rows:
+        if result[link.project_id] is not None:
+            continue
+        record = SandboxContainerRecord(
+            container=container,
+            image_name=image_name,
+            supports_tor=supports_tor,
+            control_proxy_port=control_proxy_port,
+            owner_username=owner_username,
+            host_ip_address=host_ip,
+            egress_label=sandbox_egress_label(container, proxy),
+        )
+        result[link.project_id] = sandbox_container_schema(record, user_id=user_id, user_role=user_role)
+    return result
+
+
+async def _sandbox_container_for_project(
+    session,
+    project_id: int,
+    *,
+    user_id: int | None = None,
+    user_role: SystemUserRole | None = None,
+) -> SandboxContainerSchema | None:
+    return (await _sandbox_container_by_project(
+        session,
+        [project_id],
+        user_id=user_id,
+        user_role=user_role,
+    )).get(project_id)
+
+
 async def _assets_by_project(session, project_ids: list[int]) -> dict[int, list[WorkProjectAsset]]:
     ids = [project_id for project_id in project_ids if project_id > 0]
     if not ids:
@@ -524,6 +643,52 @@ def _owner_schema(user: SystemUser) -> WorkProjectOwnerSchema:
 def _set_project_owner_rows(session, project_id: int, owner_user_ids: list[int]) -> None:
     for position, user_id in enumerate(owner_user_ids):
         session.add(WorkProjectOwner(project_id=project_id, user_id=user_id, position=position))
+
+
+def _set_project_sandbox_container_row(session, project_id: int, sandbox_container_id: int | None) -> None:
+    if sandbox_container_id is not None:
+        session.add(WorkProjectSandboxContainer(
+            project_id=project_id,
+            sandbox_container_id=sandbox_container_id,
+            position=0,
+        ))
+
+
+async def _replace_project_sandbox_container(session, project_id: int, sandbox_container_id: int | None) -> None:
+    links = (await session.exec(
+        select(WorkProjectSandboxContainer).where(WorkProjectSandboxContainer.project_id == project_id)
+    )).all()
+    if len(links) == 1 and links[0].sandbox_container_id == sandbox_container_id:
+        return
+    for link in links:
+        await session.delete(link)
+    await session.flush()
+    _set_project_sandbox_container_row(session, project_id, sandbox_container_id)
+
+
+async def _sandbox_container_id_for_project_in_tx(session, project_id: int) -> int | None:
+    return (await session.exec(
+        select(WorkProjectSandboxContainer.sandbox_container_id)
+        .where(WorkProjectSandboxContainer.project_id == project_id)
+        .order_by(WorkProjectSandboxContainer.position)
+        .limit(1)
+    )).first()
+
+
+async def _sync_project_session_sandbox_selection(
+    session,
+    project_id: int,
+    sandbox_container_id: int | None,
+) -> None:
+    generation = 0
+    if sandbox_container_id is not None:
+        container = await session.get(SandboxContainer, sandbox_container_id)
+        if container is not None:
+            generation = status_generation(container)
+    await session.execute(update(AgentSessionMeta).where(AgentSessionMeta.project_id == project_id).values(
+        selected_sandbox_container_id=sandbox_container_id,
+        selected_sandbox_container_generation=generation,
+    ))
 
 
 async def _replace_project_owners(session, project_id: int, owner_user_ids: list[int]) -> None:
@@ -563,6 +728,23 @@ async def _validate_work_project_metadata_for_write(
         missing_owner_ids = sorted(set(request.owner_user_ids) - {existing_user_id for existing_user_id in users})
         if missing_owner_ids:
             return f"selected owners not found: {', '.join(str(id) for id in missing_owner_ids)}"
+
+    if request.sandbox_container_id is not None:
+        container = await session.get(SandboxContainer, request.sandbox_container_id)
+        if container is None:
+            return "selected execution workspace not found"
+        if user_role != SystemUserRole.ADMIN and container.owner_id != user_id:
+            return "selected execution workspace is not available to current user"
+        existing_binding = (await session.exec(
+            select(WorkProjectSandboxContainer.project_id)
+            .where(WorkProjectSandboxContainer.sandbox_container_id == request.sandbox_container_id)
+            .where(WorkProjectSandboxContainer.project_id != (project_id or -1))
+            .limit(1)
+        )).first()
+        if existing_binding is not None:
+            return "selected execution workspace is already bound to another project"
+        if container.status != SandboxContainerStatus.RUNNING and existing_binding is None:
+            return "selected execution workspace is not running"
 
     return ""
 

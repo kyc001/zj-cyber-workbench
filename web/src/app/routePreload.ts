@@ -1,30 +1,39 @@
 const routeLoaders = {
   protectedAdminShell: () => import("./layouts/ProtectedAdminShell"),
+  egressProxies: () => import("../features/egress-proxies/EgressProxiesPage"),
+  hosts: () => import("../features/hosts/HostsPage"),
   knowledges: () => import("../features/knowledges/KnowledgesPage"),
   playground: () => import("../features/playground/PlaygroundPage"),
   workProjects: () => import("../features/work-projects/WorkProjectsPage"),
   workProjectWorkspace: () => import("../features/work-projects/WorkProjectWorkspacePage"),
-  systemUsers: () => import("../features/system-users/SystemUsersPage"),
+  sandboxImages: () => import("../features/sandbox-images/SandboxImagesPage"),
+  sandboxContainers: () => import("../features/sandbox-containers/SandboxContainersPage"),
   systemConfig: () => import("../features/system-config/SystemConfigPage"),
 } as const;
 
 const adminRouteLoaders: Record<string, () => Promise<unknown>> = {
   "/playground": routeLoaders.playground,
+  "/egress-proxies": routeLoaders.egressProxies,
+  "/hosts": routeLoaders.hosts,
   "/knowledges": routeLoaders.knowledges,
   "/work-projects": routeLoaders.workProjects,
   "/work-projects/:projectId": routeLoaders.workProjectWorkspace,
-  "/system-users": routeLoaders.systemUsers,
+  "/sandbox-images": routeLoaders.sandboxImages,
+  "/sandbox-containers": routeLoaders.sandboxContainers,
   "/system-config": routeLoaders.systemConfig,
 };
 
 const preloadedRoutes = new Set<string>();
 
 export const loadProtectedAdminShell = routeLoaders.protectedAdminShell;
+export const loadEgressProxiesPage = routeLoaders.egressProxies;
+export const loadHostsPage = routeLoaders.hosts;
 export const loadKnowledgesPage = routeLoaders.knowledges;
 export const loadPlaygroundPage = routeLoaders.playground;
 export const loadWorkProjectsPage = routeLoaders.workProjects;
 export const loadWorkProjectWorkspacePage = routeLoaders.workProjectWorkspace;
-export const loadSystemUsersPage = routeLoaders.systemUsers;
+export const loadSandboxImagesPage = routeLoaders.sandboxImages;
+export const loadSandboxContainersPage = routeLoaders.sandboxContainers;
 export const loadSystemConfigPage = routeLoaders.systemConfig;
 
 export function preloadAdminRoute(path: string) {

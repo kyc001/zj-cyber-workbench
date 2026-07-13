@@ -15,14 +15,14 @@
 | 接口 | A 保证 | B 使用方式 |
 | --- | --- | --- |
 | `GET /health` | 服务名、版本、协议版本和可用状态稳定 | Sidecar 启动轮询与兼容性检查 |
-| `POST /desktop/bootstrap` | 仅在桌面模式且来源为回环地址时签发本地管理员 Token | Portable 启动后自动建立会话，不显示登录或密码界面 |
+| 本机身份 | Sidecar 仅监听回环地址；桌面模式默认开启，无登录接口和会话 Token | Renderer 直接调用同源 REST/WebSocket，不写登录状态 |
 | `POST /api/system-config/models` | 使用提交的 Base URL 和 Key 代理拉取 OpenAI-compatible 模型列表，错误中不回显 Key | Renderer 提供逐 Agent 拉取、搜索、下拉和手工输入 |
 | REST/OpenAPI | 鉴权、错误码、分页和业务状态稳定 | 只使用生成的 TypeScript 类型 |
 | Timeline WS | 稳定 `item_key`、单 Session 单调 `seq`、历史重放与实时流可幂等合并 | 不能按文本内容去重 |
 | Approval | 返回真实 Action、目标、风险、约束、过期时间和变更摘要 | UI 不得只显示模糊确认文案 |
 | Shutdown/Cancel | 有界关闭和任务取消语义 | Electron 退出先请求关闭，再处理超时进程 |
 
-B 需要向 A 回传：首次启动所需字段、桌面 Token 传递方式、Sidecar 崩溃状态、前端遇到的错误码缺口。Renderer 只允许在 System Config 表单的瞬时状态中处理模型 Key，并通过受保护 API 提交；不得写入 `localStorage`、日志或打包资源。B 不得在 Renderer 中读取数据库、SSH 私钥或启动子进程。
+B 需要向 A 回传：首次启动所需字段、Sidecar 崩溃状态、前端遇到的错误码缺口。Renderer 只允许在系统配置表单的瞬时状态中处理模型 Key，并通过回环 API 提交；不得写入 `localStorage`、日志或打包资源。B 不得在 Renderer 中读取数据库、SSH 私钥或启动子进程。
 
 ## A 向 C 交付
 
@@ -41,8 +41,30 @@ C 必须在执行前再次校验 Target、Action Hash、Decision 和 Approval To
 - `SSHTransport`
 - `LocalPowerShellTransport`
 - 便携原生工具/脚本执行适配器
+- 本机及 SSH Workspace 文件、终端、异步命令与取消
 
-`SandboxTransport`、Docker Socket、容器网络和 Docker Toolpack 不进入仓库。
+Docker Socket、容器网络和 Docker Toolpack 不进入仓库；上游 Sandbox 用户能力由 Windows 本机与 SSH Linux 双后端 Workspace Runtime 提供。13 个 Linux 专属 Skill 的执行路径见 `docs/tool-capability-matrix.md`。
+
+### 当前运行接口
+
+- `POST /api/agent-sessions/turns` 和 `POST /api/agent-sessions/{id}/turns` 接受 `sandbox_container_id`。
+- `PATCH /api/agent-sessions/{id}/sandbox-container` 切换空闲会话的执行工作区。
+- WorkProject 创建/更新接受 `sandbox_container_id`，项目会话固定继承该工作区。
+- `/api/sandbox-containers/*` 保留上游命令、文件、Shell、生命周期和出口配置契约。
+- `/api/approvals/*` 提供策略评估、审批、拒绝和 Token 消费。
+- Agent 工具注册表包含 HTTP、页面读取、Web 检查、端口探测、SSH、同步/异步命令、输出读取、取消和 Skill 加载。
+
+### 队友开发注意
+
+- 不提交 `.env`、`.zj/`、`Z3r0/`、下载工具、SQLite、日志和报告。
+- 新机器从 `.env.example` 创建本地 `.env`；正式包在系统配置页填写 Provider，Key 不进入 EXE。
+- 开发阶段使用 `http://127.0.0.1:8000/` 或 Vite `http://127.0.0.1:5173/`，不需要反复打包 EXE。
+- 便携工具执行 `powershell -ExecutionPolicy Bypass -File scripts/install-portable-tools.ps1 -Proxy http://127.0.0.1:7897`。
+- 便携工具验收执行 `powershell -ExecutionPolicy Bypass -File scripts/validate-portable-tools.ps1`。
+- Agent 实际命令运行时验收执行 `uv run python scripts/validate_workspace_runtime.py --workspace-id 1`。
+- 工作区出口配置会在每次命令和 Shell 启动时生效；直连模式会清除宿主环境继承的代理变量，SSH 模式使用同一组受管代理语义。
+- SSH 工作区需要把已核验的主机公钥写入 `.zj/ssh/known_hosts`；不得关闭 Host Key 校验。
+- 每次合并前执行 `scripts/audit-upstream-migration.ps1` 和 `scripts/validate-portable-skills.ps1`；新增上游文件若未迁移或未明确替代，审计必须失败。
 
 ## A 向 D 交付
 

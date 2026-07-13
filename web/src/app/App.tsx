@@ -2,11 +2,14 @@ import { lazy, Suspense, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useOutletContext } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
 import {
+  loadEgressProxiesPage,
+  loadHostsPage,
   loadKnowledgesPage,
   loadPlaygroundPage,
   loadProtectedAdminShell,
+  loadSandboxContainersPage,
+  loadSandboxImagesPage,
   loadSystemConfigPage,
-  loadSystemUsersPage,
   loadWorkProjectWorkspacePage,
   loadWorkProjectsPage,
 } from "./routePreload";
@@ -19,12 +22,15 @@ function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends key
 }
 
 const ProtectedAdminShell = lazyRoute(loadProtectedAdminShell, "ProtectedAdminShell");
+const EgressProxiesPage = lazyRoute(loadEgressProxiesPage, "EgressProxiesPage");
+const HostsPage = lazyRoute(loadHostsPage, "HostsPage");
 const KnowledgesPage = lazyRoute(loadKnowledgesPage, "KnowledgesPage");
 const PlaygroundPage = lazyRoute(loadPlaygroundPage, "PlaygroundPage");
 const WorkProjectWorkspacePage = lazyRoute(loadWorkProjectWorkspacePage, "WorkProjectWorkspacePage");
-const SystemUsersPage = lazyRoute(loadSystemUsersPage, "SystemUsersPage");
 const SystemConfigPage = lazyRoute(loadSystemConfigPage, "SystemConfigPage");
 const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
+const SandboxContainersPage = lazyRoute(loadSandboxContainersPage, "SandboxContainersPage");
+const SandboxImagesPage = lazyRoute(loadSandboxImagesPage, "SandboxImagesPage");
 
 function ProtectedRoute() {
   const { isAuthenticated, ready } = useAuth();
@@ -57,10 +63,13 @@ export function App() {
               <Route element={<ProtectedAdminShell />}>
                 <Route path="/playground" element={<PlaygroundPage />} />
                 <Route element={<AdminOnlyRoute />}>
+                  <Route path="/hosts" element={<HostsPage />} />
+                  <Route path="/egress-proxies" element={<EgressProxiesPage />} />
                   <Route path="/knowledges" element={<KnowledgesPage />} />
                   <Route path="/work-projects" element={<WorkProjectsPage />} />
                   <Route path="/work-projects/:projectId" element={<WorkProjectWorkspacePage />} />
-                  <Route path="/system-users" element={<SystemUsersPage />} />
+                  <Route path="/sandbox-images" element={<SandboxImagesPage />} />
+                  <Route path="/sandbox-containers" element={<SandboxContainersPage />} />
                   <Route path="/system-config" element={<SystemConfigPage />} />
                 </Route>
               </Route>

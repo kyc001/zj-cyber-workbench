@@ -14,6 +14,11 @@ from model.agent.message_meta import AgentMessageMeta
 from model.agent.notifications import AgentNotification
 from model.agent.sessions import AgentSessionMeta
 from model.agent.subordinates import AgentSubordinateTask
+from model.egress_proxy.proxies import EgressProxy
+from model.host.hosts import ManagedHost
+from model.sandbox.async_jobs import SandboxAsyncJob
+from model.sandbox.containers import SandboxContainer
+from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
 from model.work_project.assets import WorkProjectAsset
 from model.work_project.findings import WorkProjectFinding
@@ -22,18 +27,19 @@ from model.work_project.graph import (
     WorkProjectAttackPathStep,
     WorkProjectGraphEdge,
 )
-from model.work_project.projects import WorkProject, WorkProjectOwner
+from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
 from utils.sdk_tables import BOOTSTRAP_SESSION_ID
 
 logger = get_logger(__name__)
 
 # registered so SQLModel.metadata picks every table up at create_all time
 _registered_models = [
-    SystemUser, WorkProject, WorkProjectOwner,
+    SystemUser, WorkProject, WorkProjectOwner, WorkProjectSandboxContainer,
     WorkProjectAsset, WorkProjectFinding,
     WorkProjectGraphEdge, WorkProjectAttackPath, WorkProjectAttackPathStep,
     AgentSessionMeta, AgentMessageMeta, AgentContextCompaction,
-    AgentSubordinateTask, AgentNotification, AgentEventLog,
+    AgentSubordinateTask, AgentNotification, AgentEventLog, SandboxAsyncJob,
+    ManagedHost, EgressProxy, SandboxImage, SandboxContainer,
 ]
 
 _engine: AsyncEngine | None = None
@@ -51,8 +57,43 @@ async def create_all_tables() -> None:
     async with _engine.begin() as conn:
         await conn.run_sync(sdk_metadata.create_all)
         await conn.run_sync(SQLModel.metadata.create_all)
+        await _upgrade_portable_schema(conn)
 
     logger.info("all tables created")
+
+
+async def _upgrade_portable_schema(conn) -> None:
+    """Apply additive SQLite upgrades for existing portable workspaces."""
+    columns = {
+        row[1]
+        for row in (await conn.exec_driver_sql("PRAGMA table_info(agent_session_meta)")).fetchall()
+    }
+    additions = {
+        "selected_sandbox_container_id": "INTEGER",
+        "selected_sandbox_container_generation": "BIGINT NOT NULL DEFAULT 0",
+        "runtime_sandbox_container_id": "INTEGER",
+        "runtime_sandbox_container_generation": "BIGINT NOT NULL DEFAULT 0",
+    }
+    for name, definition in additions.items():
+        if name not in columns:
+            await conn.exec_driver_sql(
+                f"ALTER TABLE agent_session_meta ADD COLUMN {name} {definition}"
+            )
+
+    notification_columns = {
+        row[1]
+        for row in (await conn.exec_driver_sql("PRAGMA table_info(agent_notifications)")).fetchall()
+    }
+    notification_additions = {
+        "sandbox_container_id": "INTEGER",
+        "sandbox_container_generation": "BIGINT NOT NULL DEFAULT 0",
+        "sandbox_skill_metadata": "JSON NOT NULL DEFAULT '[]'",
+    }
+    for name, definition in notification_additions.items():
+        if name not in notification_columns:
+            await conn.exec_driver_sql(
+                f"ALTER TABLE agent_notifications ADD COLUMN {name} {definition}"
+            )
 
 
 async def close_engine() -> None:

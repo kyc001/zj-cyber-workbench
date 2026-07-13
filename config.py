@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 ROOT_PATH = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 
@@ -30,6 +30,8 @@ def _load_environment_files() -> None:
 
 _load_environment_files()
 BUNDLED_AGENT_DIR = ROOT_PATH / ".z3r0" / "agents"
+BUNDLED_SKILLS_DIR = ROOT_PATH / "skills"
+BUNDLED_TOOLS_DIR = ROOT_PATH / "portable-tools"
 DEFAULT_CONFIG_FILE = ROOT_PATH / ".z3r0" / "config.json.example"
 _data_dir = os.environ.get("ZJ_DATA_DIR", "").strip()
 WORKSPACE = Path(_data_dir).expanduser().resolve() if _data_dir else ROOT_PATH / ".zj"
@@ -43,24 +45,10 @@ class StrictConfigModel(BaseModel):
 
 
 # system config
-class BootstrapAdminConfig(StrictConfigModel):
-    enabled: bool = Field(default=False)
-    username: str = Field(default="admin", min_length=1, max_length=64)
-    email: str = Field(default="admin@z3r0.fans", min_length=1, max_length=255)
-    password: str = Field(default="", max_length=128)
-
-    @model_validator(mode="after")
-    def validate_password_when_enabled(self):
-        if self.enabled and not self.password:
-            raise ValueError("bootstrap admin password is required when bootstrap admin is enabled")
-        return self
-
-
 class SystemConfig(StrictConfigModel):
     listen_addr: str = Field(default="127.0.0.1")
     listen_port: int = Field(default=8000)
     encrypt_key: str = Field(default_factory=lambda: secrets.token_urlsafe(32), min_length=32)
-    bootstrap_admin: BootstrapAdminConfig = Field(default_factory=BootstrapAdminConfig)
 
 
 # database config
@@ -156,9 +144,36 @@ def read_config_file() -> GlobalConfig:
     """read and validate config.json without mutating global state"""
     with open(CONFIG_FILE, encoding="utf-8") as f:
         data = json.load(f)
+    if isinstance(data, dict) and isinstance(data.get("system"), dict):
+        data["system"].pop("bootstrap_admin", None)
     cfg = GlobalConfig.model_validate(data)
+    _apply_portable_branding(cfg)
     _apply_provider_environment(cfg)
     return cfg
+
+
+def _apply_portable_branding(cfg: GlobalConfig) -> None:
+    descriptions = {
+        "cso": "首席安全协调 Agent，负责理解目标、编排专家、汇总结论与交付报告",
+        "cae": "代码审计 Agent，负责源码、依赖、配置与安全编码检查",
+        "cce": "密码与协议 Agent，负责密码学、协议与密钥管理分析",
+        "cie": "情报侦察 Agent，负责授权范围内的资产发现与信息收集",
+        "cpe": "安全测试 Agent，负责授权渗透测试与漏洞验证",
+        "cre": "逆向分析 Agent，负责二进制、固件与文件分析",
+    }
+    legacy_descriptions = {
+        "Chief Security Officer",
+        "Chief Audit Engineer",
+        "Chief Cryptography Engineer",
+        "Chief Intelligence Engineer",
+        "Chief Penetration Engineer",
+        "Chief Reverse Engineer",
+    }
+    for code, agent in cfg.agents.items():
+        if code == "cso" and agent.name.strip().lower() in {"z3r0", "zj"}:
+            agent.name = "真君"
+        if agent.description.strip() in legacy_descriptions and code in descriptions:
+            agent.description = descriptions[code]
 
 
 def _apply_provider_environment(cfg: GlobalConfig) -> None:

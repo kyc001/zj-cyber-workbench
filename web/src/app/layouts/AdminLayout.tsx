@@ -1,5 +1,5 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
-import { BookOpenText, Eye, FolderKanban, MessageSquareCode, Settings, Users } from "lucide-react";
+import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageSquareCode, Network, Server, Settings } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
@@ -25,7 +25,10 @@ const navItems = [
   { path: "/playground", label: "智能体工作台", eyebrow: "对话与任务执行", icon: MessageSquareCode },
   { path: "/work-projects", label: "工作项目", eyebrow: "项目与资产管理", icon: FolderKanban, adminOnly: true },
   { path: "/knowledges", label: "知识库", eyebrow: "检索与知识图谱", icon: BookOpenText, adminOnly: true },
-  { path: "/system-users", label: "系统用户", eyebrow: "访问控制", icon: Users, adminOnly: true },
+  { path: "/hosts", label: "主机管理", eyebrow: "本机与 SSH 目标", icon: Server, adminOnly: true },
+  { path: "/egress-proxies", label: "出口代理", eyebrow: "网络出口配置", icon: Network, adminOnly: true },
+  { path: "/sandbox-images", label: "工具基线", eyebrow: "便携工具配置", icon: Boxes, adminOnly: true },
+  { path: "/sandbox-containers", label: "执行工作区", eyebrow: "本机运行实例", icon: Box, adminOnly: true },
   { path: "/system-config", label: "系统配置", eyebrow: "运行时与模型配置", icon: Settings, adminOnly: true },
 ];
 

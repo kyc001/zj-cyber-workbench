@@ -2,6 +2,12 @@
 // Do not make direct changes to this file.
 
 export const SYSTEM_USER_ROLES = ["admin", "user"] as const;
+export const EGRESS_PROXY_TYPES = ["http", "https", "socks5"] as const;
+export const EGRESS_PROXY_TYPE = {"HTTP": "http", "HTTPS": "https", "SOCKS5": "socks5"} as const;
+export const SANDBOX_CONTAINER_STATUSES = ["created", "running", "paused", "stopped", "error"] as const;
+export const SANDBOX_CONTAINER_STATUS = {"CREATED": "created", "RUNNING": "running", "PAUSED": "paused", "STOPPED": "stopped", "ERROR": "error"} as const;
+export const SANDBOX_CONTAINER_EGRESS_MODES = ["direct", "proxy", "tor"] as const;
+export const SANDBOX_CONTAINER_EGRESS_MODE = {"DIRECT": "direct", "PROXY": "proxy", "TOR": "tor"} as const;
 export const WORK_PROJECT_TYPES = ["penetration_test", "source_code_audit"] as const;
 export const WORK_PROJECT_STATUSES = ["working", "completed", "canceled"] as const;
 export const WORK_PROJECT_STATUS = {"WORKING": "working", "COMPLETED": "completed", "CANCELED": "canceled"} as const;
@@ -26,5 +32,3 @@ export const RESOURCE_PAGE_SIZE = 10;
 
 export const KNOWLEDGE_GRAPH_EXPANSION_NODES = 100;
 export const KNOWLEDGE_GRAPH_MAX_NODES = 1000;
-
-export const ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token";

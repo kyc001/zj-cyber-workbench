@@ -15,7 +15,7 @@ from config import get_config
 from core import extract_message_text
 from core.conversation.context_budget import build_context_run_config
 from core.conversation.retrieval import build_conversation_retrieval_query
-from core.conversation.store import Z3r0Session, fetch_stored_items
+from core.conversation.store import ZJSession, fetch_stored_items
 from core.lightrag.runtime import activate_lightrag_context
 from core.runtime.context import (
     SUBAGENT_INSTANCE_PREFIX,
@@ -26,6 +26,7 @@ from core.runtime.input_items import build_turn_input_item, retrieval_text_from_
 from core.runtime.notification_dispatch import forget_target_notifications, is_main_agent_instance
 from core.runtime.partial_context import DeltaBuffer, discard_partial_stream, incomplete_segment_events, track_delta
 from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
+from core.sandbox.command_jobs import cancel_agent_async_sandbox_commands
 from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, run_until_idle
 from database import get_async_session, get_engine
 from logger import get_logger
@@ -372,6 +373,9 @@ async def start_subagent_task_run(
             brief=brief,
             nested_call_id=nested_call_id,
             owner_id=context.user.id,
+            allowed_targets=context.allowed_targets,
+            allowed_action_types=context.allowed_action_types,
+            scope_id=context.scope_id,
         )
         await _mark_parent_session_running(snapshot, context)
         driver = _SubagentDriver(
@@ -444,6 +448,10 @@ async def _stop_driver_task(driver: _SubagentDriver) -> asyncio.Task[None] | Non
 async def _latest_snapshot(snapshot: AgentSubordinateTaskSnapshot) -> AgentSubordinateTaskSnapshot:
     latest = await agent_subordinates.get_subagent_task_internal(snapshot.run_id)
     return latest or snapshot
+
+
+async def cancel_sandbox_subagent_runs(container_id: int) -> bool:
+    return await _cancel_drivers(lambda driver: driver.sandbox_container_id == container_id)
 
 
 async def cancel_session_subagent_runs(session_id: str) -> bool:
@@ -634,7 +642,7 @@ def _subagent_run_turn(driver: _SubagentDriver) -> Callable[[TurnTrigger], Any]:
     context = driver.context
     agent_config = get_config().agents.get(snapshot.agent_code)
     max_turns = get_config().agent_runtime.subordinate_max_turns
-    memory_session = Z3r0Session(
+    memory_session = ZJSession(
         session_id=snapshot.session_id,
         engine=get_engine(),
         viewing_agent_code=snapshot.agent_code,
@@ -736,7 +744,11 @@ async def _cancel_subagent(driver: _SubagentDriver) -> None:
 
 
 async def _teardown_subtree(driver: _SubagentDriver, message: str) -> None:
-    """Cancel a sub-agent's notifications and delegated child tasks."""
+    """Cancel a sub-agent's background commands, notifications, and child tasks."""
+    await cancel_agent_async_sandbox_commands(
+        session_id=driver.session_id,
+        agent_instance_id=driver.agent_instance_id,
+    )
     await agent_notifications.cancel_session_notifications(
         driver.session_id, message, target_agent_instance_id=driver.agent_instance_id,
     )
@@ -834,6 +846,8 @@ async def _mark_parent_session_running(
         await agent_sessions.mark_session_running(
             snapshot.session_id,
             agent_code=snapshot.parent_agent_code,
+            sandbox_container_id=context.sandbox_container_id,
+            sandbox_container_generation=context.sandbox_container_generation,
         )
     except Exception:
         logger.debug("failed to mark parent session running: %s", snapshot.session_id, exc_info=True)
@@ -851,7 +865,13 @@ def _subagent_context(
         agent_instance_id=subagent_instance_id(snapshot.run_id),
         nested_for_agent_code=snapshot.parent_agent_code,
         nested_call_id=snapshot.nested_call_id,
+        sandbox_container_id=context.sandbox_container_id,
+        sandbox_container_generation=context.sandbox_container_generation,
+        sandbox_skill_metadata=context.sandbox_skill_metadata,
         work_project_id=context.work_project_id,
+        allowed_targets=context.allowed_targets,
+        allowed_action_types=context.allowed_action_types,
+        scope_id=context.scope_id,
     )
 
 

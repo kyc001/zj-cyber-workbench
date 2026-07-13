@@ -4,7 +4,6 @@ from handler.system_user.users import (
     create_system_user_handler,
     delete_system_user_handler,
     query_system_users_handler,
-    system_user_login_handler,
     update_system_user_handler,
 )
 from middleware.auth import require_admin
@@ -13,18 +12,12 @@ from schema.common.responses import CommonResponse
 from schema.system_user.users import (
     DeleteSystemUserResponse,
     QuerySystemUsersResponse,
-    SystemUserLoginResponse,
     SystemUserSchema,
 )
 from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 NOT_FOUND_RESPONSE = not_found_response("System user")
-LOGIN_ERROR_RESPONSES = {
-    401: {"description": "Invalid email or password", "model": CommonResponse},
-    422: {"description": "Validation Error", "model": CommonResponse},
-}
-
 ADMIN_ONLY = [Depends(require_admin)]
 
 router = APIRouter(prefix="/system-users", tags=["system-users"])
@@ -45,14 +38,6 @@ router.add_api_route(
     dependencies=ADMIN_ONLY,
     response_model=CommonResponse[SystemUserSchema],
     responses=COMMON_ERROR_RESPONSES,
-)
-
-router.add_api_route(
-    "/login",
-    system_user_login_handler,
-    methods=["POST"],
-    response_model=CommonResponse[SystemUserLoginResponse],
-    responses=LOGIN_ERROR_RESPONSES,
 )
 
 router.add_api_route(

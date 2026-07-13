@@ -6,6 +6,12 @@ type JsonRequestBody<Operation> = Operation extends {
   ? Body
   : never;
 
+type MultipartRequestBody<Operation> = Operation extends {
+  requestBody: { content: { "multipart/form-data": infer Body } };
+}
+  ? Body
+  : never;
+
 type JsonResponse<Operation> = Operation extends {
   responses: { 200: { content: { "application/json": infer Response } } };
 }
@@ -16,9 +22,6 @@ type QueryParameters<Operation> = Operation extends { parameters: { query?: infe
 type PathParameters<Operation> = Operation extends { parameters: { path?: infer Params } } ? Params : never;
 
 export type CommonResponsePayload = components["schemas"]["CommonResponse"];
-
-export type LoginRequest = JsonRequestBody<paths["/api/system-users/login"]["post"]>;
-export type LoginResponse = JsonResponse<paths["/api/system-users/login"]["post"]>;
 
 export type QuerySystemUsersParams = QueryParameters<paths["/api/system-users"]["get"]>;
 export type QuerySystemUsersResponse = JsonResponse<paths["/api/system-users"]["get"]>;
@@ -33,6 +36,92 @@ export type SystemUserPathParams = PathParameters<paths["/api/system-users/{id}"
 export type UpdateSystemUserRequest = JsonRequestBody<paths["/api/system-users/{id}"]["patch"]>;
 export type UpdateSystemUserResponse = JsonResponse<paths["/api/system-users/{id}"]["patch"]>;
 export type DeleteSystemUserResponse = JsonResponse<paths["/api/system-users/{id}"]["delete"]>;
+
+export type QueryManagedHostsParams = QueryParameters<paths["/api/hosts"]["get"]>;
+export type QueryManagedHostsResponse = JsonResponse<paths["/api/hosts"]["get"]>;
+export type QueryManagedHostsData = NonNullable<QueryManagedHostsResponse["data"]>;
+export type ManagedHost = QueryManagedHostsData["items"][number];
+export type CreateManagedHostRequest = JsonRequestBody<paths["/api/hosts"]["post"]>;
+export type CreateManagedHostResponse = JsonResponse<paths["/api/hosts"]["post"]>;
+export type ManagedHostPathParams = PathParameters<paths["/api/hosts/{id}"]["patch"]>;
+export type UpdateManagedHostRequest = JsonRequestBody<paths["/api/hosts/{id}"]["patch"]>;
+export type UpdateManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["patch"]>;
+export type DeleteManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["delete"]>;
+export type ListManagedHostImagesResponse = JsonResponse<paths["/api/hosts/{id}/images"]["get"]>;
+export type ManagedHostImage = NonNullable<ListManagedHostImagesResponse["data"]>["items"][number];
+export type PullManagedHostImagesRequest = JsonRequestBody<paths["/api/hosts/{id}/images/pull"]["post"]>;
+export type PullManagedHostImagesResponse = JsonResponse<paths["/api/hosts/{id}/images/pull"]["post"]>;
+export type DeleteManagedHostImageRequest = JsonRequestBody<paths["/api/hosts/{id}/images/remove"]["post"]>;
+
+export type QueryEgressProxiesParams = QueryParameters<paths["/api/egress-proxies"]["get"]>;
+export type QueryEgressProxiesResponse = JsonResponse<paths["/api/egress-proxies"]["get"]>;
+export type QueryEgressProxiesData = NonNullable<QueryEgressProxiesResponse["data"]>;
+export type EgressProxy = QueryEgressProxiesData["items"][number];
+export type EgressProxyType = components["schemas"]["EgressProxyType"];
+export type CreateEgressProxyRequest = JsonRequestBody<paths["/api/egress-proxies"]["post"]>;
+export type CreateEgressProxyResponse = JsonResponse<paths["/api/egress-proxies"]["post"]>;
+export type EgressProxyPathParams = PathParameters<paths["/api/egress-proxies/{id}"]["patch"]>;
+export type UpdateEgressProxyRequest = JsonRequestBody<paths["/api/egress-proxies/{id}"]["patch"]>;
+export type UpdateEgressProxyResponse = JsonResponse<paths["/api/egress-proxies/{id}"]["patch"]>;
+export type DeleteEgressProxyResponse = JsonResponse<paths["/api/egress-proxies/{id}"]["delete"]>;
+export type TestEgressProxyPathParams = PathParameters<paths["/api/egress-proxies/{id}/test"]["post"]>;
+export type TestEgressProxyResponse = JsonResponse<paths["/api/egress-proxies/{id}/test"]["post"]>;
+
+export type QuerySandboxImagesParams = QueryParameters<paths["/api/sandbox-images"]["get"]>;
+export type QuerySandboxImagesResponse = JsonResponse<paths["/api/sandbox-images"]["get"]>;
+export type QuerySandboxImagesData = NonNullable<QuerySandboxImagesResponse["data"]>;
+export type SandboxImage = QuerySandboxImagesData["items"][number];
+export type CreateSandboxImageRequest = JsonRequestBody<paths["/api/sandbox-images"]["post"]>;
+export type CreateSandboxImageResponse = JsonResponse<paths["/api/sandbox-images"]["post"]>;
+export type SandboxImagePathParams = PathParameters<paths["/api/sandbox-images/{id}"]["delete"]>;
+export type DeleteSandboxImageResponse = JsonResponse<paths["/api/sandbox-images/{id}"]["delete"]>;
+
+export type QuerySandboxContainersParams = QueryParameters<paths["/api/sandbox-containers"]["get"]>;
+export type QuerySandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers"]["get"]>;
+export type QuerySandboxContainersData = NonNullable<QuerySandboxContainersResponse["data"]>;
+export type SandboxContainer = QuerySandboxContainersData["items"][number];
+export type QueryAvailableSandboxContainersParams = QueryParameters<paths["/api/sandbox-containers/available"]["get"]>;
+export type QueryAvailableSandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers/available"]["get"]>;
+export type SandboxContainerStatus = components["schemas"]["SandboxContainerStatus"];
+export type SandboxContainerEgressMode = components["schemas"]["SandboxContainerEgressMode"];
+export type SandboxContainerPortMapping = components["schemas"]["SandboxContainerPortMapping"];
+export type SandboxContainerHostOption = components["schemas"]["SandboxContainerHostOptionSchema"];
+export type SandboxContainerCreateOptionsResponse = JsonResponse<paths["/api/sandbox-containers/create-options"]["get"]>;
+export type CreateSandboxContainerRequest = JsonRequestBody<paths["/api/sandbox-containers"]["post"]>;
+export type CreateSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers"]["post"]>;
+export type SandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}"]["delete"]>;
+export type DeleteSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}"]["delete"]>;
+export type StartSandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}/start"]["post"]>;
+export type StartSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/start"]["post"]>;
+export type StopSandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}/stop"]["post"]>;
+export type StopSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/stop"]["post"]>;
+export type PauseSandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}/pause"]["post"]>;
+export type PauseSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/pause"]["post"]>;
+export type ResumeSandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}/resume"]["post"]>;
+export type ResumeSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/resume"]["post"]>;
+export type UpdateSandboxContainerEgressPathParams = PathParameters<paths["/api/sandbox-containers/{id}/egress"]["patch"]>;
+export type UpdateSandboxContainerEgressRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/egress"]["patch"]>;
+export type UpdateSandboxContainerEgressResponse = JsonResponse<paths["/api/sandbox-containers/{id}/egress"]["patch"]>;
+
+export type ListContainerFilesParams = QueryParameters<paths["/api/sandbox-containers/{id}/files"]["get"]>;
+export type ListContainerFilesResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files"]["get"]>;
+export type ContainerFileInfo = components["schemas"]["ContainerFileInfo"];
+export type ContainerFileType = components["schemas"]["ContainerFileType"];
+export type ReadContainerFileParams = QueryParameters<paths["/api/sandbox-containers/{id}/files/read"]["get"]>;
+export type ReadContainerFileResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/read"]["get"]>;
+export type ContainerFileWriteRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/files/write"]["post"]>;
+export type ContainerFileWriteResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/write"]["post"]>;
+export type ContainerFileUploadRequest = MultipartRequestBody<paths["/api/sandbox-containers/{id}/files/upload"]["post"]>;
+export type ContainerFileUploadResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/upload"]["post"]>;
+export type DownloadContainerFilesParams = QueryParameters<paths["/api/sandbox-containers/{id}/files/download"]["get"]>;
+export type ContainerFileCopyRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/files/copy"]["post"]>;
+export type ContainerFileCopyResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/copy"]["post"]>;
+export type ContainerFileMoveRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/files/move"]["post"]>;
+export type ContainerFileMoveResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/move"]["post"]>;
+export type ContainerFileDeleteRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/files/delete"]["post"]>;
+export type ContainerFileDeleteResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/delete"]["post"]>;
+export type ContainerFileMkdirRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/files/mkdir"]["post"]>;
+export type ContainerFileMkdirResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files/mkdir"]["post"]>;
 
 export type InstanceConfig = components["schemas"]["InstanceConfigSchema"];
 export type AgentConfig = components["schemas"]["AgentConfig"];
@@ -135,6 +224,8 @@ export type ListAgentEventsData = NonNullable<ListAgentEventsResponse["data"]>;
 export type DownloadAgentReportPathParams = PathParameters<paths["/api/agent-sessions/reports/{report_id}/download"]["get"]>;
 export type UpdateAgentSessionTitleRequest = JsonRequestBody<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;
 export type UpdateAgentSessionTitleResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;
+export type UpdateAgentSessionSandboxContainerRequest = JsonRequestBody<paths["/api/agent-sessions/{session_id}/sandbox-container"]["patch"]>;
+export type UpdateAgentSessionSandboxContainerResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/sandbox-container"]["patch"]>;
 export type DeleteAgentSessionResponse = JsonResponse<paths["/api/agent-sessions/{session_id}"]["delete"]>;
 
 export type UserMessageEvent = components["schemas"]["UserMessageEvent"];

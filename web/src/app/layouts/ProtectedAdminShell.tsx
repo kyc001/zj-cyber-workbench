@@ -1,11 +1,14 @@
 import { AgentSessionProvider } from "../../features/playground/AgentSessionProvider";
+import { ContainerShellProvider } from "../../features/container-shell/ContainerShellProvider";
 import { AdminLayout } from "./AdminLayout";
 
 export function ProtectedAdminShell() {
   return (
     <div className="admin-app">
       <AgentSessionProvider>
-        <AdminLayout />
+        <ContainerShellProvider>
+          <AdminLayout />
+        </ContainerShellProvider>
       </AgentSessionProvider>
     </div>
   );

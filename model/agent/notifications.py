@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Column, Integer, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from schema.agent.notifications import AgentNotificationKind, AgentNotificationStatus, SYSTEM_NOTIFICATION_PRIORITY
@@ -14,7 +14,7 @@ _AGENT_NOTIFICATION_STATUS_COLUMN = Column(String(32), index=True, nullable=Fals
 class AgentNotification(SQLModel, table=True):
     """Durable inbox item for agent turn resumption.
 
-    Covers system-generated signals (subagent finished) and
+    Covers system-generated signals (subagent finished, async command done) and
     user messages queued while the agent loop is already running.
     """
 
@@ -33,6 +33,9 @@ class AgentNotification(SQLModel, table=True):
     target_agent_instance_id: str = Field(default="", index=True)
     nested_for_agent_code: str = Field(default="", index=True)
     nested_call_id: str = Field(default="", index=True)
+    sandbox_container_id: int | None = Field(default=None, index=True)
+    sandbox_container_generation: int = Field(default=0, sa_column=Column(BigInteger, nullable=False))
+    sandbox_skill_metadata: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     kind: AgentNotificationKind = Field(
         default=AgentNotificationKind.SUBAGENT_FINISHED,
         sa_column=_AGENT_NOTIFICATION_KIND_COLUMN,

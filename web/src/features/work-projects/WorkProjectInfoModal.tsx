@@ -47,6 +47,10 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
                   <span>负责人</span>
                   <strong>{workProjectOwnerNames(project)}</strong>
                 </div>
+                <div>
+                  <span>执行工作区</span>
+                  <strong>{project.sandbox_container?.container_name ?? "未绑定"}</strong>
+                </div>
               </section>
 
               {project.description ? <div className="project-info-description">{project.description}</div> : null}

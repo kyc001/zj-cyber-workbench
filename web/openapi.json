@@ -362,6 +362,38 @@
             "title": "Runtime Agent Code",
             "type": "string"
           },
+          "runtime_sandbox_container_generation": {
+            "default": 0,
+            "title": "Runtime Sandbox Container Generation",
+            "type": "integer"
+          },
+          "runtime_sandbox_container_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Sandbox Container Id"
+          },
+          "selected_sandbox_container_generation": {
+            "default": 0,
+            "title": "Selected Sandbox Container Generation",
+            "type": "integer"
+          },
+          "selected_sandbox_container_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Sandbox Container Id"
+          },
           "session_id": {
             "title": "Session Id",
             "type": "string"
@@ -550,6 +582,18 @@
             "minItems": 1,
             "title": "Content",
             "type": "array"
+          },
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
           }
         },
         "required": [
@@ -636,6 +680,331 @@
           "events"
         ],
         "title": "AgentTurnResponse",
+        "type": "object"
+      },
+      "ApprovalConsumeRequest": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ProposedAction"
+          },
+          "token": {
+            "minLength": 16,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "token"
+        ],
+        "title": "ApprovalConsumeRequest",
+        "type": "object"
+      },
+      "ApprovalConsumeResponse": {
+        "properties": {
+          "approval_id": {
+            "format": "uuid",
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "claims": {
+            "additionalProperties": true,
+            "title": "Claims",
+            "type": "object"
+          },
+          "consumed": {
+            "title": "Consumed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approval_id",
+          "consumed"
+        ],
+        "title": "ApprovalConsumeResponse",
+        "type": "object"
+      },
+      "ApprovalCreateRequest": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ProposedAction"
+          },
+          "approver_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approver Id"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/TargetEnvironment",
+            "default": "test"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AuthorizationScope"
+          }
+        },
+        "required": [
+          "action",
+          "scope"
+        ],
+        "title": "ApprovalCreateRequest",
+        "type": "object"
+      },
+      "ApprovalCreateResponse": {
+        "properties": {
+          "approval": {
+            "$ref": "#/components/schemas/ApprovalRecord"
+          }
+        },
+        "required": [
+          "approval"
+        ],
+        "title": "ApprovalCreateResponse",
+        "type": "object"
+      },
+      "ApprovalDecisionResponse": {
+        "properties": {
+          "approval": {
+            "$ref": "#/components/schemas/ApprovalRecord"
+          },
+          "token": {
+            "default": "",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval"
+        ],
+        "title": "ApprovalDecisionResponse",
+        "type": "object"
+      },
+      "ApprovalRecord": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ProposedAction"
+          },
+          "approval_id": {
+            "format": "uuid",
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "approver_id": {
+            "title": "Approver Id",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/PolicyDecision"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "requester_id": {
+            "title": "Requester Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_id",
+          "action",
+          "decision",
+          "status",
+          "requester_id",
+          "approver_id",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "ApprovalRecord",
+        "type": "object"
+      },
+      "AuthUser": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/components/schemas/SystemUserRole"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "email",
+          "username"
+        ],
+        "title": "AuthUser",
+        "type": "object"
+      },
+      "AuthorizationScope": {
+        "properties": {
+          "allowed_action_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Action Types",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "allowed_target_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Allowed Target Ids",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "max_load_test_concurrency": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Load Test Concurrency"
+          },
+          "max_load_test_duration_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Load Test Duration Seconds"
+          },
+          "max_load_test_rps": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Load Test Rps"
+          },
+          "maximum_risk_level": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "default": "L1"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "title": "AuthorizationScope",
+        "type": "object"
+      },
+      "Body_consume_handler_api_approvals_consume_post": {
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/ApprovalConsumeRequest"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        },
+        "required": [
+          "request",
+          "user"
+        ],
+        "title": "Body_consume_handler_api_approvals_consume_post",
+        "type": "object"
+      },
+      "Body_create_approval_handler_api_approvals_post": {
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/ApprovalCreateRequest"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        },
+        "required": [
+          "request",
+          "user"
+        ],
+        "title": "Body_create_approval_handler_api_approvals_post",
+        "type": "object"
+      },
+      "Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "overwrite": {
+            "default": true,
+            "title": "Overwrite",
+            "type": "boolean"
+          },
+          "path": {
+            "default": "/",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "title": "Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post",
         "type": "object"
       },
       "Body_upload_knowledge_documents_route_api_knowledges_documents_post": {
@@ -751,6 +1120,136 @@
         "title": "CommonResponse[Any]",
         "type": "object"
       },
+      "CommonResponse_ApprovalConsumeResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalConsumeResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ApprovalConsumeResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ApprovalCreateResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalCreateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ApprovalCreateResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ApprovalDecisionResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalDecisionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ApprovalDecisionResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ContainerFileReadResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContainerFileReadResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ContainerFileReadResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ContainerFileUploadResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContainerFileUploadResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ContainerFileUploadResponse]",
+        "type": "object"
+      },
       "CommonResponse_CreateWorkProjectSessionResponse_": {
         "properties": {
           "code": {
@@ -777,6 +1276,32 @@
         "title": "CommonResponse[CreateWorkProjectSessionResponse]",
         "type": "object"
       },
+      "CommonResponse_DeleteEgressProxyResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteEgressProxyResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteEgressProxyResponse]",
+        "type": "object"
+      },
       "CommonResponse_DeleteKnowledgeDocumentResponse_": {
         "properties": {
           "code": {
@@ -801,6 +1326,84 @@
           }
         },
         "title": "CommonResponse[DeleteKnowledgeDocumentResponse]",
+        "type": "object"
+      },
+      "CommonResponse_DeleteManagedHostResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteManagedHostResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteManagedHostResponse]",
+        "type": "object"
+      },
+      "CommonResponse_DeleteSandboxContainerResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteSandboxContainerResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteSandboxContainerResponse]",
+        "type": "object"
+      },
+      "CommonResponse_DeleteSandboxImageResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteSandboxImageResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteSandboxImageResponse]",
         "type": "object"
       },
       "CommonResponse_DeleteSystemUserResponse_": {
@@ -853,6 +1456,32 @@
           }
         },
         "title": "CommonResponse[DeleteWorkProjectResponse]",
+        "type": "object"
+      },
+      "CommonResponse_EgressProxySchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EgressProxySchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[EgressProxySchema]",
         "type": "object"
       },
       "CommonResponse_FetchProviderModelsResponse_": {
@@ -1063,6 +1692,58 @@
         "title": "CommonResponse[ListAgentsResponse]",
         "type": "object"
       },
+      "CommonResponse_ListContainerFilesResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListContainerFilesResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ListContainerFilesResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ListManagedHostImagesResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListManagedHostImagesResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ListManagedHostImagesResponse]",
+        "type": "object"
+      },
       "CommonResponse_ListWorkProjectSessionsResponse_": {
         "properties": {
           "code": {
@@ -1087,6 +1768,110 @@
           }
         },
         "title": "CommonResponse[ListWorkProjectSessionsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ManagedHostSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManagedHostSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ManagedHostSchema]",
+        "type": "object"
+      },
+      "CommonResponse_PolicyDecision_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PolicyDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[PolicyDecision]",
+        "type": "object"
+      },
+      "CommonResponse_PullManagedHostImagesResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PullManagedHostImagesResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[PullManagedHostImagesResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QueryEgressProxiesResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryEgressProxiesResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryEgressProxiesResponse]",
         "type": "object"
       },
       "CommonResponse_QueryKnowledgeDocumentsResponse_": {
@@ -1141,6 +1926,84 @@
         "title": "CommonResponse[QueryKnowledgeVectorsResponse]",
         "type": "object"
       },
+      "CommonResponse_QueryManagedHostsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryManagedHostsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryManagedHostsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QuerySandboxContainersResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuerySandboxContainersResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QuerySandboxContainersResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QuerySandboxImagesResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuerySandboxImagesResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QuerySandboxImagesResponse]",
+        "type": "object"
+      },
       "CommonResponse_QuerySystemUsersResponse_": {
         "properties": {
           "code": {
@@ -1193,7 +2056,7 @@
         "title": "CommonResponse[QueryWorkProjectsResponse]",
         "type": "object"
       },
-      "CommonResponse_SystemUserLoginResponse_": {
+      "CommonResponse_SandboxContainerCreateOptionsResponse_": {
         "properties": {
           "code": {
             "default": 200,
@@ -1203,7 +2066,7 @@
           "data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SystemUserLoginResponse"
+                "$ref": "#/components/schemas/SandboxContainerCreateOptionsResponse"
               },
               {
                 "type": "null"
@@ -1216,7 +2079,59 @@
             "type": "string"
           }
         },
-        "title": "CommonResponse[SystemUserLoginResponse]",
+        "title": "CommonResponse[SandboxContainerCreateOptionsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_SandboxContainerSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SandboxContainerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[SandboxContainerSchema]",
+        "type": "object"
+      },
+      "CommonResponse_SandboxImageSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SandboxImageSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[SandboxImageSchema]",
         "type": "object"
       },
       "CommonResponse_SystemUserSchema_": {
@@ -1243,6 +2158,32 @@
           }
         },
         "title": "CommonResponse[SystemUserSchema]",
+        "type": "object"
+      },
+      "CommonResponse_TestEgressProxyResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TestEgressProxyResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[TestEgressProxyResponse]",
         "type": "object"
       },
       "CommonResponse_UpdateInstanceConfigResponse_": {
@@ -1349,6 +2290,421 @@
         "title": "CommonResponse[WorkProjectSchema]",
         "type": "object"
       },
+      "CommonResponse_list_ApprovalRecord__": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ApprovalRecord"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[list[ApprovalRecord]]",
+        "type": "object"
+      },
+      "ContainerFileCopyRequest": {
+        "properties": {
+          "destination": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Destination",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources",
+          "destination"
+        ],
+        "title": "ContainerFileCopyRequest",
+        "type": "object"
+      },
+      "ContainerFileDeleteRequest": {
+        "properties": {
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "paths"
+        ],
+        "title": "ContainerFileDeleteRequest",
+        "type": "object"
+      },
+      "ContainerFileInfo": {
+        "properties": {
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "modified_at": {
+            "title": "Modified At",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "permissions": {
+            "title": "Permissions",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ContainerFileType"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "size",
+          "modified_at",
+          "owner",
+          "group",
+          "permissions",
+          "path"
+        ],
+        "title": "ContainerFileInfo",
+        "type": "object"
+      },
+      "ContainerFileMkdirRequest": {
+        "properties": {
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "ContainerFileMkdirRequest",
+        "type": "object"
+      },
+      "ContainerFileMoveRequest": {
+        "properties": {
+          "destination": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Destination",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources",
+          "destination"
+        ],
+        "title": "ContainerFileMoveRequest",
+        "type": "object"
+      },
+      "ContainerFileReadResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "content",
+          "size"
+        ],
+        "title": "ContainerFileReadResponse",
+        "type": "object"
+      },
+      "ContainerFileType": {
+        "enum": [
+          "file",
+          "directory",
+          "symlink"
+        ],
+        "title": "ContainerFileType",
+        "type": "string"
+      },
+      "ContainerFileUploadItem": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "size"
+        ],
+        "title": "ContainerFileUploadItem",
+        "type": "object"
+      },
+      "ContainerFileUploadResponse": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ContainerFileUploadItem"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "files"
+        ],
+        "title": "ContainerFileUploadResponse",
+        "type": "object"
+      },
+      "ContainerFileWriteRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 1048576,
+            "minLength": 0,
+            "title": "Content",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "title": "ContainerFileWriteRequest",
+        "type": "object"
+      },
+      "CreateEgressProxyRequest": {
+        "properties": {
+          "proxy_account": {
+            "default": "",
+            "maxLength": 255,
+            "title": "Proxy Account",
+            "type": "string"
+          },
+          "proxy_host": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Proxy Host",
+            "type": "string"
+          },
+          "proxy_password": {
+            "default": "",
+            "maxLength": 512,
+            "title": "Proxy Password",
+            "type": "string"
+          },
+          "proxy_port": {
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Proxy Port",
+            "type": "integer"
+          },
+          "proxy_type": {
+            "$ref": "#/components/schemas/EgressProxyType",
+            "default": "http"
+          }
+        },
+        "required": [
+          "proxy_host",
+          "proxy_port"
+        ],
+        "title": "CreateEgressProxyRequest",
+        "type": "object"
+      },
+      "CreateManagedHostRequest": {
+        "properties": {
+          "host_account": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Host Account",
+            "type": "string"
+          },
+          "host_password": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Host Password",
+            "type": "string"
+          },
+          "ip_address": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Ip Address",
+            "type": "string"
+          },
+          "ssh_port": {
+            "default": 22,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Ssh Port",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ip_address",
+          "host_account",
+          "host_password"
+        ],
+        "title": "CreateManagedHostRequest",
+        "type": "object"
+      },
+      "CreateSandboxContainerRequest": {
+        "properties": {
+          "egress_mode": {
+            "$ref": "#/components/schemas/SandboxContainerEgressMode",
+            "default": "direct"
+          },
+          "egress_proxy_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Proxy Id"
+          },
+          "host_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Host Id",
+            "type": "integer"
+          },
+          "image_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Image Id",
+            "type": "integer"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Assign container owner user ID. Admin only; defaults to the creator.",
+            "title": "Owner Id"
+          },
+          "port_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxContainerPortMapping"
+            },
+            "maxItems": 32,
+            "title": "Port Mappings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "host_id",
+          "image_id"
+        ],
+        "title": "CreateSandboxContainerRequest",
+        "type": "object"
+      },
+      "CreateSandboxImageRequest": {
+        "properties": {
+          "control_proxy_port": {
+            "default": 8000,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Control Port",
+            "type": "integer"
+          },
+          "image_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Image Name",
+            "type": "string"
+          },
+          "supports_tor": {
+            "default": false,
+            "title": "Supports Tor",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "image_name"
+        ],
+        "title": "CreateSandboxImageRequest",
+        "type": "object"
+      },
       "CreateSystemUserRequest": {
         "properties": {
           "email": {
@@ -1412,6 +2768,18 @@
             "title": "Owner User Ids",
             "type": "array"
           },
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
+          },
           "type": {
             "$ref": "#/components/schemas/WorkProjectType",
             "default": "penetration_test"
@@ -1437,6 +2805,19 @@
         "title": "CreateWorkProjectSessionResponse",
         "type": "object"
       },
+      "DeleteEgressProxyResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteEgressProxyResponse",
+        "type": "object"
+      },
       "DeleteKnowledgeDocumentResponse": {
         "properties": {
           "id": {
@@ -1448,6 +2829,65 @@
           "id"
         ],
         "title": "DeleteKnowledgeDocumentResponse",
+        "type": "object"
+      },
+      "DeleteManagedHostImageRequest": {
+        "properties": {
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "image_id": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Image Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "image_id"
+        ],
+        "title": "DeleteManagedHostImageRequest",
+        "type": "object"
+      },
+      "DeleteManagedHostResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteManagedHostResponse",
+        "type": "object"
+      },
+      "DeleteSandboxContainerResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteSandboxContainerResponse",
+        "type": "object"
+      },
+      "DeleteSandboxImageResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteSandboxImageResponse",
         "type": "object"
       },
       "DeleteSystemUserResponse": {
@@ -1474,19 +2914,6 @@
           "id"
         ],
         "title": "DeleteWorkProjectResponse",
-        "type": "object"
-      },
-      "DesktopBootstrapResponse": {
-        "properties": {
-          "token": {
-            "title": "Token",
-            "type": "string"
-          }
-        },
-        "required": [
-          "token"
-        ],
-        "title": "DesktopBootstrapResponse",
         "type": "object"
       },
       "DocStatus": {
@@ -1543,6 +2970,64 @@
         "title": "DoneEvent",
         "type": "object"
       },
+      "EgressProxySchema": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "proxy_account": {
+            "title": "Proxy Account",
+            "type": "string"
+          },
+          "proxy_host": {
+            "title": "Proxy Host",
+            "type": "string"
+          },
+          "proxy_password": {
+            "title": "Proxy Password",
+            "type": "string"
+          },
+          "proxy_port": {
+            "title": "Proxy Port",
+            "type": "integer"
+          },
+          "proxy_type": {
+            "$ref": "#/components/schemas/EgressProxyType"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "proxy_type",
+          "proxy_host",
+          "proxy_port",
+          "proxy_account",
+          "proxy_password",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EgressProxySchema",
+        "type": "object"
+      },
+      "EgressProxyType": {
+        "enum": [
+          "http",
+          "https",
+          "socks5"
+        ],
+        "title": "EgressProxyType",
+        "type": "string"
+      },
       "ErrorEvent": {
         "properties": {
           "agent_name": {
@@ -1593,6 +3078,26 @@
         "title": "ErrorEvent",
         "type": "object"
       },
+      "EvaluateActionRequest": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ProposedAction"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/TargetEnvironment",
+            "default": "test"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AuthorizationScope"
+          }
+        },
+        "required": [
+          "action",
+          "scope"
+        ],
+        "title": "EvaluateActionRequest",
+        "type": "object"
+      },
       "FetchProviderModelsRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1629,6 +3134,19 @@
           "models"
         ],
         "title": "FetchProviderModelsResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
         "type": "object"
       },
       "HealthResponse": {
@@ -2299,6 +3817,43 @@
         "title": "ListAgentsResponse",
         "type": "object"
       },
+      "ListContainerFilesResponse": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ContainerFileInfo"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "files"
+        ],
+        "title": "ListContainerFilesResponse",
+        "type": "object"
+      },
+      "ListManagedHostImagesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ManagedHostImageSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ListManagedHostImagesResponse",
+        "type": "object"
+      },
       "ListWorkProjectSessionsResponse": {
         "properties": {
           "items": {
@@ -2313,6 +3868,359 @@
           "items"
         ],
         "title": "ListWorkProjectSessionsResponse",
+        "type": "object"
+      },
+      "ManagedHostImageSchema": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "image_hash": {
+            "default": "",
+            "title": "Image Hash",
+            "type": "string"
+          },
+          "image_id": {
+            "default": "",
+            "title": "Image Id",
+            "type": "string"
+          },
+          "image_name": {
+            "title": "Image Name",
+            "type": "string"
+          },
+          "image_size": {
+            "default": 0,
+            "format": "int64",
+            "title": "Image Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "image_name"
+        ],
+        "title": "ManagedHostImageSchema",
+        "type": "object"
+      },
+      "ManagedHostSchema": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "has_password": {
+            "default": false,
+            "title": "Has Password",
+            "type": "boolean"
+          },
+          "host_account": {
+            "title": "Host Account",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip_address": {
+            "title": "Ip Address",
+            "type": "string"
+          },
+          "ssh_port": {
+            "title": "Ssh Port",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ip_address",
+          "ssh_port",
+          "host_account",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ManagedHostSchema",
+        "type": "object"
+      },
+      "PolicyDecision": {
+        "properties": {
+          "approval_ttl_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Ttl Seconds"
+          },
+          "constraints": {
+            "additionalProperties": true,
+            "title": "Constraints",
+            "type": "object"
+          },
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PolicyEffect"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          }
+        },
+        "required": [
+          "effect",
+          "risk_level"
+        ],
+        "title": "PolicyDecision",
+        "type": "object"
+      },
+      "PolicyEffect": {
+        "enum": [
+          "allow",
+          "require_approval",
+          "deny"
+        ],
+        "title": "PolicyEffect",
+        "type": "string"
+      },
+      "ProposedAction": {
+        "properties": {
+          "action_type": {
+            "maxLength": 128,
+            "minLength": 3,
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)+$",
+            "title": "Action Type",
+            "type": "string"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "is_load_test": {
+            "default": false,
+            "title": "Is Load Test",
+            "type": "boolean"
+          },
+          "is_write": {
+            "default": false,
+            "title": "Is Write",
+            "type": "boolean"
+          },
+          "prechecks": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Prechecks",
+            "type": "array"
+          },
+          "project_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_concurrency": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Concurrency"
+          },
+          "requested_duration_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Duration Seconds"
+          },
+          "requested_rps": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Rps"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "rollback_steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Rollback Steps",
+            "type": "array"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "verification_steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Verification Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "incident_id",
+          "target_id",
+          "action_type",
+          "risk_level",
+          "reason"
+        ],
+        "title": "ProposedAction",
+        "type": "object"
+      },
+      "PullManagedHostImageResultSchema": {
+        "properties": {
+          "image_name": {
+            "title": "Image Name",
+            "type": "string"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "image_name",
+          "success"
+        ],
+        "title": "PullManagedHostImageResultSchema",
+        "type": "object"
+      },
+      "PullManagedHostImagesRequest": {
+        "properties": {
+          "image_names": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Image Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "image_names"
+        ],
+        "title": "PullManagedHostImagesRequest",
+        "type": "object"
+      },
+      "PullManagedHostImagesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PullManagedHostImageResultSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PullManagedHostImagesResponse",
+        "type": "object"
+      },
+      "QueryEgressProxiesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EgressProxySchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryEgressProxiesResponse",
         "type": "object"
       },
       "QueryKnowledgeDocumentsResponse": {
@@ -2383,6 +4291,99 @@
           "items"
         ],
         "title": "QueryKnowledgeVectorsResponse",
+        "type": "object"
+      },
+      "QueryManagedHostsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ManagedHostSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryManagedHostsResponse",
+        "type": "object"
+      },
+      "QuerySandboxContainersResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxContainerSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QuerySandboxContainersResponse",
+        "type": "object"
+      },
+      "QuerySandboxImagesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxImageSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QuerySandboxImagesResponse",
         "type": "object"
       },
       "QuerySystemUsersResponse": {
@@ -2496,6 +4497,16 @@
         "title": "ReportToolResultOutputSchema",
         "type": "object"
       },
+      "RiskLevel": {
+        "enum": [
+          "L0",
+          "L1",
+          "L2",
+          "L3"
+        ],
+        "title": "RiskLevel",
+        "type": "string"
+      },
       "RunStateEvent": {
         "properties": {
           "created_at": {
@@ -2524,6 +4535,266 @@
           "running"
         ],
         "title": "RunStateEvent",
+        "type": "object"
+      },
+      "SandboxContainerCreateOptionsResponse": {
+        "properties": {
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxContainerHostOptionSchema"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxImageSchema"
+            },
+            "title": "Images",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hosts",
+          "images"
+        ],
+        "title": "SandboxContainerCreateOptionsResponse",
+        "type": "object"
+      },
+      "SandboxContainerEgressMode": {
+        "enum": [
+          "direct",
+          "proxy",
+          "tor"
+        ],
+        "title": "SandboxContainerEgressMode",
+        "type": "string"
+      },
+      "SandboxContainerHostOptionSchema": {
+        "properties": {
+          "execution_backend": {
+            "enum": [
+              "local",
+              "ssh"
+            ],
+            "title": "Execution Backend",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip_address": {
+            "title": "Ip Address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ip_address",
+          "execution_backend"
+        ],
+        "title": "SandboxContainerHostOptionSchema",
+        "type": "object"
+      },
+      "SandboxContainerPortMapping": {
+        "properties": {
+          "container_port": {
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Container Port",
+            "type": "integer"
+          },
+          "host_port": {
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Host Port",
+            "type": "integer"
+          },
+          "protocol": {
+            "default": "tcp",
+            "enum": [
+              "tcp",
+              "udp"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "container_port",
+          "host_port"
+        ],
+        "title": "SandboxContainerPortMapping",
+        "type": "object"
+      },
+      "SandboxContainerSchema": {
+        "properties": {
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "container_hash": {
+            "title": "Container Hash",
+            "type": "string"
+          },
+          "container_name": {
+            "title": "Container Name",
+            "type": "string"
+          },
+          "control_proxy_host_port": {
+            "title": "Control Host Port",
+            "type": "integer"
+          },
+          "control_proxy_port": {
+            "title": "Control Port",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "egress_label": {
+            "title": "Egress Label",
+            "type": "string"
+          },
+          "egress_mode": {
+            "$ref": "#/components/schemas/SandboxContainerEgressMode"
+          },
+          "egress_proxy_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Proxy Id"
+          },
+          "host_id": {
+            "title": "Host Id",
+            "type": "integer"
+          },
+          "host_ip_address": {
+            "title": "Host Ip Address",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image_id": {
+            "title": "Image Id",
+            "type": "integer"
+          },
+          "image_name": {
+            "title": "Image Name",
+            "type": "string"
+          },
+          "owner_id": {
+            "title": "Owner Id",
+            "type": "integer"
+          },
+          "owner_username": {
+            "title": "Owner Username",
+            "type": "string"
+          },
+          "port_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxContainerPortMapping"
+            },
+            "title": "Port Mappings",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SandboxContainerStatus"
+          },
+          "supports_tor": {
+            "title": "Supports Tor",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "host_id",
+          "host_ip_address",
+          "container_name",
+          "container_hash",
+          "image_id",
+          "image_name",
+          "supports_tor",
+          "control_proxy_port",
+          "egress_mode",
+          "egress_proxy_id",
+          "egress_label",
+          "control_proxy_host_port",
+          "port_mappings",
+          "status",
+          "owner_id",
+          "owner_username",
+          "can_manage",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SandboxContainerSchema",
+        "type": "object"
+      },
+      "SandboxContainerStatus": {
+        "enum": [
+          "created",
+          "running",
+          "paused",
+          "stopped",
+          "error"
+        ],
+        "title": "SandboxContainerStatus",
+        "type": "string"
+      },
+      "SandboxImageSchema": {
+        "properties": {
+          "control_proxy_port": {
+            "title": "Control Port",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image_name": {
+            "title": "Image Name",
+            "type": "string"
+          },
+          "supports_tor": {
+            "title": "Supports Tor",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "image_name",
+          "control_proxy_port",
+          "supports_tor",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SandboxImageSchema",
         "type": "object"
       },
       "SessionType": {
@@ -2628,41 +4899,6 @@
         "title": "SubagentTaskEvent",
         "type": "object"
       },
-      "SystemUserLoginRequest": {
-        "properties": {
-          "email": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Email",
-            "type": "string"
-          },
-          "password": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Password",
-            "type": "string"
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ],
-        "title": "SystemUserLoginRequest",
-        "type": "object"
-      },
-      "SystemUserLoginResponse": {
-        "properties": {
-          "token": {
-            "title": "Token",
-            "type": "string"
-          }
-        },
-        "required": [
-          "token"
-        ],
-        "title": "SystemUserLoginResponse",
-        "type": "object"
-      },
       "SystemUserRole": {
         "enum": [
           "admin",
@@ -2708,6 +4944,55 @@
           "updated_at"
         ],
         "title": "SystemUserSchema",
+        "type": "object"
+      },
+      "TargetEnvironment": {
+        "enum": [
+          "development",
+          "test",
+          "staging",
+          "production"
+        ],
+        "title": "TargetEnvironment",
+        "type": "string"
+      },
+      "TestEgressProxyResponse": {
+        "properties": {
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "success",
+          "elapsed_ms",
+          "message"
+        ],
+        "title": "TestEgressProxyResponse",
         "type": "object"
       },
       "TextCompleteEvent": {
@@ -3154,6 +5439,24 @@
         "title": "UpdateAgentConfigRequest",
         "type": "object"
       },
+      "UpdateAgentSessionSandboxContainerRequest": {
+        "properties": {
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
+          }
+        },
+        "title": "UpdateAgentSessionSandboxContainerRequest",
+        "type": "object"
+      },
       "UpdateAgentSessionTitleRequest": {
         "properties": {
           "title": {
@@ -3167,6 +5470,72 @@
           "title"
         ],
         "title": "UpdateAgentSessionTitleRequest",
+        "type": "object"
+      },
+      "UpdateEgressProxyRequest": {
+        "properties": {
+          "proxy_account": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Account"
+          },
+          "proxy_host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Host"
+          },
+          "proxy_password": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Password"
+          },
+          "proxy_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Port"
+          },
+          "proxy_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EgressProxyType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "UpdateEgressProxyRequest",
         "type": "object"
       },
       "UpdateInstanceConfigRequest": {
@@ -3213,6 +5582,86 @@
           "restarted"
         ],
         "title": "UpdateInstanceConfigResponse",
+        "type": "object"
+      },
+      "UpdateManagedHostRequest": {
+        "properties": {
+          "host_account": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Account"
+          },
+          "host_password": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Password"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "ssh_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssh Port"
+          }
+        },
+        "title": "UpdateManagedHostRequest",
+        "type": "object"
+      },
+      "UpdateSandboxContainerEgressRequest": {
+        "properties": {
+          "egress_mode": {
+            "$ref": "#/components/schemas/SandboxContainerEgressMode",
+            "default": "direct"
+          },
+          "egress_proxy_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Proxy Id"
+          }
+        },
+        "title": "UpdateSandboxContainerEgressRequest",
         "type": "object"
       },
       "UpdateSystemUserRequest": {
@@ -3299,6 +5748,18 @@
             "maxItems": 100,
             "title": "Owner User Ids",
             "type": "array"
+          },
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
           },
           "type": {
             "$ref": "#/components/schemas/WorkProjectType",
@@ -3400,6 +5861,46 @@
           "content"
         ],
         "title": "UserMessageEvent",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
         "type": "object"
       },
       "WorkProjectAgentSummaryContentSchema": {
@@ -4136,6 +6637,27 @@
             "title": "Progress",
             "type": "number"
           },
+          "sandbox_container": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SandboxContainerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
+          },
           "session_count": {
             "default": 0,
             "title": "Session Count",
@@ -4254,13 +6776,6 @@
         "title": "WorkProjectType",
         "type": "string"
       }
-    },
-    "securitySchemes": {
-      "AccessTokenAuth": {
-        "in": "header",
-        "name": "X-Z3r0-Access-Token",
-        "type": "apiKey"
-      }
     }
   },
   "info": {
@@ -4297,16 +6812,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -4318,11 +6823,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "List Agent Sessions Route",
         "tags": [
           "agent-sessions"
@@ -4366,16 +6866,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -4397,11 +6887,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Download Agent Report Route",
         "tags": [
           "agent-sessions"
@@ -4432,16 +6917,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -4453,11 +6928,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Create Agent Session Turn Route",
         "tags": [
           "agent-sessions"
@@ -4489,16 +6959,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -4520,11 +6980,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Delete Agent Session Route",
         "tags": [
           "agent-sessions"
@@ -4556,16 +7011,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -4587,11 +7032,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Cancel Agent Session Tasks Route",
         "tags": [
           "agent-sessions"
@@ -4652,16 +7092,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -4673,11 +7103,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "List Agent Events Route",
         "tags": [
           "agent-sessions"
@@ -4709,7 +7134,7 @@
             },
             "description": "Successful Response"
           },
-          "401": {
+          "404": {
             "content": {
               "application/json": {
                 "schema": {
@@ -4717,7 +7142,59 @@
                 }
               }
             },
-            "description": "Unauthorized"
+            "description": "Agent session not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Interrupt Agent Session Route",
+        "tags": [
+          "agent-sessions"
+        ]
+      }
+    },
+    "/api/agent-sessions/{session_id}/sandbox-container": {
+      "patch": {
+        "operationId": "update_agent_session_sandbox_container_route_api_agent_sessions__session_id__sandbox_container_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgentSessionSandboxContainerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentSessionSummarySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
           },
           "404": {
             "content": {
@@ -4740,12 +7217,7 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
-        "summary": "Interrupt Agent Session Route",
+        "summary": "Update Agent Session Sandbox Container Route",
         "tags": [
           "agent-sessions"
         ]
@@ -4786,16 +7258,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -4817,11 +7279,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Update Agent Session Title Route",
         "tags": [
           "agent-sessions"
@@ -4863,16 +7320,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -4894,11 +7341,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Submit Agent Session Turn Route",
         "tags": [
           "agent-sessions"
@@ -4919,7 +7361,7 @@
             },
             "description": "Successful Response"
           },
-          "401": {
+          "422": {
             "content": {
               "application/json": {
                 "schema": {
@@ -4927,7 +7369,57 @@
                 }
               }
             },
-            "description": "Unauthorized"
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Agents Handler",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/approvals": {
+      "get": {
+        "operationId": "list_approvals_handler_api_approvals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_list_ApprovalRecord__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Approvals Handler",
+        "tags": [
+          "approvals"
+        ]
+      },
+      "post": {
+        "operationId": "create_approval_handler_api_approvals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_approval_handler_api_approvals_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ApprovalCreateResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
           },
           "422": {
             "content": {
@@ -4940,14 +7432,919 @@
             "description": "Validation Error"
           }
         },
-        "security": [
+        "summary": "Create Approval Handler",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/approvals/consume": {
+      "post": {
+        "operationId": "consume_handler_api_approvals_consume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_consume_handler_api_approvals_consume_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ApprovalConsumeResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Consume Handler",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/approvals/evaluate": {
+      "post": {
+        "operationId": "evaluate_action_handler_api_approvals_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_PolicyDecision_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluate Action Handler",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/approvals/{approval_id}/approve": {
+      "post": {
+        "operationId": "approve_handler_api_approvals__approval_id__approve_post",
+        "parameters": [
           {
-            "AccessTokenAuth": []
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
           }
         ],
-        "summary": "List Agents Handler",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ApprovalDecisionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Handler",
         "tags": [
-          "agents"
+          "approvals"
+        ]
+      }
+    },
+    "/api/approvals/{approval_id}/reject": {
+      "post": {
+        "operationId": "reject_handler_api_approvals__approval_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ApprovalDecisionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Handler",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/api/egress-proxies": {
+      "get": {
+        "operationId": "query_egress_proxies_route_api_egress_proxies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryEgressProxiesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Egress Proxies Route",
+        "tags": [
+          "egress-proxies"
+        ]
+      },
+      "post": {
+        "operationId": "create_egress_proxy_handler_api_egress_proxies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEgressProxyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_EgressProxySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      }
+    },
+    "/api/egress-proxies/{id}": {
+      "delete": {
+        "operationId": "delete_egress_proxy_handler_api_egress_proxies__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteEgressProxyResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Egress proxy not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      },
+      "patch": {
+        "operationId": "update_egress_proxy_handler_api_egress_proxies__id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEgressProxyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_EgressProxySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Egress proxy not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      }
+    },
+    "/api/egress-proxies/{id}/test": {
+      "post": {
+        "operationId": "test_egress_proxy_handler_api_egress_proxies__id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_TestEgressProxyResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Egress proxy not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      }
+    },
+    "/api/hosts": {
+      "get": {
+        "operationId": "query_managed_hosts_route_api_hosts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryManagedHostsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Managed Hosts Route",
+        "tags": [
+          "hosts"
+        ]
+      },
+      "post": {
+        "operationId": "create_managed_host_handler_api_hosts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManagedHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ManagedHostSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Managed Host Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
+    "/api/hosts/{id}": {
+      "delete": {
+        "operationId": "delete_managed_host_handler_api_hosts__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteManagedHostResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Managed Host Handler",
+        "tags": [
+          "hosts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_managed_host_handler_api_hosts__id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateManagedHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ManagedHostSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Managed Host Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
+    "/api/hosts/{id}/images": {
+      "get": {
+        "operationId": "list_managed_host_images_handler_api_hosts__id__images_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ListManagedHostImagesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Managed Host Images Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
+    "/api/hosts/{id}/images/pull": {
+      "post": {
+        "operationId": "pull_managed_host_images_handler_api_hosts__id__images_pull_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PullManagedHostImagesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_PullManagedHostImagesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pull Managed Host Images Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
+    "/api/hosts/{id}/images/remove": {
+      "post": {
+        "operationId": "delete_managed_host_image_handler_api_hosts__id__images_remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteManagedHostImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Managed Host Image Handler",
+        "tags": [
+          "hosts"
         ]
       }
     },
@@ -5006,26 +8403,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5037,11 +8414,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Query Knowledge Documents Route",
         "tags": [
           "knowledges"
@@ -5080,26 +8452,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5111,11 +8463,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Upload Knowledge Documents Route",
         "tags": [
           "knowledges"
@@ -5149,26 +8496,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5190,11 +8517,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Delete Knowledge Document Route",
         "tags": [
           "knowledges"
@@ -5226,26 +8548,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5267,11 +8569,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Get Knowledge Document Route",
         "tags": [
           "knowledges"
@@ -5328,26 +8625,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5359,11 +8636,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Get Knowledge Graph Route",
         "tags": [
           "knowledges"
@@ -5419,26 +8691,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5450,11 +8702,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Search Knowledge Graph Route",
         "tags": [
           "knowledges"
@@ -5500,26 +8747,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5531,11 +8758,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Query Knowledge Vectors Route",
         "tags": [
           "knowledges"
@@ -5569,26 +8791,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5610,14 +8812,1725 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Get Knowledge Vector Route",
         "tags": [
           "knowledges"
+        ]
+      }
+    },
+    "/api/sandbox-containers": {
+      "get": {
+        "operationId": "query_sandbox_containers_route_api_sandbox_containers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QuerySandboxContainersResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Sandbox Containers Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      },
+      "post": {
+        "operationId": "create_sandbox_container_route_api_sandbox_containers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSandboxContainerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox image not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/available": {
+      "get": {
+        "operationId": "query_available_sandbox_containers_route_api_sandbox_containers_available_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "work_project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Work Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_non_running",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Non Running",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QuerySandboxContainersResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Available Sandbox Containers Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/create-options": {
+      "get": {
+        "operationId": "sandbox_container_create_options_route_api_sandbox_containers_create_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerCreateOptionsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sandbox Container Create Options Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}": {
+      "delete": {
+        "operationId": "delete_sandbox_container_route_api_sandbox_containers__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteSandboxContainerResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/egress": {
+      "patch": {
+        "operationId": "update_sandbox_container_egress_route_api_sandbox_containers__id__egress_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSandboxContainerEgressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Sandbox Container Egress Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files": {
+      "get": {
+        "operationId": "list_container_files_route_api_sandbox_containers__id__files_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "default": "/",
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ListContainerFilesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "List Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/copy": {
+      "post": {
+        "operationId": "copy_container_files_route_api_sandbox_containers__id__files_copy_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerFileCopyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Copy Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/delete": {
+      "post": {
+        "operationId": "delete_container_files_route_api_sandbox_containers__id__files_delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerFileDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Delete Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/download": {
+      "get": {
+        "operationId": "download_container_files_route_api_sandbox_containers__id__files_download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "title": "Path",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/x-tar": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "File stream or tar archive"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Download Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/mkdir": {
+      "post": {
+        "operationId": "mkdir_container_files_route_api_sandbox_containers__id__files_mkdir_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerFileMkdirRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Mkdir Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/move": {
+      "post": {
+        "operationId": "move_container_files_route_api_sandbox_containers__id__files_move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerFileMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Move Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/read": {
+      "get": {
+        "operationId": "read_container_file_route_api_sandbox_containers__id__files_read_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base64",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Base64",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ContainerFileReadResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Read Container File Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/upload": {
+      "post": {
+        "operationId": "upload_container_files_route_api_sandbox_containers__id__files_upload_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ContainerFileUploadResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Upload Container Files Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/files/write": {
+      "post": {
+        "operationId": "write_container_file_route_api_sandbox_containers__id__files_write_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerFileWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Write Container File Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/pause": {
+      "post": {
+        "operationId": "pause_sandbox_container_route_api_sandbox_containers__id__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pause Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/resume": {
+      "post": {
+        "operationId": "resume_sandbox_container_route_api_sandbox_containers__id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resume Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/start": {
+      "post": {
+        "operationId": "start_sandbox_container_route_api_sandbox_containers__id__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/stop": {
+      "post": {
+        "operationId": "stop_sandbox_container_route_api_sandbox_containers__id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-images": {
+      "get": {
+        "operationId": "query_sandbox_images_route_api_sandbox_images_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QuerySandboxImagesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Sandbox Images Route",
+        "tags": [
+          "sandbox-images"
+        ]
+      },
+      "post": {
+        "operationId": "create_sandbox_image_handler_api_sandbox_images_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSandboxImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxImageSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Sandbox Image Handler",
+        "tags": [
+          "sandbox-images"
+        ]
+      }
+    },
+    "/api/sandbox-images/{id}": {
+      "delete": {
+        "operationId": "delete_sandbox_image_handler_api_sandbox_images__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteSandboxImageResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox image not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Sandbox Image Handler",
+        "tags": [
+          "sandbox-images"
         ]
       }
     },
@@ -5635,26 +10548,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5666,11 +10559,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Get Instance Config Handler",
         "tags": [
           "system-config"
@@ -5709,26 +10597,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5740,11 +10608,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Update Instance Config Handler",
         "tags": [
           "system-config"
@@ -5785,26 +10648,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5816,11 +10659,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Fetch Provider Models Handler",
         "tags": [
           "system-config"
@@ -5876,26 +10714,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5907,11 +10725,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Query System Users Route",
         "tags": [
           "system-users"
@@ -5940,26 +10753,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -5971,63 +10764,7 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Create System User Handler",
-        "tags": [
-          "system-users"
-        ]
-      }
-    },
-    "/api/system-users/login": {
-      "post": {
-        "operationId": "system_user_login_handler_api_system_users_login_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SystemUserLoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_SystemUserLoginResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Invalid email or password"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "System User Login Handler",
         "tags": [
           "system-users"
         ]
@@ -6068,26 +10805,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6109,11 +10826,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Delete System User Handler",
         "tags": [
           "system-users"
@@ -6153,26 +10865,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6194,11 +10886,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Update System User Handler",
         "tags": [
           "system-users"
@@ -6254,16 +10941,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -6275,11 +10952,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Query Work Projects Route",
         "tags": [
           "work-projects"
@@ -6318,26 +10990,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -6349,11 +11001,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Create Work Project Route",
         "tags": [
           "work-projects"
@@ -6385,26 +11032,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6426,11 +11053,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Delete Work Project Route",
         "tags": [
           "work-projects"
@@ -6472,26 +11094,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6513,11 +11115,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Cancel Work Project Route",
         "tags": [
           "work-projects"
@@ -6569,26 +11166,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6610,11 +11187,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Update Work Project Metadata Route",
         "tags": [
           "work-projects"
@@ -6646,16 +11218,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6677,11 +11239,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Get Work Project Record Snapshot Route",
         "tags": [
           "work-projects"
@@ -6723,26 +11280,6 @@
             },
             "description": "Bad Request"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6764,11 +11301,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Retry Work Project Route",
         "tags": [
           "work-projects"
@@ -6800,16 +11332,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6831,11 +11353,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "List Work Project Sessions Route",
         "tags": [
           "work-projects"
@@ -6865,16 +11382,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6896,11 +11403,6 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Create Work Project Session Route",
         "tags": [
           "work-projects"
@@ -6941,16 +11443,6 @@
             },
             "description": "Successful Response"
           },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -6972,35 +11464,9 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
         "summary": "Delete Work Project Session Route",
         "tags": [
           "work-projects"
-        ]
-      }
-    },
-    "/desktop/bootstrap": {
-      "post": {
-        "operationId": "desktop_bootstrap_desktop_bootstrap_post",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DesktopBootstrapResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Desktop Bootstrap",
-        "tags": [
-          "desktop"
         ]
       }
     },

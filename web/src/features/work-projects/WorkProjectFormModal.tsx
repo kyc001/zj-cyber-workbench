@@ -1,6 +1,6 @@
 import { Button, Input, InputNumber, Select, Spin, Tag, TextArea } from "@douyinfe/semi-ui";
-import { FolderKanban, Plus, ScanSearch, Trash2, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { FolderKanban, Plus, ScanSearch, Server, Trash2, UserRound } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   WORK_PROJECT_ASSET_ORIGIN,
   getWorkProjectAssetTypes,
@@ -10,8 +10,10 @@ import {
   WORK_PROJECT_ASSET_TYPE,
 } from "../../shared/api/contract";
 import { querySystemUsers } from "../../shared/api/systemUsers";
+import { queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
 import type {
   CreateWorkProjectRequest,
+  SandboxContainer,
   SystemUser,
   WorkProject,
   WorkProjectAssetRequest,
@@ -22,6 +24,8 @@ import {
   SYSTEM_USER_ROLE_COLOR,
   SYSTEM_USER_ROLE_LABEL,
   WORK_PROJECT_ASSET_TYPE_LABEL,
+  SANDBOX_CONTAINER_STATUS_COLOR,
+  SANDBOX_CONTAINER_STATUS_LABEL,
   WORK_PROJECT_TYPE_LABEL,
 } from "../../shared/lib/labels";
 
@@ -59,12 +63,20 @@ const EMPTY: WorkProjectFormValues = {
   name: "",
   description: "",
   owner_user_ids: [],
+  sandbox_container_id: null,
   assets: [{ ...EMPTY_ASSET }],
   type: projectTypes[0],
 };
 
 export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit }: WorkProjectFormModalProps) {
   const [values, setValues] = useState<WorkProjectFormValues>(EMPTY);
+  const loadWorkspaces = useCallback((params: { page: number; size: number; keyword: string }) => (
+    queryAvailableSandboxContainers({ ...params, work_project_id: project?.id })
+  ), [project?.id]);
+  const { items: workspaces, loading: workspacesLoading } = useOptionList<SandboxContainer>({
+    enabled: open,
+    query: loadWorkspaces,
+  });
   const { items: users, loading: usersLoading } = useOptionList<SystemUser>({
     enabled: open,
     query: querySystemUsers,
@@ -77,6 +89,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       name: project.name,
       description: project.description,
       owner_user_ids: project.owner_user_ids,
+      sandbox_container_id: project.sandbox_container_id ?? null,
       assets: scopeAssetsFromProject(project),
       type: project.type,
     } : { ...EMPTY, assets: [{ ...EMPTY_ASSET }] });
@@ -86,6 +99,10 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
     label: <UserOption user={user} />,
     value: user.id,
   })), [users]);
+  const workspaceOptionList = useMemo(() => workspaces.map((workspace) => ({
+    label: <WorkspaceOption workspace={workspace} />,
+    value: workspace.id,
+  })), [workspaces]);
 
   const canSubmit = Boolean(values.name.trim()) && values.assets.length > 0
     && values.assets.every(isAssetComplete);
@@ -157,6 +174,27 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             onChange={(value) => setValues((v) => ({
               ...v,
               owner_user_ids: Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [],
+            }))}
+          />
+        </label>
+        <label>
+          <span>执行工作区</span>
+          <Select
+            prefix={<Server size={16} />}
+            value={values.sandbox_container_id ?? undefined}
+            optionList={workspaceOptionList}
+            placeholder={workspacesLoading ? "正在加载执行工作区" : "选择项目执行工作区"}
+            emptyContent={workspacesLoading ? <Spin size="small" /> : "暂无可用工作区"}
+            loading={workspacesLoading}
+            showClear
+            renderSelectedItem={(option: { value?: number }) => (
+              workspaces.find((workspace) => workspace.id === option.value)?.container_name
+              ?? String(option.value ?? "")
+            )}
+            onClear={() => setValues((v) => ({ ...v, sandbox_container_id: null }))}
+            onChange={(value) => setValues((v) => ({
+              ...v,
+              sandbox_container_id: typeof value === "number" ? value : null,
             }))}
           />
         </label>
@@ -240,6 +278,19 @@ function UserOption({ user }: { user: SystemUser }) {
       <span>{user.username}</span>
        <small>{user.email || "无邮箱"}</small>
       <Tag color={SYSTEM_USER_ROLE_COLOR[user.role]}>{SYSTEM_USER_ROLE_LABEL[user.role]}</Tag>
+    </div>
+  );
+}
+
+
+function WorkspaceOption({ workspace }: { workspace: SandboxContainer }) {
+  return (
+    <div className="project-sandbox-option">
+      <span>{workspace.container_name}</span>
+      <small>工作区 #{workspace.id}</small>
+      <Tag color={SANDBOX_CONTAINER_STATUS_COLOR[workspace.status]}>
+        {SANDBOX_CONTAINER_STATUS_LABEL[workspace.status]}
+      </Tag>
     </div>
   );
 }

@@ -7,7 +7,7 @@ from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
 from fastapi.responses import FileResponse, JSONResponse
 
 from core.runtime.session import get_agent_pool
-from handler import authenticate_ws_token, cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
+from handler import authenticate_local_websocket, cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
 from logger import get_logger
 from middleware.auth import AuthUser
 from schema.agent.events import AgentEventSchema
@@ -17,6 +17,7 @@ from schema.agent.sessions import (
     AgentTurnResponse,
     ListAgentEventsResponse,
     ListAgentSessionsResponse,
+    UpdateAgentSessionSandboxContainerRequest,
     UpdateAgentSessionTitleRequest,
 )
 from schema.common.responses import CommonResponse
@@ -36,6 +37,7 @@ async def create_agent_session_turn_handler(
         session_id, events = await agent_runtime.submit_new_chat_turn(
             content=request.content,
             user=user,
+            sandbox_container_id=request.sandbox_container_id,
             requested_agent_code=request.agent_code,
         )
     except Exception as exc:
@@ -56,6 +58,7 @@ async def submit_agent_session_turn_handler(
             session_id=session_id,
             content=request.content,
             user=user,
+            sandbox_container_id=request.sandbox_container_id,
             requested_agent_code=request.agent_code,
         )
     except Exception as exc:
@@ -115,6 +118,25 @@ async def update_agent_session_title_handler(
     return CommonResponse(message="agent session title updated", data=session)
 
 
+async def update_agent_session_sandbox_container_handler(
+    session_id: str,
+    request: UpdateAgentSessionSandboxContainerRequest,
+    user: AuthUser,
+) -> CommonResponse[AgentSessionSummarySchema]:
+    try:
+        summary = await agent_runtime.update_selected_sandbox_container(
+            session_id=session_id,
+            sandbox_container_id=request.sandbox_container_id,
+            user=user,
+        )
+    except Exception as exc:
+        error = _runtime_error_response(exc)
+        if error is not None:
+            return error
+        raise
+    return CommonResponse(message="会话工作区已更新", data=summary)
+
+
 async def list_agent_sessions_handler(limit: int, user: AuthUser) -> CommonResponse[ListAgentSessionsResponse]:
     sessions = await agent_sessions.list_sessions(
         limit=limit,
@@ -167,8 +189,8 @@ async def download_agent_report_handler(report_id: str, user: AuthUser) -> FileR
     )
 
 
-async def handle_agent_stream(websocket: WebSocket, session_id: str, token: str) -> None:
-    user = authenticate_ws_token(token)
+async def handle_agent_stream(websocket: WebSocket, session_id: str) -> None:
+    user = await authenticate_local_websocket(websocket)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return

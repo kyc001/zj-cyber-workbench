@@ -36,13 +36,11 @@ busy_timeout=5000
 synchronous=NORMAL
 ```
 
-## 被明确排除的能力
+## 被明确排除的实现依赖
 
-- Dockerfile、Docker Compose 和镜像构建。
-- Docker SDK、Docker Socket 和远程 Docker Host。
-- 容器 Sandbox、容器 Shell、容器文件管理和 noVNC。
-- Egress Proxy 和容器出口网络策略。
-- 依赖完整 Kali/容器环境的工具。
+- Dockerfile、Docker Compose、镜像构建、Docker SDK 和 Docker Socket。
+- 远程 Docker Host 与容器网络命名空间。
+- 在 Windows 本机伪装实现依赖 Linux 内核或 ELF/GDB 生态的工具；这些能力改走 SSH Linux 工作区。
 
 这些能力不能以“可选依赖”的形式重新加入 v1，因为老师的要求是项目不使用 Docker，而不是仅允许无 Docker 降级启动。
 
@@ -52,11 +50,22 @@ synchronous=NORMAL
 | --- | --- |
 | PostgreSQL | Embedded SQLite WAL |
 | PGVector/PG LightRAG | NanoVectorDB + NetworkX + JSON local storage |
-| Docker Sandbox | SSH 远端执行或明确打包的便携工具 |
+| Docker Sandbox | 本机隔离 Workspace + SSH 远端执行 + 便携工具 |
 | Docker Toolpack | Manifest 驱动的 EXE/PowerShell/Python-sidecar 内置适配器 |
+| 容器 Shell/文件 | 本机 PowerShell 或 SSH Shell、目录白名单和本机/SFTP 文件 API |
 | 容器隔离 | Scope、Policy、Approval、低权限进程、超时、输出上限和目录白名单 |
-| noVNC | 不实现；v1 只提供终端和结构化结果 |
-| Egress Proxy | Target 白名单、Action Registry 和执行前二次校验 |
+| noVNC | 保留兼容入口；本机工作区无图形桌面时禁用，后续可接 Chromium Sidecar |
+| Egress Proxy | 保留配置与 UI，同时以 Target 白名单和执行前二次校验兜底 |
+
+## 已完成的等价迁移
+
+- Agent 可调用 HTTP GET/HEAD、网页读取、低风险 Web Header/TLS 检查和小范围 TCP 端口探测。
+- Agent 可调用同步/异步本机或 SSH 命令，支持超时、取消、分块输出和 JSONL 审计。
+- 执行工作区支持创建、选择、项目绑定、本机/SFTP 文件浏览、上传下载、复制移动删除和交互终端。
+- 子 Agent、通知恢复和后端重启恢复继承同一工作区与授权 Scope。
+- Agent 的独立 SSH 工具使用 `credential_ref`；SSH 工作区使用“主机”配置，并统一通过 `.zj/ssh/known_hosts` 严格校验主机公钥。
+- L2/L3 提供审批创建、批准、拒绝、Token 签发和一次性消费 API。
+- `.zj/tools` 可下载并验证 ffuf、httpx、dnsx、subfinder、gobuster、amass、uv、Embedded Python、observer_ward、agent-browser-cli 和 Chrome；sqlmap 等 Linux 专属能力走 SSH 工作区，详见 `docs/tool-capability-matrix.md`。
 
 移除容器后，执行安全不能降低。任意写操作仍必须经过 Scope、Policy、Approval、备份、验证和回滚；任意外部工具必须固定版本、校验哈希并限制工作目录和目标。
 
@@ -67,7 +76,7 @@ synchronous=NORMAL
 - 目标产物：`ZJ-<version>-win-x64-portable.exe`。
 - Electron 负责选择空闲回环端口、自动建立本地管理员会话、传入 `ZJ_DATA_DIR`、轮询 `/health`、关闭 Sidecar 和处理进程树。
 - Sidecar 只绑定 `127.0.0.1`，不作为局域网 Web 服务发布。
-- Portable 模式不显示登录页，也不使用固定默认口令；Sidecar 为本地 `desktop` 用户保存随机口令哈希，并且只允许回环客户端在 `ZJ_DESKTOP_MODE=true` 时获取桌面会话 Token。
+- Portable 模式不显示登录页，不使用固定口令、JWT、Header Token 或桌面会话 Token。Sidecar 强制只监听回环地址，HTTP/WebSocket 请求直接映射为内部 `desktop` 管理员身份；该产品没有可重新开启的登录模式。
 - 发布包内只包含空 Key 的配置模板。用户在 System Config 中填写的 Provider Key 保存到 EXE 旁的 `data/config.json`，不进入 EXE、源码仓库、日志或浏览器持久存储。
 - System Config 同时支持逐 Agent 配置和一键应用统一 Provider；模型列表由后端代理访问 OpenAI-compatible `<baseURL>/models`，Renderer 不直接请求第三方 Provider。
 

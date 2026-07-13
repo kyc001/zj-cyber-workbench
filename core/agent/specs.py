@@ -19,11 +19,14 @@ from core.tools.work_project import (
     update_work_project_agent_summary,
     update_work_project_tasks,
 )
+from core.tools.network import browser_fetch, http_request, port_probe, ssh_command, web_security_scan
+from core.tools.sandbox import cancel_sandbox_async_job, execute_async_command, execute_sync_command, load_skill, read_sandbox_command_output
 
 
 @dataclass(frozen=True, slots=True)
 class ToolMount:
     tool: Tool
+    requires_sandbox_container: bool = False
     requires_work_project: bool = False
 
 
@@ -59,6 +62,16 @@ WORK_PROJECT_RECORD_TOOLS = (
 )
 
 SPECIALIST_TOOLS = (
+    ToolMount(http_request),
+    ToolMount(browser_fetch),
+    ToolMount(web_security_scan),
+    ToolMount(port_probe),
+    ToolMount(ssh_command),
+    ToolMount(execute_sync_command, requires_sandbox_container=True),
+    ToolMount(read_sandbox_command_output, requires_sandbox_container=True),
+    ToolMount(execute_async_command, requires_sandbox_container=True),
+    ToolMount(cancel_sandbox_async_job, requires_sandbox_container=True),
+    ToolMount(load_skill, requires_sandbox_container=True),
     *WORK_PROJECT_TOOLS,
     *WORK_PROJECT_RECORD_TOOLS,
 )
@@ -69,6 +82,16 @@ AGENT_SPECS: tuple[AgentSpec, ...] = (
         tools=(
             *WORK_PROJECT_TOOLS,
             *WORK_PROJECT_RECORD_TOOLS,
+            ToolMount(http_request),
+            ToolMount(browser_fetch),
+            ToolMount(web_security_scan),
+            ToolMount(port_probe),
+            ToolMount(ssh_command),
+            ToolMount(execute_sync_command, requires_sandbox_container=True),
+            ToolMount(read_sandbox_command_output, requires_sandbox_container=True),
+            ToolMount(execute_async_command, requires_sandbox_container=True),
+            ToolMount(cancel_sandbox_async_job, requires_sandbox_container=True),
+            ToolMount(load_skill, requires_sandbox_container=True),
             ToolMount(update_work_project_tasks, requires_work_project=True),
             ToolMount(export_report),
         ),

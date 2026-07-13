@@ -1,5 +1,6 @@
 param(
-    [switch]$Clean
+    [switch]$Clean,
+    [string]$ToolProxy = "http://127.0.0.1:7897"
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,6 +19,15 @@ if ($Clean) {
             Remove-Item -LiteralPath $resolved -Recurse -Force
         }
     }
+}
+
+powershell -ExecutionPolicy Bypass -File scripts/install-portable-tools.ps1 -Proxy $ToolProxy
+if ($LASTEXITCODE -ne 0) {
+    throw "Portable tool installation failed with exit code $LASTEXITCODE."
+}
+powershell -ExecutionPolicy Bypass -File scripts/validate-portable-tools.ps1
+if ($LASTEXITCODE -ne 0) {
+    throw "Portable tool validation failed with exit code $LASTEXITCODE."
 }
 
 pnpm --filter @zj-security/web build

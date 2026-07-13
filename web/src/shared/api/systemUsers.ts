@@ -4,8 +4,6 @@ import type {
   CreateSystemUserRequest,
   CreateSystemUserResponse,
   DeleteSystemUserResponse,
-  LoginRequest,
-  LoginResponse,
   QuerySystemUsersParams,
   QuerySystemUsersResponse,
   SystemUserPathParams,
@@ -14,10 +12,6 @@ import type {
 } from "./types";
 
 const SYSTEM_USERS_PATH = "/api/system-users";
-
-export function login(payload: LoginRequest) {
-  return apiPost<LoginResponse>(`${SYSTEM_USERS_PATH}/login`, payload, false);
-}
 
 export function querySystemUsers(params: QuerySystemUsersParams) {
   return apiGet<QuerySystemUsersResponse>(`${SYSTEM_USERS_PATH}${buildQuery(params)}`);

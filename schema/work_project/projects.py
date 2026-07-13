@@ -6,6 +6,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schema.agent.sessions import AgentSessionSummarySchema
+from schema.sandbox.containers import SandboxContainerSchema
 from schema.common.responses import PaginatedResponse
 from schema.system_user.users import SystemUserRole
 from schema.work_project.assets import WorkProjectAssetRequest, WorkProjectAssetSchema
@@ -113,6 +114,8 @@ class WorkProjectSchema(BaseModel):
     description: str
     owner_user_ids: list[int]
     owners: list[WorkProjectOwnerSchema]
+    sandbox_container_id: int | None = None
+    sandbox_container: SandboxContainerSchema | None = None
     assets: list[WorkProjectAssetSchema]
     tasks: list[WorkProjectTaskSchema]
     agent_summaries: list[WorkProjectAgentSummarySchema]
@@ -136,6 +139,7 @@ class WorkProjectMetadataRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str = Field(default="", max_length=2000)
     owner_user_ids: list[int] = Field(default_factory=list, max_length=100)
+    sandbox_container_id: int | None = Field(default=None, gt=0)
     assets: list[WorkProjectAssetRequest] = Field(min_length=1, max_length=500)
     type: WorkProjectType = WorkProjectType.PENETRATION_TEST
 

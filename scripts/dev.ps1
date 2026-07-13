@@ -43,7 +43,6 @@ switch ($Command) {
         pnpm install
     }
     "backend" {
-        $env:ZJ_DESKTOP_MODE = "true"
         $env:ZJ_BIND_HOST = "127.0.0.1"
         $env:ZJ_BIND_PORT = "8000"
         uv run python main.py
@@ -55,11 +54,9 @@ switch ($Command) {
     "ui" {
         # Fast browser UI loop: run the real backend from source and Vite with desktop auth enabled.
         # This path never builds PyInstaller or Electron and is the default development feedback loop.
-        $previousDesktopMode = $env:ZJ_DESKTOP_MODE
         $previousBindHost = $env:ZJ_BIND_HOST
         $previousBindPort = $env:ZJ_BIND_PORT
         $previousViteDesktopMode = $env:VITE_DESKTOP_MODE
-        $env:ZJ_DESKTOP_MODE = "true"
         $env:ZJ_BIND_HOST = "127.0.0.1"
         $env:ZJ_BIND_PORT = "8000"
         $env:VITE_DESKTOP_MODE = "true"
@@ -70,7 +67,6 @@ switch ($Command) {
             if ($backend -and -not $backend.HasExited) {
                 Stop-Process -Id $backend.Id -Force -ErrorAction SilentlyContinue
             }
-            $env:ZJ_DESKTOP_MODE = $previousDesktopMode
             $env:ZJ_BIND_HOST = $previousBindHost
             $env:ZJ_BIND_PORT = $previousBindPort
             $env:VITE_DESKTOP_MODE = $previousViteDesktopMode
@@ -84,7 +80,9 @@ switch ($Command) {
         uv run python -m unittest discover -s tests -p "test_*.py"
         pnpm typecheck
     }
-    "e2e" { throw "Electron E2E is owned by D and is not implemented in the Day 1 skeleton." }
+    "e2e" {
+        & "$PSScriptRoot\validate-migration.ps1"
+    }
     "package" {
         & "$PSScriptRoot\package-portable.ps1"
     }

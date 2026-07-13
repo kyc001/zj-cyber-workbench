@@ -34,7 +34,7 @@ class StoredItem:
     nested_call_id: str = ""
 
 
-class Z3r0Session(SQLAlchemySession):
+class ZJSession(SQLAlchemySession):
     def __init__(
         self,
         *,

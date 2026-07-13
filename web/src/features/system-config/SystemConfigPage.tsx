@@ -74,7 +74,7 @@ const EMPTY_PROVIDER: ProviderDraft = { base_url: "", api_key: "", model: "" };
 
 function toFormValue(config: InstanceConfig): ConfigFormValue {
   if (!config.agent_pool || !config.agent_runtime || !config.lightrag) {
-    throw new Error("instance config is incomplete");
+    throw new Error("实例配置不完整");
   }
   const agents = Object.values(config.agents ?? {}).map((agent) => ({ ...agent }));
   return {

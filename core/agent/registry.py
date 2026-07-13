@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from agents import (
     Agent,
+    FunctionToolResult,
     Model,
     ModelSettings,
+    RunContextWrapper,
     Tool,
+    ToolsToFinalOutputResult,
 )
 
 from config import AgentConfig, BUNDLED_AGENT_DIR, get_config
@@ -18,15 +22,39 @@ from core.agent.specs import AGENT_SPECS, AgentSpec, ToolMount
 from core.delegation.subagents import build_subagent_tools
 from core.runtime.context import AgentRuntimeContext
 from core.tools.reports import export_report
+from core.tools.sandbox import execute_async_command
+from schema.sandbox.async_jobs import SandboxAsyncJobStatus
+
+
+async def _end_turn_after_async_dispatch(
+    _ctx: RunContextWrapper[AgentRuntimeContext],
+    results: list[FunctionToolResult],
+) -> ToolsToFinalOutputResult:
+    for result in results:
+        if getattr(result.tool, "name", None) != execute_async_command.name:
+            continue
+        try:
+            status = json.loads(result.output).get("status")
+        except (TypeError, ValueError):
+            status = None
+        if status == SandboxAsyncJobStatus.RUNNING.value:
+            return ToolsToFinalOutputResult(is_final_output=True, final_output=result.output)
+    return ToolsToFinalOutputResult(is_final_output=False)
 
 
 @dataclass(frozen=True, slots=True)
 class AgentToolSnapshot:
+    sandbox_container_id: int | None = None
+    sandbox_container_generation: int = 0
+    sandbox_skill_metadata: tuple[str, ...] = ()
     work_project_id: int | None = None
 
     @classmethod
     def from_context(cls, context: AgentRuntimeContext) -> "AgentToolSnapshot":
         return cls(
+            sandbox_container_id=context.sandbox_container_id,
+            sandbox_container_generation=context.sandbox_container_generation,
+            sandbox_skill_metadata=context.sandbox_skill_metadata,
             work_project_id=context.work_project_id,
         )
 
@@ -86,6 +114,8 @@ class AgentRegistry:
         instructions = build_instructions(
             soul,
             rules,
+            graph.tool_snapshot.sandbox_skill_metadata,
+            has_sandbox_container=graph.tool_snapshot.sandbox_container_id is not None,
             include_work_project_tools=(
                 graph.tool_snapshot.work_project_id is not None
                 and _has_work_project_tool(spec)
@@ -109,6 +139,7 @@ class AgentRegistry:
                 part for part in (instructions, run_context.context.rag_context) if part
             ),
             tools=tools,
+            tool_use_behavior=_end_turn_after_async_dispatch,
         )
 
 
@@ -159,6 +190,8 @@ def _has_work_project_tool(spec: AgentSpec) -> bool:
 
 
 def _tool_mount_available(mount: ToolMount, snapshot: AgentToolSnapshot) -> bool:
+    if mount.requires_sandbox_container and snapshot.sandbox_container_id is None:
+        return False
     if mount.requires_work_project and snapshot.work_project_id is None:
         return False
     return True

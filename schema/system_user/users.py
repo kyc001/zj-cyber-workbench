@@ -54,14 +54,3 @@ class UpdateSystemUserRequest(BaseModel):
 # query system users response schema
 class QuerySystemUsersResponse(PaginatedResponse[SystemUserSchema]):
     pass
-
-
-# system user login request schema
-class SystemUserLoginRequest(BaseModel):
-    email: str = Field(min_length=1, max_length=255)
-    password: str = Field(min_length=1, max_length=128)
-
-
-# system user login response schema
-class SystemUserLoginResponse(BaseModel):
-    token: str

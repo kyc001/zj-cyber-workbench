@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import WebSocket, status as ws_status
 
 from logger import get_logger
-from middleware.auth import AuthUser, decode_access_token
+from middleware.auth import AuthUser, local_desktop_user
 
 
 logger = get_logger(__name__)
@@ -51,12 +51,10 @@ async def finish_ws_reader_task(task: asyncio.Task | None) -> None:
         logger.debug("shell reader stopped with error", exc_info=True)
 
 
-def authenticate_ws_token(token: str) -> AuthUser | None:
-    """Decode a JWT access token for WebSocket authentication."""
-    try:
-        return decode_access_token(token)
-    except Exception:
-        return None
+async def authenticate_local_websocket(websocket: WebSocket) -> AuthUser | None:
+    """Resolve the single local desktop identity for a WebSocket."""
+    del websocket
+    return await local_desktop_user()
 
 
 def bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:

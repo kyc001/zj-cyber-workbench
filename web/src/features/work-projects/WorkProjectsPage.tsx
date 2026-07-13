@@ -271,6 +271,10 @@ function WorkProjectExpanded({
           <strong>{workProjectOwnerNames(project)}</strong>
         </div>
         <div>
+          <span>执行工作区</span>
+          <strong>{project.sandbox_container?.container_name ?? "未绑定"}</strong>
+        </div>
+        <div>
           <span>任务进度</span>
           <Progress percent={project.progress} size="small" showInfo />
         </div>

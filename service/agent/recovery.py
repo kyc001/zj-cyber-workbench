@@ -41,5 +41,6 @@ async def recover_pending_sessions() -> None:
             session.session_id,
             auth_user,
             agent_code,
+            sandbox_container_id=session.runtime_sandbox_container_id or session.selected_sandbox_container_id,
         )
         await runtime.start_notification_recovery(context)

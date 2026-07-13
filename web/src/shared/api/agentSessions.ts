@@ -1,4 +1,4 @@
-import { apiBlob, apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { apiBlob, apiDelete, apiGet, apiPatch, apiPost, buildWebSocketUrl } from "./client";
 import type {
   AgentTurnRequest,
   CancelAllAgentSessionTasksResponse,
@@ -9,6 +9,8 @@ import type {
   ListAgentEventsResponse,
   ListAgentSessionsResponse,
   SubmitAgentSessionTurnResponse,
+  UpdateAgentSessionSandboxContainerRequest,
+  UpdateAgentSessionSandboxContainerResponse,
   UpdateAgentSessionTitleRequest,
   UpdateAgentSessionTitleResponse,
 } from "./types";
@@ -62,6 +64,16 @@ export function updateAgentSessionTitle(sessionId: string, payload: UpdateAgentS
   );
 }
 
+export function updateAgentSessionSandboxContainer(
+  sessionId: string,
+  payload: UpdateAgentSessionSandboxContainerRequest,
+) {
+  return apiPatch<UpdateAgentSessionSandboxContainerResponse>(
+    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/sandbox-container`,
+    payload,
+  );
+}
+
 export function deleteAgentSession(sessionId: string) {
   return apiDelete<DeleteAgentSessionResponse>(
     `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}`,
@@ -72,6 +84,6 @@ export function downloadAgentReport(reportId: DownloadAgentReportPathParams["rep
   return apiBlob(`${AGENT_SESSIONS_PATH}/reports/${encodeURIComponent(reportId)}/download`);
 }
 
-export function buildAgentStreamUrl(sessionId: string, token: string) {
-  return buildAuthenticatedWebSocketUrl(`${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/stream`, token);
+export function buildAgentStreamUrl(sessionId: string) {
+  return buildWebSocketUrl(`${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/stream`);
 }

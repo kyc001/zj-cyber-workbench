@@ -11,6 +11,8 @@ tiktoken_datas, tiktoken_binaries, tiktoken_hiddenimports = collect_all("tiktoke
 datas = [
     (str(root / ".z3r0" / "agents"), ".z3r0/agents"),
     (str(root / ".z3r0" / "config.json.example"), ".z3r0"),
+    (str(root / "skills"), "skills"),
+    (str(root / ".zj" / "tools"), "portable-tools"),
     (str(root / "web" / "dist-app"), "web/dist-app"),
     *copy_metadata("openai"),
     *lightrag_datas,

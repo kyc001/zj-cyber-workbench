@@ -2,13 +2,7 @@
     "system": {
         "listen_addr": "127.0.0.1",
         "listen_port": 8000,
-        "encrypt_key": "replace-with-at-least-32-random-characters",
-        "bootstrap_admin": {
-            "enabled": false,
-            "username": "admin",
-            "email": "admin@z3r0.fans",
-            "password": ""
-        }
+        "encrypt_key": "replace-with-at-least-32-random-characters"
     },
     "database": {
         "url": "",
@@ -50,8 +44,8 @@
     "agents": {
         "cso": {
             "code": "cso",
-            "name": "ZJ",
-            "description": "Chief Security Officer",
+            "name": "真君",
+            "description": "首席安全协调 Agent，负责理解目标、编排专家、汇总结论与交付报告",
             "base_url": "",
             "api_key": "",
             "model": "gpt-5.6-luna",
@@ -61,7 +55,7 @@
         "cae": {
             "code": "cae",
             "name": "V3ra",
-            "description": "Chief Audit Engineer",
+            "description": "代码审计 Agent，负责源码、依赖、配置与安全编码检查",
             "base_url": "",
             "api_key": "",
             "model": "gpt-5.6-luna",
@@ -71,7 +65,7 @@
         "cce": {
             "code": "cce",
             "name": "Nu1L",
-            "description": "Chief Cryptography Engineer",
+            "description": "密码与协议 Agent，负责密码学、协议与密钥管理分析",
             "base_url": "",
             "api_key": "",
             "model": "gpt-5.6-luna",
@@ -81,7 +75,7 @@
         "cie": {
             "code": "cie",
             "name": "L1ly",
-            "description": "Chief Intelligence Engineer",
+            "description": "情报侦察 Agent，负责授权范围内的资产发现与信息收集",
             "base_url": "",
             "api_key": "",
             "model": "gpt-5.6-luna",
@@ -91,7 +85,7 @@
         "cpe": {
             "code": "cpe",
             "name": "Fr4nk",
-            "description": "Chief Penetration Engineer",
+            "description": "安全测试 Agent，负责授权渗透测试与漏洞验证",
             "base_url": "",
             "api_key": "",
             "model": "gpt-5.6-luna",
@@ -101,7 +95,7 @@
         "cre": {
             "code": "cre",
             "name": "J4m3",
-            "description": "Chief Reverse Engineer",
+            "description": "逆向分析 Agent，负责二进制、固件与文件分析",
             "base_url": "",
             "api_key": "",
             "model": "gpt-5.6-luna",

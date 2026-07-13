@@ -11,6 +11,7 @@ from handler.agent.sessions import (
     list_agent_events_handler,
     list_agent_sessions_handler,
     submit_agent_session_turn_handler,
+    update_agent_session_sandbox_container_handler,
     update_agent_session_title_handler,
 )
 from middleware.auth import AuthUser, require_user
@@ -21,6 +22,7 @@ from schema.agent.sessions import (
     AgentTurnResponse,
     ListAgentEventsResponse,
     ListAgentSessionsResponse,
+    UpdateAgentSessionSandboxContainerRequest,
     UpdateAgentSessionTitleRequest,
 )
 from schema.common.responses import CommonResponse
@@ -85,6 +87,18 @@ async def update_agent_session_title_route(
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
     return await update_agent_session_title_handler(session_id=session_id, request=request, user=user)
+
+
+async def update_agent_session_sandbox_container_route(
+    session_id: str,
+    request: UpdateAgentSessionSandboxContainerRequest,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[AgentSessionSummarySchema]:
+    return await update_agent_session_sandbox_container_handler(
+        session_id=session_id,
+        request=request,
+        user=user,
+    )
 
 
 async def list_agent_events_route(
@@ -184,6 +198,14 @@ router.add_api_route(
 )
 
 router.add_api_route(
+    "/{session_id}/sandbox-container",
+    update_agent_session_sandbox_container_route,
+    methods=["PATCH"],
+    response_model=CommonResponse[AgentSessionSummarySchema],
+    responses={**COMMON_ERROR_RESPONSES, **not_found_response("Agent session")},
+)
+
+router.add_api_route(
     "/{session_id}",
     delete_agent_session_route,
     methods=["DELETE"],
@@ -196,6 +218,5 @@ router.add_api_route(
 async def agent_session_stream(
     websocket: WebSocket,
     session_id: str,
-    token: str = Query(default=""),
 ) -> None:
-    await handle_agent_stream(websocket=websocket, session_id=session_id, token=token)
+    await handle_agent_stream(websocket=websocket, session_id=session_id)

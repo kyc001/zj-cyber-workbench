@@ -261,7 +261,7 @@ export function KnowledgesPage() {
     try {
       const response = await uploadKnowledgeDocuments(files);
       const result = response.data;
-      if (!result) throw new Error("upload response did not include a batch result");
+      if (!result) throw new Error("上传响应未包含批处理结果");
 
       const queued = result.queued_files.length;
       if (queued > 0) {

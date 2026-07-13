@@ -22,8 +22,12 @@ class AgentSessionSummarySchema(BaseModel):
     agent_code: str = ""
     owner_id: int = 0
     project_id: int | None = None
+    selected_sandbox_container_id: int | None = None
+    selected_sandbox_container_generation: int = 0
     is_running: bool = False
     runtime_agent_code: str = ""
+    runtime_sandbox_container_id: int | None = None
+    runtime_sandbox_container_generation: int = 0
     run_started_at: datetime | None = None
     run_finished_at: datetime | None = None
     run_error: str = ""
@@ -48,6 +52,7 @@ class ListAgentEventsResponse(BaseModel):
 class AgentTurnRequest(BaseModel):
     content: list[AgentInputPart] = Field(min_length=1, max_length=8)
     agent_code: str | None = Field(min_length=1, max_length=32)
+    sandbox_container_id: int | None = Field(default=None, gt=0)
 
     @field_validator("content", mode="after")
     @classmethod
@@ -71,6 +76,10 @@ class UpdateAgentSessionTitleRequest(BaseModel):
         if isinstance(value, str):
             return value.strip()
         return value
+
+
+class UpdateAgentSessionSandboxContainerRequest(BaseModel):
+    sandbox_container_id: int | None = Field(default=None, gt=0)
 
 
 # one available agent; surfaced to the @-mention picker in the chat input

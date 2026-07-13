@@ -1,18 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { bootstrapDesktopSession } from "../api/desktop";
-import { isSystemUserRole } from "../api/contract";
+import { createContext, useContext, useMemo } from "react";
 import type { SystemUserRole } from "../api/types";
-import { isDesktopRuntime } from "../lib/desktopRuntime";
-import { clearStoredAccessToken, getStoredAccessToken, storeAccessToken } from "./session";
 
 type AuthContextValue = {
-  token: string | null;
-  user: AuthUser | null;
-  ready: boolean;
-  isDesktop: boolean;
-  isAuthenticated: boolean;
-  signIn: (token: string) => void;
-  signOut: () => void;
+  user: AuthUser;
+  ready: true;
+  isAuthenticated: true;
 };
 
 type AuthUser = {
@@ -25,61 +17,16 @@ type AuthUser = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const isDesktop = isDesktopRuntime();
-  const [token, setToken] = useState<string | null>(() => getStoredAccessToken());
-  const [ready, setReady] = useState(false);
-
-  const startDesktopSession = useCallback(async () => {
-    const nextToken = await bootstrapDesktopSession();
-    storeAccessToken(nextToken);
-    setToken(nextToken);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    setReady(false);
-    void startDesktopSession()
-      .catch((error) => console.error(error))
-      .finally(() => {
-        if (active) setReady(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [startDesktopSession]);
-
-  const signIn = useCallback((nextToken: string) => {
-    storeAccessToken(nextToken);
-    setToken(nextToken);
-  }, []);
-
-  const signOut = useCallback(() => {
-    clearStoredAccessToken();
-    setToken(null);
-    setReady(false);
-    void startDesktopSession()
-      .catch((error) => console.error(error))
-      .finally(() => setReady(true));
-  }, [startDesktopSession]);
-
-  useEffect(() => {
-    const handleAuthExpired = () => signOut();
-    window.addEventListener("z3r0:auth-expired", handleAuthExpired);
-    return () => window.removeEventListener("z3r0:auth-expired", handleAuthExpired);
-  }, [signOut]);
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      token,
-      user: decodeUser(token),
-      ready,
-      isDesktop,
-      isAuthenticated: Boolean(token),
-      signIn,
-      signOut,
-    }),
-    [isDesktop, ready, signIn, signOut, token],
-  );
+  const value = useMemo<AuthContextValue>(() => ({
+    user: {
+      id: 0,
+      role: "admin",
+      email: "desktop@localhost",
+      username: "本机用户",
+    },
+    ready: true,
+    isAuthenticated: true,
+  }), []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -90,31 +37,4 @@ export function useAuth() {
     throw new Error("useAuth must be used inside AuthProvider");
   }
   return value;
-}
-
-function decodeUser(token: string | null): AuthUser | null {
-  if (!token) return null;
-  const payload = token.split(".")[1];
-  if (!payload) return null;
-  try {
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const parsed = JSON.parse(atob(padded));
-    if (
-      typeof parsed.id === "number"
-      && isSystemUserRole(parsed.role)
-      && typeof parsed.email === "string"
-      && typeof parsed.username === "string"
-    ) {
-      return {
-        id: parsed.id,
-        role: parsed.role,
-        email: parsed.email,
-        username: parsed.username,
-      };
-    }
-  } catch {
-    return null;
-  }
-  return null;
 }

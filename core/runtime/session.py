@@ -13,8 +13,8 @@ from config import get_config
 from core.agent.registry import AgentRegistry, AgentToolSnapshot, SessionAgentGraph
 from core.conversation.context_budget import build_context_run_config
 from core.conversation.retrieval import build_conversation_retrieval_query
-from core.conversation.store import Z3r0Session
-from core.delegation.subagents import cancel_session_subagent_runs
+from core.conversation.store import ZJSession
+from core.delegation.subagents import cancel_sandbox_subagent_runs, cancel_session_subagent_runs
 from core.lightrag.runtime import activate_lightrag_context
 from core.runtime.context import AgentRuntimeContext, main_agent_instance_id
 from core.runtime.input_items import build_turn_input_item, display_text_from_content, retrieval_text_from_content
@@ -23,6 +23,7 @@ from core.runtime.notification_dispatch import signal_target_notifications
 from core.runtime.partial_context import DeltaBuffer, discard_partial_stream, incomplete_segment_events, track_delta
 from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
 from core.runtime.timeline import TimelineLogWriter, is_persistable, timeline_item_key
+from core.sandbox.command_jobs import cancel_sandbox_async_commands, cancel_session_async_sandbox_commands
 from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, replace_trigger, run_until_idle
 from database import get_engine
 from logger import get_logger
@@ -105,6 +106,8 @@ class AgentSession:
             await _mark_session_running(
                 self.session_id,
                 agent_code=agent_code,
+                sandbox_container_id=context.sandbox_container_id,
+                sandbox_container_generation=context.sandbox_container_generation,
             )
             await self._ensure_timeline_loaded()
             events: list[AgentEventSchema] = [self._publish_run_state(True)]
@@ -141,6 +144,12 @@ class AgentSession:
             user_content=serialized_content,
             user_display_text=display_text,
             user_requested_agent_code=agent_code,
+            sandbox_container_id=context.sandbox_container_id,
+            sandbox_container_generation=context.sandbox_container_generation,
+            sandbox_skill_metadata=context.sandbox_skill_metadata,
+            allowed_targets=context.allowed_targets,
+            allowed_action_types=context.allowed_action_types,
+            scope_id=context.scope_id,
         )
         await signal_target_notifications(target_instance)
         event = await self._publish(UserMessageEvent(
@@ -165,6 +174,8 @@ class AgentSession:
             await _mark_session_running(
                 self.session_id,
                 agent_code=context.agent_code,
+                sandbox_container_id=context.sandbox_container_id,
+                sandbox_container_generation=context.sandbox_container_generation,
             )
             await self._ensure_timeline_loaded()
             self._publish_run_state(True)
@@ -211,6 +222,7 @@ class AgentSession:
             await _mark_session_stopped(self.session_id)
             events.append(await self._publish(DoneEvent(created_at=datetime.now())))
         await cancel_session_subagent_runs(self.session_id)
+        await cancel_session_async_sandbox_commands(self.session_id)
         await agent_notifications.cancel_session_notifications(
             self.session_id,
             "Agent session tasks canceled by user.",
@@ -237,6 +249,9 @@ class AgentSession:
     async def flush_timeline(self) -> None:
         if self._timeline_loaded:
             await self._log_writer.flush()
+
+    def uses_sandbox_container(self, container_id: int) -> bool:
+        return self._tool_snapshot is not None and self._tool_snapshot.sandbox_container_id == container_id
 
     async def invalidate_tool_binding(self) -> None:
         await self.cancel_all()
@@ -268,7 +283,7 @@ class AgentSession:
         def _tag(event: AgentEventSchema) -> AgentEventSchema:
             return _tag_notification_event(event, turn_context) if trigger.has_notification else event
 
-        memory_session = Z3r0Session(
+        memory_session = ZJSession(
             session_id=self.session_id,
             engine=get_engine(),
             viewing_agent_code=turn_agent_code,
@@ -301,7 +316,7 @@ class AgentSession:
         turn_agent_code: str,
         turn_context: AgentRuntimeContext,
         tag: Callable[[AgentEventSchema], AgentEventSchema],
-        memory_session: Z3r0Session,
+        memory_session: ZJSession,
     ) -> Any:
         # Setup phase (graph bind, compaction, runner build) runs under the same
         # exception protection as the stream: a failure here is surfaced as a
@@ -427,7 +442,13 @@ class AgentSession:
             self._main_agent_code = agent_code
             self._tool_snapshot = tool_snapshot
             self._agent_graph = self._registry.bind(tool_snapshot)
-            logger.debug("agent graph bound session=%s agent=%s", self.session_id, agent_code)
+            logger.debug(
+                "agent graph bound session=%s agent=%s workspace=%s generation=%d",
+                self.session_id,
+                agent_code,
+                tool_snapshot.sandbox_container_id,
+                tool_snapshot.sandbox_container_generation,
+            )
         return self._agent_graph
 
     async def _dispose_agent_graph(self) -> None:
@@ -799,7 +820,10 @@ class AgentSessionPool:
         auth_user = AuthUser(id=user.id, role=user.role, email=user.email, username=user.username)
         agent_code = meta.runtime_agent_code or meta.agent_code
         context = await build_runtime_context(
-            session_id, auth_user, agent_code,
+            session_id,
+            auth_user,
+            agent_code,
+            sandbox_container_id=meta.runtime_sandbox_container_id or meta.selected_sandbox_container_id,
         )
         session = await self.get_or_create(session_id)
         await session.start_notification_recovery(context, recovered=False)
@@ -820,6 +844,7 @@ class AgentSessionPool:
             entry = self._pool.get(session_id)
         if entry is None:
             await cancel_session_subagent_runs(session_id)
+            await cancel_session_async_sandbox_commands(session_id)
             await agent_notifications.cancel_session_notifications(
                 session_id,
                 "Agent session tasks canceled by user.",
@@ -828,14 +853,27 @@ class AgentSessionPool:
             return []
         return await entry.session.cancel_all()
 
-    async def invalidate_tool_bindings(self) -> None:
+    async def invalidate_tool_bindings(self, container_id: int | None = None) -> None:
         async with self._lock:
-            entries = list(self._pool.values())
+            entries = [
+                entry
+                for entry in self._pool.values()
+                if container_id is None or entry.session.uses_sandbox_container(container_id)
+            ]
         tasks = [entry.session.invalidate_tool_binding() for entry in entries]
+        if container_id is not None:
+            tasks.extend((
+                cancel_sandbox_subagent_runs(container_id),
+                cancel_sandbox_async_commands(container_id),
+            ))
         if not tasks:
             return
         await asyncio.gather(*tasks, return_exceptions=True)
-        logger.debug("agent pool invalidated tool bindings count=%d", len(entries))
+        logger.debug(
+            "agent pool invalidated tool bindings workspace=%s count=%d",
+            container_id,
+            len(entries),
+        )
 
     async def _sweep_loop(self) -> None:
         while True:
@@ -950,6 +988,10 @@ def _context_for_notification(
     base: AgentRuntimeContext,
     notification: AgentNotificationSnapshot,
 ) -> AgentRuntimeContext:
+    sandbox_container_id, sandbox_generation, sandbox_skill_metadata = _notification_sandbox_scope(
+        base,
+        notification,
+    )
     return AgentRuntimeContext(
         session_id=base.session_id,
         user=base.user,
@@ -957,7 +999,28 @@ def _context_for_notification(
         agent_instance_id=notification.target_agent_instance_id,
         nested_for_agent_code=notification.nested_for_agent_code,
         nested_call_id=notification.nested_call_id,
+        sandbox_container_id=sandbox_container_id,
+        sandbox_container_generation=sandbox_generation,
+        sandbox_skill_metadata=sandbox_skill_metadata,
         work_project_id=base.work_project_id,
+        allowed_targets=notification.allowed_targets or base.allowed_targets,
+        allowed_action_types=notification.allowed_action_types or base.allowed_action_types,
+        scope_id=notification.scope_id or base.scope_id,
+    )
+
+
+def _notification_sandbox_scope(
+    base: AgentRuntimeContext,
+    notification: AgentNotificationSnapshot,
+) -> tuple[int | None, int, tuple[str, ...]]:
+    if notification.sandbox_container_id is None:
+        return base.sandbox_container_id, base.sandbox_container_generation, base.sandbox_skill_metadata
+    if notification.sandbox_container_id != base.sandbox_container_id:
+        return None, 0, ()
+    return (
+        base.sandbox_container_id,
+        base.sandbox_container_generation,
+        base.sandbox_skill_metadata,
     )
 
 
@@ -983,12 +1046,16 @@ async def _mark_session_running(
     session_id: str,
     *,
     agent_code: str,
+    sandbox_container_id: int | None = None,
+    sandbox_container_generation: int = 0,
 ) -> None:
     from service.agent import sessions as agent_sessions
 
     await agent_sessions.mark_session_running(
         session_id,
         agent_code=agent_code,
+        sandbox_container_id=sandbox_container_id,
+        sandbox_container_generation=sandbox_container_generation,
     )
 
 

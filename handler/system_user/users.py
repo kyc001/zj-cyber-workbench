@@ -5,8 +5,6 @@ from schema.system_user.users import (
     CreateSystemUserRequest,
     DeleteSystemUserResponse,
     QuerySystemUsersResponse,
-    SystemUserLoginRequest,
-    SystemUserLoginResponse,
     SystemUserSchema,
     UpdateSystemUserRequest,
 )
@@ -14,7 +12,6 @@ from service.system_user.users import (
     create_system_user,
     delete_system_user,
     query_system_users,
-    system_user_login,
     update_system_user,
 )
 from service.common.pagination import paginated_payload
@@ -60,10 +57,3 @@ async def query_system_users_handler(page: int, size: int, keyword: str) -> Comm
             [SystemUserSchema.model_validate(user) for user in system_users.items],
         ),
     ))
-
-
-async def system_user_login_handler(request: SystemUserLoginRequest) -> CommonResponse:
-    token = await system_user_login(email=request.email, password=request.password)
-    if token is None:
-        return CommonResponse(code=HTTPStatus.UNAUTHORIZED.value, message="invalid email or password")
-    return CommonResponse(data=SystemUserLoginResponse(token=token))

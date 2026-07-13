@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class AgentNotificationKind(StrEnum):
     SUBAGENT_FINISHED = "subagent_finished"
+    SANDBOX_ASYNC_JOB_FINISHED = "sandbox_async_job_finished"
     USER_MESSAGE = "user_message"
 
 
@@ -49,6 +50,12 @@ class AgentNotificationSnapshot(BaseModel):
     run_id: str = ""
     payload: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
+    sandbox_container_id: int | None = None
+    sandbox_container_generation: int = 0
+    sandbox_skill_metadata: tuple[str, ...] = ()
+    allowed_targets: tuple[str, ...] = ()
+    allowed_action_types: tuple[str, ...] = ()
+    scope_id: str = ""
     created_at: datetime
     updated_at: datetime
     started_at: datetime | None = None

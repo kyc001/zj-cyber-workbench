@@ -42,6 +42,9 @@ async def create_subagent_task(
     brief: str,
     nested_call_id: str,
     owner_id: int,
+    allowed_targets: tuple[str, ...] = (),
+    allowed_action_types: tuple[str, ...] = (),
+    scope_id: str = "",
 ) -> AgentSubordinateTaskSnapshot:
     now = datetime.now()
     run_id = str(uuid4())
@@ -77,6 +80,9 @@ async def create_subagent_task(
                     "agent_code": agent_code,
                     "agent_name": agent_name,
                 },
+                allowed_targets=allowed_targets,
+                allowed_action_types=allowed_action_types,
+                scope_id=scope_id,
             )
         await session.commit()
         await session.refresh(task)

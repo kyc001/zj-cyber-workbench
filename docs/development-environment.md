@@ -36,7 +36,7 @@
 ```
 
 该命令直接运行源码后端和 Vite，浏览器访问 `http://127.0.0.1:5173/playground`。网页不再
-加载登录页，通过回环接口自动建立本机会话；`VITE_DESKTOP_MODE=true` 复用便携版免登录流程，
+加载登录页；后端默认将回环请求映射为本机管理员身份，前端不使用登录 Token，
 支持完整的前端交互、REST 和 WebSocket 调试。只有发布验收或验证 EXE 生命周期时才运行
 `pnpm package:portable`。
 
@@ -67,6 +67,10 @@ uv run python -m unittest discover -s tests -p "test_*.py"
 uv run ruff check .
 pnpm typecheck
 pnpm build
+powershell -ExecutionPolicy Bypass -File scripts/audit-upstream-migration.ps1
+powershell -ExecutionPolicy Bypass -File scripts/validate-portable-skills.ps1
+powershell -ExecutionPolicy Bypass -File scripts/validate-portable-tools.ps1
+uv run python scripts/validate_workspace_runtime.py --workspace-id 1
 ```
 
 修改 API Schema 后必须执行：
@@ -102,9 +106,9 @@ B 负责 Electron Builder 和最终 Portable EXE，A 提供可被 PyInstaller �
 pnpm package:portable
 ```
 
-该命令依次构建 React Renderer、`dist/zj-core.exe`、Electron Main/Preload，并在 `desktop/release/ZJ-<version>-win-x64-portable.exe` 生成单文件便携包。`scripts/package-portable.ps1` 会检查每一步的退出码，任何子构建失败都会使整个命令失败。
+该命令先通过 `127.0.0.1:7897` 安装并验证 Windows 便携工具，再依次构建 React Renderer、`dist/zj-core.exe`、Electron Main/Preload，并在 `desktop/release/ZJ-<version>-win-x64-portable.exe` 生成单文件便携包。其他网络环境可直接执行 `scripts/package-portable.ps1 -ToolProxy <proxy>`。任何子步骤失败都会终止构建。
 
-PyInstaller 只收集 `.z3r0/agents`、空 Key 的 `.z3r0/config.json.example`、Web 静态资源和运行依赖。Electron Builder 只再加入 `zj-core.exe`；仓库根 `.env`、`.zj/`、`data/`、数据库、日志和历史构建数据均不属于发布输入。便携程序首次启动后才在自身目录旁创建 `data/`。
+PyInstaller 只收集 `.z3r0/agents`、空 Key 的 `.z3r0/config.json.example`、`skills/`、经过验证的 `.zj/tools`（在包内命名为 `portable-tools/`）、Web 静态资源和运行依赖。Electron Builder 只再加入 `zj-core.exe`；仓库根 `.env`、`.zj/config.json`、`data/`、数据库、日志和历史 Artifact 均不属于发布输入。便携程序首次启动后才在自身目录旁创建 `data/`。
 
 当前工程基线没有代码签名证书，`desktop/electron-builder.yml` 明确关闭 EXE 资源编辑与签名工具依赖，产物状态为 `NotSigned`。正式发布前由 B 配置证书、图标和签名校验，再由 D 在干净 Windows VM 验证；不要把证书或密码写入仓库。
 

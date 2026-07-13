@@ -25,7 +25,7 @@ from config import AgentConfig
 from core.agent.model_input import ModelInputAdapter
 
 
-class Z3r0OpenAIModel(Model):
+class ZJOpenAIModel(Model):
     def __init__(self, cfg: AgentConfig) -> None:
         self.model = cfg.model
         self._input_adapter = ModelInputAdapter()
@@ -103,5 +103,5 @@ class Z3r0OpenAIModel(Model):
         await self._client.close()
 
 
-def build_openai_model(cfg: AgentConfig) -> Z3r0OpenAIModel:
-    return Z3r0OpenAIModel(cfg)
+def build_openai_model(cfg: AgentConfig) -> ZJOpenAIModel:
+    return ZJOpenAIModel(cfg)

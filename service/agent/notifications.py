@@ -35,6 +35,7 @@ _ACTIVE_CANCELABLE_VALUES = [
 ]
 
 _MAIN_AGENT_TARGET = f"{MAIN_AGENT_INSTANCE_PREFIX}%"
+_RUNTIME_SCOPE_KEY = "_runtime_scope"
 
 
 def add_obligation_in_session(
@@ -48,6 +49,12 @@ def add_obligation_in_session(
     payload: dict[str, Any] | None = None,
     nested_for_agent_code: str = "",
     nested_call_id: str = "",
+    sandbox_container_id: int | None = None,
+    sandbox_container_generation: int = 0,
+    sandbox_skill_metadata: tuple[str, ...] = (),
+    allowed_targets: tuple[str, ...] = (),
+    allowed_action_types: tuple[str, ...] = (),
+    scope_id: str = "",
 ) -> AgentNotification:
     """Register an AWAITING obligation row on an already-open session.
 
@@ -63,10 +70,18 @@ def add_obligation_in_session(
         target_agent_instance_id=target_agent_instance_id,
         nested_for_agent_code=nested_for_agent_code,
         nested_call_id=nested_call_id,
+        sandbox_container_id=sandbox_container_id,
+        sandbox_container_generation=sandbox_container_generation,
+        sandbox_skill_metadata=list(sandbox_skill_metadata),
         kind=kind.value,
         status=AgentNotificationStatus.AWAITING.value,
         run_id=run_id,
-        payload=payload or {},
+        payload=_payload_with_runtime_scope(
+            payload,
+            allowed_targets=allowed_targets,
+            allowed_action_types=allowed_action_types,
+            scope_id=scope_id,
+        ),
     )
     session.add(notification)
     return notification
@@ -101,7 +116,10 @@ async def resolve_obligation_in_session(
         AgentNotificationStatus.PENDING.value if ready else AgentNotificationStatus.CANCELED.value
     )
     if payload is not None:
-        notification.payload = payload
+        current_scope = _runtime_scope_payload(notification.payload)
+        notification.payload = dict(payload)
+        if current_scope:
+            notification.payload[_RUNTIME_SCOPE_KEY] = current_scope
     notification.error = error
     notification.updated_at = now
     if not ready:
@@ -118,6 +136,12 @@ async def enqueue_user_message_notification(
     user_content: list[dict[str, Any]],
     user_display_text: str = "",
     user_requested_agent_code: str = "",
+    sandbox_container_id: int | None = None,
+    sandbox_container_generation: int = 0,
+    sandbox_skill_metadata: tuple[str, ...] = (),
+    allowed_targets: tuple[str, ...] = (),
+    allowed_action_types: tuple[str, ...] = (),
+    scope_id: str = "",
 ) -> AgentNotificationSnapshot:
     """Queue a user message for the agent that is already running."""
     run_id = str(uuid4())
@@ -126,6 +150,12 @@ async def enqueue_user_message_notification(
         "display_text": user_display_text,
         "requested_agent_code": user_requested_agent_code,
     }
+    payload = _payload_with_runtime_scope(
+        payload,
+        allowed_targets=allowed_targets,
+        allowed_action_types=allowed_action_types,
+        scope_id=scope_id,
+    )
     notification = AgentNotification(
         id=str(uuid4()),
         session_id=session_id,
@@ -133,6 +163,9 @@ async def enqueue_user_message_notification(
         target_agent_instance_id=target_agent_instance_id,
         nested_for_agent_code="",
         nested_call_id="",
+        sandbox_container_id=sandbox_container_id,
+        sandbox_container_generation=sandbox_container_generation,
+        sandbox_skill_metadata=list(sandbox_skill_metadata),
         kind=AgentNotificationKind.USER_MESSAGE.value,
         status=AgentNotificationStatus.PENDING.value,
         priority=USER_MESSAGE_PRIORITY,
@@ -460,6 +493,7 @@ async def _finish_notification(
 
 def snapshot_from_notification(notification: AgentNotification) -> AgentNotificationSnapshot:
     payload = _coerce_payload(notification.payload)
+    runtime_scope = _runtime_scope_payload(payload)
     kind = _coerce_kind(notification.kind)
 
     user_content: list[dict[str, Any]] | None = None
@@ -484,6 +518,12 @@ def snapshot_from_notification(notification: AgentNotification) -> AgentNotifica
         run_id=notification.run_id,
         payload=payload,
         error=notification.error,
+        sandbox_container_id=notification.sandbox_container_id,
+        sandbox_container_generation=notification.sandbox_container_generation,
+        sandbox_skill_metadata=_coerce_string_tuple(notification.sandbox_skill_metadata),
+        allowed_targets=_coerce_string_tuple(runtime_scope.get("allowed_targets")),
+        allowed_action_types=_coerce_string_tuple(runtime_scope.get("allowed_action_types")),
+        scope_id=str(runtime_scope.get("scope_id") or ""),
         created_at=notification.created_at,
         updated_at=notification.updated_at,
         started_at=notification.started_at,
@@ -508,6 +548,36 @@ def _coerce_status(value: AgentNotificationStatus | str) -> AgentNotificationSta
 
 def _coerce_payload(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _payload_with_runtime_scope(
+    payload: dict[str, Any] | None,
+    *,
+    allowed_targets: tuple[str, ...],
+    allowed_action_types: tuple[str, ...],
+    scope_id: str,
+) -> dict[str, Any]:
+    value = dict(payload or {})
+    if allowed_targets or allowed_action_types or scope_id:
+        value[_RUNTIME_SCOPE_KEY] = {
+            "allowed_targets": list(allowed_targets),
+            "allowed_action_types": list(allowed_action_types),
+            "scope_id": scope_id,
+        }
+    return value
+
+
+def _runtime_scope_payload(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    value = payload.get(_RUNTIME_SCOPE_KEY)
+    return value if isinstance(value, dict) else {}
+
+
+def _coerce_string_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list | tuple):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
 
 
 def _filter_notification_target(statement: Any, target_agent_instance_id: str | None) -> Any:

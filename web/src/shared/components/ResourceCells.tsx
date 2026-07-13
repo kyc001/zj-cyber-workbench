@@ -56,7 +56,7 @@ export function SecretCell({
   return (
     <div className="resource-secret-cell">
       <code>{visible ? (value || "-") : hasValue || maskEmpty ? hiddenText : "-"}</code>
-      <Tooltip content={visible ? "Hide secret" : "Show secret"}>
+      <Tooltip content={visible ? "隐藏密钥" : "显示密钥"}>
         <Button
           icon={visible ? <EyeOff size={14} /> : <Eye size={14} />}
           theme="borderless"

@@ -37,3 +37,21 @@ class WorkProjectOwner(SQLModel, table=True):
     )
     position: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.now)
+
+
+class WorkProjectSandboxContainer(SQLModel, table=True):
+    __tablename__ = "work_project_sandbox_containers"
+
+    project_id: int = Field(
+        foreign_key="work_projects.id",
+        primary_key=True,
+        ondelete="CASCADE",
+    )
+    sandbox_container_id: int = Field(
+        foreign_key="sandbox_containers.id",
+        primary_key=True,
+        index=True,
+        ondelete="CASCADE",
+    )
+    position: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.now)

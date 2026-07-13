@@ -34,15 +34,15 @@ git -C Z3r0 ls-files
 
 | 路径 | 文件数 | 处理结论 |
 | --- | ---: | --- |
-| `web/` | 133 | 迁移工作台，删除 Host/Egress/Sandbox 页面并继续由 B 产品化 |
-| `sandbox/` | 48 | 全部排除 |
-| `service/` | 44 | 迁移 Agent、Knowledge、User、WorkProject；排除容器/Host/Egress 服务 |
-| `core/` | 42 | 迁移 Agent Runtime、委派、会话、工具；排除 Sandbox 控制层 |
+| `web/` | 133 | 完整迁移工作台；Host/Egress/Sandbox 页面改称主机、出口代理、工具基线和执行工作区 |
+| `sandbox/` | 48 | Docker/Go 进程实现由便携后端替换；全部 Skill 与用户能力迁入 Windows/SSH 双后端 Workspace Runtime |
+| `service/` | 44 | 完整迁移 Agent、Knowledge、WorkProject、Host、Egress、Sandbox 服务并替换 Docker 实现 |
+| `core/` | 42 | 完整迁移 Agent Runtime、委派、会话、Sandbox 工具与异步命令 |
 | `docs/` | 32 | 仅作上游参考，不覆盖本项目设计文档 |
-| `schema/` | 30 | 迁移可复用领域和 API Schema，排除容器相关 Schema |
+| `schema/` | 30 | 完整迁移领域和 API Schema；Sandbox 契约保留，底层语义改为执行工作区 |
 | `model/` | 23 | 迁移并将 PostgreSQL 类型改为 SQLite 兼容类型 |
-| `router/` | 22 | 迁移可复用 API，删除容器/Host/Egress 路由 |
-| `handler/` | 19 | 与保留路由同步迁移 |
+| `router/` | 22 | 完整迁移 API；Host/Egress/Sandbox 路由保留，仅删除登录路由 |
+| `handler/` | 19 | 与完整路由同步迁移，并增加本机身份、审批和模型拉取处理 |
 | `.z3r0/` | 13 | 迁移 Agent SOUL/AGENTS 和配置模板，作为只读发布资源 |
 | 其他根文件 | 26 | 按运行、许可和构建需要逐项迁移或重写 |
 
@@ -63,16 +63,19 @@ git -C Z3r0 ls-files
 - PostgreSQL Timeline insert：改为 SQLite dialect upsert。
 - PostgreSQL advisory lock：改为单 Sidecar 进程内 `asyncio.Lock`。
 - PostgreSQL LightRAG：改为 JsonKV、NanoVectorDB、NetworkX、JsonDocStatus 本地存储。
-- Web 部署入口：增加 Electron Main/Preload 和 Sidecar 生命周期骨架。
+- Web 部署入口：增加 Electron Main/Preload、Sidecar 生命周期和 Portable 发布配置。
 - `.z3r0`：从可写运行目录拆分为只读 Agent 资源；运行数据改到 `.zj`/`ZJ_DATA_DIR`。
 
-## 明确排除的部分
+## Docker 替换而非功能删除
 
-- `sandbox/` 全目录。
-- Dockerfile、`.dockerignore`、Compose 文件和 Docker Python 依赖。
-- `core/sandbox`、`service/sandbox`、Sandbox model/schema/router/handler。
-- Docker Host、Egress Proxy、容器 Shell、容器文件、noVNC 和容器网络 UI。
-- 依赖 PostgreSQL、pgvector 或外部数据库服务的运行路径。
+- Dockerfile、Compose、Docker SDK、Docker Socket 和镜像构建不进入运行时。
+- Sandbox 的 API、模型、路由、命令、文件、Shell、异步任务、技能和前端选择器全部保留。
+- Sandbox 底层替换为 `.zj/sandboxes/<id>/workspace` 本机目录，或 SSH 主机 `$HOME/.zj/sandboxes/<id>/workspace`；两者都支持命令、异步任务、Shell 和文件 API。
+- Host 保留本机 PowerShell，并以严格 Host Key 的 SSH/SFTP 后端承载 Linux 专属工具。
+- Egress Proxy 保留为受管网络配置；Agent 网络工具仍以 Scope/Policy/Audit 为最终边界。
+- 便携工作区每次启动本机或 SSH 命令/Shell 时解析 Egress 配置并注入代理环境；直连模式会清除宿主机继承代理，避免界面配置与实际执行不一致。
+- noVNC API 保留兼容判断，但本机工作区没有远程图形桌面时明确禁用入口。
+- PostgreSQL/pgvector 替换为 SQLite WAL、本地向量库和 NetworkX。
 
 ## 来源与安全检查
 
@@ -83,4 +86,14 @@ git -C Z3r0 ls-files
 
 ## 后续同步规则
 
-不做整仓覆盖式上游同步。需要吸收上游修复时，以本基线提交为起点逐文件 Cherry-pick/人工移植，并重新检查：无 Docker、SQLite 兼容、桌面数据目录、当前 Schema 和许可证。任何上游 Docker/PostgreSQL 假设都不能直接进入主干。
+继续以 `git -C Z3r0 ls-files` 为完整功能审计基线。吸收上游修复时逐文件移植并重新检查：无 Docker、SQLite 兼容、桌面数据目录、Scope/Policy/Audit、当前 Schema 和许可证。上游 Docker/PostgreSQL 实现不得直接进入主干，但对应用户能力不得无说明删除。
+
+自动审计命令：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/audit-upstream-migration.ps1
+```
+
+当前基线的 432 个文件全部被脚本分类，任何新的未迁移文件都会以非零退出码阻断交接。登录页/登录 API、官网 Landing、Docker/Compose/Go 容器代理和上游文档站属于明确替代项；其余 Control、Runtime、Evidence、Workspace API、React 工作台与 Skill 均要求存在对应源文件。
+
+同一脚本还比较上游与当前 `web/openapi.json`：上游 57 条 API 路径中只允许缺少已明确删除的登录接口；所有共享路径的 HTTP 方法必须完整存在。当前仓库有 63 条路径，额外提供审批、模型拉取和健康检查，迁移 API 缺失数为 0。

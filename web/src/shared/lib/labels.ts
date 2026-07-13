@@ -1,5 +1,6 @@
 import type { WorkProjectGraphEdgeCategory } from "../api/contract";
 import {
+  SANDBOX_CONTAINER_STATUSES,
   SYSTEM_USER_ROLES,
   WORK_PROJECT_ASSET_ORIGINS,
   WORK_PROJECT_ASSET_TYPES,
@@ -13,6 +14,7 @@ import {
   WORK_PROJECT_TYPES,
 } from "../api/generated/constants";
 import type {
+  SandboxContainerStatus,
   SystemUserRole,
   WorkProjectAssetOrigin,
   WorkProjectAssetType,
@@ -38,6 +40,7 @@ export const WORK_PROJECT_FINDING_STATUS_LABEL = labelsFromEnum<WorkProjectFindi
 export const WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL = labelsFromEnum<WorkProjectGraphEdgeType>(WORK_PROJECT_GRAPH_EDGE_TYPES, { related: "关联", resolves_to: "解析到", hosts: "托管", connects_to: "连接", trusts: "信任", exploits: "利用", pivots_to: "横向转移", leads_to: "导向" });
 export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL = labelsFromEnum<WorkProjectGraphEdgeCategory>(WORK_PROJECT_GRAPH_EDGE_CATEGORIES, { structural: "结构关系", offensive: "攻击关系" });
 export const WORK_PROJECT_ATTACK_PATH_STATUS_LABEL = labelsFromEnum<WorkProjectAttackPathStatus>(WORK_PROJECT_ATTACK_PATH_STATUSES, { suspected: "疑似", validated: "已验证", blocked: "已阻断", closed: "已关闭" });
+export const SANDBOX_CONTAINER_STATUS_LABEL = labelsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUSES, { created: "已创建", running: "运行中", paused: "已暂停", stopped: "已停止", error: "错误" });
 
 export const SYSTEM_USER_ROLE_COLOR = colorsFromEnum<SystemUserRole>(SYSTEM_USER_ROLES, {
   admin: "red",
@@ -91,6 +94,14 @@ export const WORK_PROJECT_ASSET_ORIGIN_COLOR = colorsFromEnum<WorkProjectAssetOr
 export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_COLOR = colorsFromEnum<WorkProjectGraphEdgeCategory>(WORK_PROJECT_GRAPH_EDGE_CATEGORIES, {
   structural: "blue",
   offensive: "red",
+});
+
+export const SANDBOX_CONTAINER_STATUS_COLOR = colorsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUSES, {
+  created: "blue",
+  running: "green",
+  paused: "amber",
+  stopped: "grey",
+  error: "red",
 });
 
 function labelsFromEnum<T extends string>(

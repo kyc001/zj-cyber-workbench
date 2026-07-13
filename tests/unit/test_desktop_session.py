@@ -1,15 +1,13 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
-from app import _bootstrap_desktop_user
+from app import _bootstrap_desktop_user, create_app
 from config import DatabaseConfig, get_config
 from database import close_engine, create_all_tables, init_engine
-from middleware.auth import decode_access_token, desktop_mode_enabled
+from middleware.auth import local_desktop_user
 from schema.system_user.users import SystemUserRole
-from service.system_user.users import issue_system_user_token, query_system_user_by_username
+from service.system_user.users import query_system_user_by_username
 
 
 class DesktopSessionTests(unittest.IsolatedAsyncioTestCase):
@@ -28,10 +26,8 @@ class DesktopSessionTests(unittest.IsolatedAsyncioTestCase):
         get_config().database = self.original_database
         self.temp_dir.cleanup()
 
-    async def test_desktop_mode_creates_local_admin_and_issues_token(self) -> None:
-        with patch.dict(os.environ, {"ZJ_DESKTOP_MODE": "true"}):
-            self.assertTrue(desktop_mode_enabled())
-            await _bootstrap_desktop_user()
+    async def test_desktop_mode_creates_local_admin_identity(self) -> None:
+        await _bootstrap_desktop_user()
 
         user = await query_system_user_by_username("desktop")
         self.assertIsNotNone(user)
@@ -39,19 +35,22 @@ class DesktopSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(SystemUserRole.ADMIN, user.role)
         self.assertTrue(user.password.startswith("pbkdf2_sha256$"))
 
-        auth_user = decode_access_token(issue_system_user_token(user))
+        auth_user = await local_desktop_user()
         self.assertIsNotNone(auth_user)
         assert auth_user is not None
         self.assertEqual(user.id, auth_user.id)
         self.assertEqual(SystemUserRole.ADMIN, auth_user.role)
         self.assertEqual("desktop@localhost", auth_user.email)
 
-    async def test_desktop_bootstrap_is_disabled_by_default(self) -> None:
-        with patch.dict(os.environ, {"ZJ_DESKTOP_MODE": ""}):
-            self.assertFalse(desktop_mode_enabled())
-            await _bootstrap_desktop_user()
+    async def test_local_identity_has_no_disable_switch(self) -> None:
+        await _bootstrap_desktop_user()
+        self.assertIsNotNone(await local_desktop_user())
 
-        self.assertIsNone(await query_system_user_by_username("desktop"))
+    async def test_openapi_has_no_login_or_access_token_scheme(self) -> None:
+        schema = create_app().openapi()
+        self.assertNotIn("/api/system-users/login", schema.get("paths", {}))
+        security_schemes = schema.get("components", {}).get("securitySchemes", {})
+        self.assertNotIn("AccessTokenAuth", security_schemes)
 
 
 if __name__ == "__main__":
