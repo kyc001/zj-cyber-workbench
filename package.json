@@ -1,0 +1,29 @@
+{
+  "name": "zj-cyber-workbench",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Multi-agent cyber operations workbench for authorized security testing and infrastructure operations.",
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "dev": "concurrently -k -n web,desktop -c cyan,yellow \"pnpm --filter @zj-security/web dev\" \"pnpm --filter @zj-security/desktop dev\"",
+    "build": "pnpm --filter @zj-security/web build && pnpm --filter @zj-security/desktop build",
+    "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
+    "typecheck": "pnpm --filter @zj-security/web typecheck && pnpm --filter @zj-security/desktop typecheck",
+    "test": "uv run python -m unittest discover -s tests -p \"test_*.py\" && pnpm typecheck",
+    "test:d-runtime": "uv run python -m unittest tests.integration.test_d_mock_runtime tests.unit.test_d_agent_quality_assets",
+    "test:d-web": "powershell -ExecutionPolicy Bypass -File scripts/run-d-web-e2e.ps1",
+    "test:d": "pnpm test:d-runtime && pnpm test:d-web"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^9.2.1",
+    "wait-on": "^8.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller",
+      "esbuild"
+    ]
+  }
+}
