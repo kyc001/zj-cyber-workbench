@@ -1,0 +1,112 @@
+{
+    "system": {
+        "listen_addr": "127.0.0.1",
+        "listen_port": 8000,
+        "encrypt_key": "replace-with-at-least-32-random-characters",
+        "bootstrap_admin": {
+            "enabled": false,
+            "username": "admin",
+            "email": "admin@z3r0.fans",
+            "password": ""
+        }
+    },
+    "database": {
+        "url": "",
+        "filename": "zj.sqlite3",
+        "busy_timeout_ms": 5000,
+        "pool_pre_ping": true
+    },
+    "agent_runtime": {
+        "main_max_turns": 1000,
+        "subordinate_max_turns": 1000,
+        "model_stream_idle_timeout_seconds": 300,
+        "report_retention_seconds": 259200,
+        "context_compression_enabled": true,
+        "context_compression_trigger_ratio": 0.95,
+        "context_compression_hard_stop_ratio": 0.98,
+        "context_compression_target_ratio": 0.20,
+        "context_budget_model_call_ratio": 0.80,
+        "context_compression_preserve_recent_ratio": 0.25,
+        "context_compression_preserve_recent_items": 20,
+        "context_compression_min_items": 12,
+        "context_compression_summary_max_tokens": 8000
+    },
+    "agent_pool": {
+        "max_size": 256,
+        "ttl_seconds": 1800,
+        "sweep_interval_seconds": 60
+    },
+    "lightrag": {
+        "embedding_api": "",
+        "embedding_key": "",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dim": 1536,
+        "llm_api": "",
+        "llm_key": "",
+        "llm_model": "gpt-5.6-luna",
+        "graph_matches": 5,
+        "chunk_matches": 10
+    },
+    "agents": {
+        "cso": {
+            "code": "cso",
+            "name": "Z3r0",
+            "description": "Chief Security Officer",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-luna",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cae": {
+            "code": "cae",
+            "name": "V3ra",
+            "description": "Chief Audit Engineer",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-luna",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cce": {
+            "code": "cce",
+            "name": "Nu1L",
+            "description": "Chief Cryptography Engineer",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-luna",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cie": {
+            "code": "cie",
+            "name": "L1ly",
+            "description": "Chief Intelligence Engineer",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-luna",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cpe": {
+            "code": "cpe",
+            "name": "Fr4nk",
+            "description": "Chief Penetration Engineer",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-luna",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cre": {
+            "code": "cre",
+            "name": "J4m3",
+            "description": "Chief Reverse Engineer",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-luna",
+            "use_responses": false,
+            "context_window": 1000000
+        }
+    }
+}

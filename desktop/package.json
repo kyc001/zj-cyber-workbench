@@ -1,0 +1,23 @@
+{
+  "name": "@zj-security/desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Electron shell for the ZJ cyber operations workbench",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "wait-on tcp:5173 && pnpm build && electron dist/main.js",
+    "package": "pnpm build && electron-builder --win portable --x64"
+  },
+  "dependencies": {
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.3",
+    "wait-on": "^8.0.3"
+  }
+}
