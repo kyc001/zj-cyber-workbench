@@ -27,9 +27,9 @@ Remote remediation · Evidence-driven operations
 基础上，增加 Incident、授权范围、风险策略、人工审批、远程运维、变更回滚和
 独立验证能力，并通过 Electron 交付桌面产品。
 
-当前仓库处于工程基线阶段：上游代码已迁移，桌面壳、运维领域契约和
-SQLite 便携持久化已建立，但业务 API、SSH Transport、Sidecar 正式打包和
-正式 Agent Prompt 仍需按团队分工实现。
+当前仓库处于工程基线阶段：上游代码已迁移，桌面壳、运维领域契约、
+SQLite 便携持久化以及 Electron + PyInstaller Portable EXE 打包链路已建立，
+但业务 API、SSH Transport 和正式 Agent Prompt 仍需按团队分工实现。
 不要把当前骨架误认为可对生产环境执行变更的正式版本。
 
 ## Architecture

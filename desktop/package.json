@@ -16,7 +16,8 @@
   "devDependencies": {
     "@types/node": "^22.15.3",
     "electron": "^37.2.6",
-    "electron-builder": "^26.0.12",
+    "electron-builder": "26.0.12",
+    "electron-builder-squirrel-windows": "26.0.12",
     "typescript": "^5.9.3",
     "wait-on": "^8.0.3"
   }

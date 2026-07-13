@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $RepoRoot
+$env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
 
 if ($Clean) {
     $workspacePrefix = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd('\') + '\'
@@ -20,8 +21,23 @@ if ($Clean) {
 }
 
 pnpm --filter @zj-security/web build
+if ($LASTEXITCODE -ne 0) {
+    throw "Web build failed with exit code $LASTEXITCODE."
+}
+
 uv run pyinstaller --noconfirm --clean packaging/zj-core.spec
+if ($LASTEXITCODE -ne 0) {
+    throw "Sidecar build failed with exit code $LASTEXITCODE."
+}
+
 pnpm --filter @zj-security/desktop build
+if ($LASTEXITCODE -ne 0) {
+    throw "Desktop build failed with exit code $LASTEXITCODE."
+}
+
 pnpm --filter @zj-security/desktop exec electron-builder --win portable --x64
+if ($LASTEXITCODE -ne 0) {
+    throw "Portable packaging failed with exit code $LASTEXITCODE."
+}
 
 Write-Host "Portable artifacts are in desktop/release." -ForegroundColor Green

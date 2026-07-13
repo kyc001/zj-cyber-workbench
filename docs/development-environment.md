@@ -84,3 +84,24 @@ git ls-files | Select-String -Pattern '(^|/)config\.json$|\.env$|Z3r0/'
 ## Portable 构建责任
 
 B 负责 Electron Builder 和最终 Portable EXE，A 提供可被 PyInstaller 打包的 Sidecar，D 在干净 Windows VM 验收。任何打包脚本都必须复用当前 SQLite 和 `ZJ_DATA_DIR` 约定，不能在打包阶段引入 Docker 或外部数据库。
+
+完整构建命令：
+
+```powershell
+pnpm package:portable
+```
+
+该命令依次构建 React Renderer、`dist/zj-core.exe`、Electron Main/Preload，并在 `desktop/release/ZJ-<version>-win-x64-portable.exe` 生成单文件便携包。`scripts/package-portable.ps1` 会检查每一步的退出码，任何子构建失败都会使整个命令失败。
+
+当前工程基线没有代码签名证书，`desktop/electron-builder.yml` 明确关闭 EXE 资源编辑与签名工具依赖，产物状态为 `NotSigned`。正式发布前由 B 配置证书、图标和签名校验，再由 D 在干净 Windows VM 验证；不要把证书或密码写入仓库。
+
+需要通过本地代理首次下载 Electron/NSIS 依赖时，在当前 PowerShell 会话设置代理后执行安装和打包：
+
+```powershell
+$env:HTTP_PROXY = "http://127.0.0.1:<port>"
+$env:HTTPS_PROXY = $env:HTTP_PROXY
+$env:ALL_PROXY = $env:HTTP_PROXY
+$env:ELECTRON_GET_USE_PROXY = "1"
+pnpm install
+pnpm package:portable
+```

@@ -9,7 +9,7 @@
     "build": "pnpm --filter @zj-security/web build && pnpm --filter @zj-security/desktop build",
     "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
     "typecheck": "pnpm --filter @zj-security/web typecheck && pnpm --filter @zj-security/desktop typecheck",
-    "test": "python -m unittest discover -s tests -p \"test_*.py\" && pnpm typecheck"
+    "test": "uv run python -m unittest discover -s tests -p \"test_*.py\" && pnpm typecheck"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

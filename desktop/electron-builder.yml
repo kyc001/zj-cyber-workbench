@@ -1,6 +1,6 @@
 appId: io.github.zj-security.workbench
 productName: ZJ
-artifactName: ZJ-${version}-win-${arch}-${name}.${ext}
+artifactName: ZJ-${version}-win-${arch}-portable.${ext}
 directories:
   output: release
 files:
@@ -14,3 +14,4 @@ win:
   target:
     - portable
   requestedExecutionLevel: asInvoker
+  signAndEditExecutable: false
