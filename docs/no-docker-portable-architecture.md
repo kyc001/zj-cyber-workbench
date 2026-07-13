@@ -63,10 +63,13 @@ synchronous=NORMAL
 ## EXE 打包边界
 
 - `zj-core.exe`：使用 PyInstaller 打包 FastAPI Sidecar、Python 依赖、Agent 资源和内置脚本。
-- `zj.exe` / Portable 产物：使用 Electron Builder 打包桌面进程、React 静态资源和 `zj-core.exe`。
+- `zhenjun.exe` / Portable 产物：使用 Electron Builder 打包桌面进程、React 静态资源和 `zj-core.exe`。
 - 目标产物：`ZJ-<version>-win-x64-portable.exe`。
-- Electron 负责选择空闲回环端口、设置桌面会话 Token、传入 `ZJ_DATA_DIR`、轮询 `/health`、关闭 Sidecar 和处理进程树。
+- Electron 负责选择空闲回环端口、自动建立本地管理员会话、传入 `ZJ_DATA_DIR`、轮询 `/health`、关闭 Sidecar 和处理进程树。
 - Sidecar 只绑定 `127.0.0.1`，不作为局域网 Web 服务发布。
+- Portable 模式不显示登录页，也不使用固定默认口令；Sidecar 为本地 `desktop` 用户保存随机口令哈希，并且只允许回环客户端在 `ZJ_DESKTOP_MODE=true` 时获取桌面会话 Token。
+- 发布包内只包含空 Key 的配置模板。用户在 System Config 中填写的 Provider Key 保存到 EXE 旁的 `data/config.json`，不进入 EXE、源码仓库、日志或浏览器持久存储。
+- System Config 同时支持逐 Agent 配置和一键应用统一 Provider；模型列表由后端代理访问 OpenAI-compatible `<baseURL>/models`，Renderer 不直接请求第三方 Provider。
 
 ## 发布验收
 

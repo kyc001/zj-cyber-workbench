@@ -29,9 +29,11 @@ const SystemConfigPage = lazyRoute(loadSystemConfigPage, "SystemConfigPage");
 const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
 
 function ProtectedRoute() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isDesktop, ready } = useAuth();
   const location = useLocation();
+  if (!ready) return <RouteFallback />;
   if (!isAuthenticated) {
+    if (isDesktop) return <DesktopSessionUnavailable />;
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
   return <Outlet />;
@@ -47,11 +49,16 @@ function AdminOnlyRoute() {
 }
 
 function PublicOnlyRoute() {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated) {
+  const { isAuthenticated, isDesktop } = useAuth();
+  if (isDesktop || isAuthenticated) {
     return <Navigate to="/playground" replace />;
   }
   return <Outlet />;
+}
+
+function HomeRoute() {
+  const { isDesktop } = useAuth();
+  return <Navigate to={isDesktop ? "/playground" : "/login"} replace />;
 }
 
 export function App() {
@@ -60,7 +67,7 @@ export function App() {
       <BrowserRouter>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<HomeRoute />} />
             <Route element={<PublicOnlyRoute />}>
               <Route path="/login" element={<LoginPage />} />
             </Route>
@@ -81,6 +88,14 @@ export function App() {
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
+  );
+}
+
+function DesktopSessionUnavailable() {
+  return (
+    <div className="route-fallback">
+      <span>Unable to start the local desktop session.</span>
+    </div>
   );
 }
 

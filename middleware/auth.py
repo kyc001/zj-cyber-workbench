@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any
@@ -6,15 +7,19 @@ import jwt
 from fastapi import Depends, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response as StarletteResponse
+from starlette.responses import JSONResponse
+from starlette.responses import Response as StarletteResponse
 
 from config import get_config
 from schema.common.responses import CommonResponse
 from schema.system_user.users import SystemUserRole
 
-
 ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token"
 _API_PATH_PREFIX = "/api"
+
+
+def desktop_mode_enabled() -> bool:
+    return os.environ.get("ZJ_DESKTOP_MODE", "").strip().lower() in {"1", "true", "yes"}
 
 
 @dataclass(frozen=True)

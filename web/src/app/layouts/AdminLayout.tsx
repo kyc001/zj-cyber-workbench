@@ -30,7 +30,7 @@ const navItems = [
 ];
 
 export function AdminLayout() {
-  const { signOut, user } = useAuth();
+  const { isDesktop, signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [headerActions, setHeaderActionsState] = useState<ReactNode>(null);
@@ -150,7 +150,9 @@ export function AdminLayout() {
             {headerActions ? <div className="topbar-resource-actions">{headerActions}</div> : null}
             <div className="topbar-session-actions">
               <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
-              <Button icon={<LogOut size={16} />} theme="borderless" type="tertiary" onClick={handleSignOut} aria-label="Sign out" />
+              {!isDesktop ? (
+                <Button icon={<LogOut size={16} />} theme="borderless" type="tertiary" onClick={handleSignOut} aria-label="Sign out" />
+              ) : null}
             </div>
           </div>
         </header>

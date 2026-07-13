@@ -296,6 +296,23 @@ export interface paths {
         patch: operations["update_instance_config_handler_api_system_config_instance_patch"];
         trace?: never;
     };
+    "/api/system-config/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fetch Provider Models Handler */
+        post: operations["fetch_provider_models_handler_api_system_config_models_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system-users": {
         parameters: {
             query?: never;
@@ -482,6 +499,23 @@ export interface paths {
         post?: never;
         /** Delete Work Project Session Route */
         delete: operations["delete_work_project_session_route_api_work_projects__id__sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/desktop/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Desktop Bootstrap */
+        post: operations["desktop_bootstrap_desktop_bootstrap_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -935,6 +969,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[FetchProviderModelsResponse] */
+        CommonResponse_FetchProviderModelsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["FetchProviderModelsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[InstanceConfigSchema] */
         CommonResponse_InstanceConfigSchema_: {
             /**
@@ -1237,6 +1285,11 @@ export interface components {
             /** Id */
             id: number;
         };
+        /** DesktopBootstrapResponse */
+        DesktopBootstrapResponse: {
+            /** Token */
+            token: string;
+        };
         /**
          * DocStatus
          * @description Document processing status.
@@ -1317,6 +1370,21 @@ export interface components {
              * @enum {string}
              */
             type: "error";
+        };
+        /** FetchProviderModelsRequest */
+        FetchProviderModelsRequest: {
+            /**
+             * Api Key
+             * @default
+             */
+            api_key: string;
+            /** Base Url */
+            base_url: string;
+        };
+        /** FetchProviderModelsResponse */
+        FetchProviderModelsResponse: {
+            /** Models */
+            models: string[];
         };
         /** HealthResponse */
         HealthResponse: {
@@ -3699,6 +3767,66 @@ export interface operations {
             };
         };
     };
+    fetch_provider_models_handler_api_system_config_models_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FetchProviderModelsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_FetchProviderModelsResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     query_system_users_route_api_system_users_get: {
         parameters: {
             query?: {
@@ -4530,6 +4658,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    desktop_bootstrap_desktop_bootstrap_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesktopBootstrapResponse"];
                 };
             };
         };

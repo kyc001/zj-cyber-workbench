@@ -1,5 +1,7 @@
-import { apiGet, apiPatch } from "./client";
+import { apiGet, apiPatch, apiPost } from "./client";
 import type {
+  FetchProviderModelsRequest,
+  FetchProviderModelsResponse,
   GetInstanceConfigResponse,
   UpdateInstanceConfigRequest,
   UpdateInstanceConfigResponse,
@@ -13,4 +15,8 @@ export function getInstanceConfig() {
 
 export function updateInstanceConfig(payload: UpdateInstanceConfigRequest) {
   return apiPatch<UpdateInstanceConfigResponse>(`${SYSTEM_CONFIG_PATH}/instance`, payload);
+}
+
+export function fetchProviderModels(payload: FetchProviderModelsRequest) {
+  return apiPost<FetchProviderModelsResponse>(`${SYSTEM_CONFIG_PATH}/models`, payload);
 }

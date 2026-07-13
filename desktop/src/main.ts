@@ -10,7 +10,7 @@ let sidecar: SidecarManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 
 function rendererUrl(): string {
-  return process.env.ZJ_RENDERER_URL || (sidecar ? `${sidecar.baseUrl}/login` : "http://127.0.0.1:5173/login");
+  return process.env.ZJ_RENDERER_URL || (sidecar ? `${sidecar.baseUrl}/playground` : "http://127.0.0.1:5173/playground");
 }
 
 function createWindow(): BrowserWindow {

@@ -43,3 +43,14 @@ class UpdateInstanceConfigRequest(BaseModel):
 class UpdateInstanceConfigResponse(BaseModel):
     config: InstanceConfigSchema
     restarted: bool
+
+
+class FetchProviderModelsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    base_url: str = Field(min_length=1, max_length=2048)
+    api_key: str = Field(default="", max_length=4096)
+
+
+class FetchProviderModelsResponse(BaseModel):
+    models: list[str]

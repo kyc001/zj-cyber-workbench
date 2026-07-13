@@ -855,6 +855,32 @@
         "title": "CommonResponse[DeleteWorkProjectResponse]",
         "type": "object"
       },
+      "CommonResponse_FetchProviderModelsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FetchProviderModelsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[FetchProviderModelsResponse]",
+        "type": "object"
+      },
       "CommonResponse_InstanceConfigSchema_": {
         "properties": {
           "code": {
@@ -1450,6 +1476,19 @@
         "title": "DeleteWorkProjectResponse",
         "type": "object"
       },
+      "DesktopBootstrapResponse": {
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "DesktopBootstrapResponse",
+        "type": "object"
+      },
       "DocStatus": {
         "description": "Document processing status.\nPipeline order: PENDING -> PARSING -> ANALYZING (optional) -> PROCESSING -> PROCESSED | FAILED.\nPREPROCESSED is deprecated, kept for backward compatibility.",
         "enum": [
@@ -1552,6 +1591,44 @@
           "message"
         ],
         "title": "ErrorEvent",
+        "type": "object"
+      },
+      "FetchProviderModelsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "default": "",
+            "maxLength": 4096,
+            "title": "Api Key",
+            "type": "string"
+          },
+          "base_url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_url"
+        ],
+        "title": "FetchProviderModelsRequest",
+        "type": "object"
+      },
+      "FetchProviderModelsResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          }
+        },
+        "required": [
+          "models"
+        ],
+        "title": "FetchProviderModelsResponse",
         "type": "object"
       },
       "HealthResponse": {
@@ -5674,6 +5751,82 @@
         ]
       }
     },
+    "/api/system-config/models": {
+      "post": {
+        "operationId": "fetch_provider_models_handler_api_system_config_models_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FetchProviderModelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_FetchProviderModelsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Fetch Provider Models Handler",
+        "tags": [
+          "system-config"
+        ]
+      }
+    },
     "/api/system-users": {
       "get": {
         "operationId": "query_system_users_route_api_system_users_get",
@@ -6827,6 +6980,27 @@
         "summary": "Delete Work Project Session Route",
         "tags": [
           "work-projects"
+        ]
+      }
+    },
+    "/desktop/bootstrap": {
+      "post": {
+        "operationId": "desktop_bootstrap_desktop_bootstrap_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesktopBootstrapResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Desktop Bootstrap",
+        "tags": [
+          "desktop"
         ]
       }
     },

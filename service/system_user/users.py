@@ -1,8 +1,8 @@
 import hmac
 import secrets
 from dataclasses import dataclass
-from hashlib import pbkdf2_hmac
 from datetime import datetime, timedelta
+from hashlib import pbkdf2_hmac
 
 import jwt
 from sqlalchemy import or_
@@ -14,7 +14,6 @@ from logger import get_logger
 from model.system_user.users import SystemUser
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import Page, paginate_statement
-
 
 logger = get_logger(__name__)
 
@@ -58,6 +57,25 @@ def _verify_password(password: str, password_hash: str) -> bool:
         iterations,
     ).hex()
     return hmac.compare_digest(actual_digest, expected_digest)
+
+
+def issue_system_user_token(system_user: SystemUser) -> str:
+    if system_user.id is None:
+        raise ValueError("system user must be persisted before issuing a token")
+
+    cfg = get_config()
+    return jwt.encode(
+        payload={
+            "id": system_user.id,
+            "role": system_user.role,
+            "email": system_user.email,
+            "username": system_user.username,
+            "sub": "z3r0",
+            "exp": datetime.now() + timedelta(days=30),
+        },
+        key=cfg.system.encrypt_key,
+        algorithm="HS256",
+    )
 
 
 async def create_system_user(
@@ -156,8 +174,6 @@ async def query_system_users(page: int = 1, size: int = 100, keyword: str = "") 
 
 
 async def system_user_login(email: str, password: str) -> str | None:
-    cfg = get_config()
-
     async with get_async_session() as session:
         result = await session.exec(select(SystemUser).where(SystemUser.email == email))
         system_user = result.first()
@@ -167,16 +183,4 @@ async def system_user_login(email: str, password: str) -> str | None:
         if not _verify_password(password, system_user.password):
             return None
 
-        token = jwt.encode(
-            payload={
-                "id": system_user.id,
-                "role": system_user.role,
-                "email": system_user.email,
-                "username": system_user.username,
-                "sub": "z3r0",
-                "exp": datetime.now() + timedelta(days=30),
-            },
-            key=cfg.system.encrypt_key,
-            algorithm="HS256",
-        )
-        return token
+        return issue_system_user_token(system_user)

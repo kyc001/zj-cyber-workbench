@@ -1,7 +1,7 @@
-import { Button, Input, InputNumber, Spin, Switch, TextArea } from "@douyinfe/semi-ui";
-import { Bot, DatabaseZap, RotateCcw, Save, Settings, X } from "lucide-react";
+import { Button, Input, InputNumber, Select, Spin, Switch, TextArea } from "@douyinfe/semi-ui";
+import { Bot, CopyCheck, DatabaseZap, RefreshCw, RotateCcw, Save, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";
+import { fetchProviderModels, getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import { MetricStrip } from "../../shared/components/ResourcePageShell";
 import { cx } from "../../shared/lib/className";
@@ -24,6 +24,8 @@ type ConfigFormValue = {
   agent_runtime: AgentRuntimeConfig;
   lightrag: LightRAGFormValue;
 };
+
+type ProviderDraft = Pick<AgentConfig, "base_url" | "api_key" | "model">;
 
 type FieldKey<T, Value> = {
   [Key in keyof T]: T[Key] extends Value ? Key : never;
@@ -65,9 +67,10 @@ const POOL_FIELDS: ConfigField<AgentPoolConfig>[] = [
 const AGENT_TEXT_FIELDS: AgentTextField[] = [
   { key: "name", label: "Name", maxLength: 128 },
   { key: "base_url", label: "Base URL" },
-  { key: "model", label: "Model" },
   { key: "api_key", label: "API Key", password: true },
 ];
+
+const EMPTY_PROVIDER: ProviderDraft = { base_url: "", api_key: "", model: "" };
 
 function toFormValue(config: InstanceConfig): ConfigFormValue {
   if (!config.agent_pool || !config.agent_runtime || !config.lightrag) {
@@ -119,6 +122,11 @@ export function SystemConfigPage() {
   const [savedValues, setSavedValues] = useState<ConfigFormValue | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharedProvider, setSharedProvider] = useState<ProviderDraft>(EMPTY_PROVIDER);
+  const [sharedModels, setSharedModels] = useState<string[]>([]);
+  const [sharedModelsLoading, setSharedModelsLoading] = useState(false);
+  const [agentModels, setAgentModels] = useState<Record<string, string[]>>({});
+  const [loadingAgentCode, setLoadingAgentCode] = useState<string | null>(null);
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
@@ -128,6 +136,14 @@ export function SystemConfigPage() {
         const nextValues = toFormValue(response.data);
         setValues(nextValues);
         setSavedValues(cloneFormValue(nextValues));
+        const firstAgent = nextValues.agents[0];
+        setSharedProvider(firstAgent ? {
+          base_url: firstAgent.base_url,
+          api_key: firstAgent.api_key,
+          model: firstAgent.model,
+        } : EMPTY_PROVIDER);
+        setSharedModels([]);
+        setAgentModels({});
       }
     } catch (error) {
       showApiError(error);
@@ -195,6 +211,49 @@ export function SystemConfigPage() {
     }
   }, [saving, values]);
 
+  const loadProviderModels = useCallback(async (provider: Pick<ProviderDraft, "base_url" | "api_key">) => {
+    const response = await fetchProviderModels({
+      base_url: provider.base_url.trim(),
+      api_key: provider.api_key.trim(),
+    });
+    return response.data?.models ?? [];
+  }, []);
+
+  const handleFetchSharedModels = useCallback(async () => {
+    if (!sharedProvider.base_url.trim() || sharedModelsLoading) return;
+    setSharedModelsLoading(true);
+    try {
+      setSharedModels(await loadProviderModels(sharedProvider));
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setSharedModelsLoading(false);
+    }
+  }, [loadProviderModels, sharedModelsLoading, sharedProvider]);
+
+  const handleApplySharedProvider = useCallback(() => {
+    setValues((current) => current && {
+      ...current,
+      agents: current.agents.map((agent) => ({ ...agent, ...sharedProvider })),
+    });
+    if (values) {
+      setAgentModels(Object.fromEntries(values.agents.map((agent) => [agent.code, sharedModels])));
+    }
+  }, [sharedModels, sharedProvider, values]);
+
+  const handleFetchAgentModels = useCallback(async (agent: AgentConfig) => {
+    if (!agent.base_url.trim() || loadingAgentCode) return;
+    setLoadingAgentCode(agent.code);
+    try {
+      const models = await loadProviderModels(agent);
+      setAgentModels((current) => ({ ...current, [agent.code]: models }));
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setLoadingAgentCode(null);
+    }
+  }, [loadProviderModels, loadingAgentCode]);
+
   const headerActions = useMemo(() => (
     <>
       <Button icon={<X size={16} />} type="tertiary" disabled={!savedValues || saving || loading} onClick={handleCancel}>
@@ -234,12 +293,23 @@ export function SystemConfigPage() {
             </ConfigPanel>
 
             <ConfigPanel icon={<Bot size={18} />} title="Agents">
+              <ProviderQuickSetup
+                value={sharedProvider}
+                models={sharedModels}
+                loading={sharedModelsLoading}
+                onChange={(patch) => setSharedProvider((current) => ({ ...current, ...patch }))}
+                onFetch={handleFetchSharedModels}
+                onApply={handleApplySharedProvider}
+              />
               <div className="agent-config-list">
                 {values.agents.map((agent) => (
                   <AgentConfigEditor
                     key={agent.code}
                     agent={agent}
+                    models={agentModels[agent.code] ?? []}
+                    loadingModels={loadingAgentCode === agent.code}
                     onChange={(patch) => updateAgent(agent.code, patch)}
+                    onFetchModels={() => void handleFetchAgentModels(agent)}
                   />
                 ))}
               </div>
@@ -248,6 +318,39 @@ export function SystemConfigPage() {
         ) : null}
       </Spin>
     </section>
+  );
+}
+
+function ProviderQuickSetup({ value, models, loading, onChange, onFetch, onApply }: {
+  value: ProviderDraft;
+  models: string[];
+  loading: boolean;
+  onChange: (patch: Partial<ProviderDraft>) => void;
+  onFetch: () => void;
+  onApply: () => void;
+}) {
+  return (
+    <div className="provider-quick-setup">
+      <div className="provider-quick-grid">
+        <Field kind="text" label="Base URL" value={value.base_url}
+          onChange={(base_url) => onChange({ base_url })}
+        />
+        <Field kind="text" label="API Key" value={value.api_key} password
+          onChange={(api_key) => onChange({ api_key })}
+        />
+        <ModelSelectField label="Model" value={value.model} models={models} loading={loading}
+          onChange={(model) => onChange({ model })} onFetch={onFetch}
+        />
+      </div>
+      <div className="provider-quick-actions">
+        <Button icon={<CopyCheck size={16} />} theme="solid" type="primary"
+          disabled={!value.base_url.trim() || !value.model.trim()} onClick={onApply}
+        >
+          Apply to all agents
+        </Button>
+        <span>{models.length ? `${models.length} models` : ""}</span>
+      </div>
+    </div>
   );
 }
 
@@ -330,9 +433,12 @@ function ConfigFieldGrid<T extends object>({ compact = false, fields, values, on
   );
 }
 
-function AgentConfigEditor({ agent, onChange }: {
+function AgentConfigEditor({ agent, models, loadingModels, onChange, onFetchModels }: {
   agent: AgentFormValue;
+  models: string[];
+  loadingModels: boolean;
   onChange: (patch: Partial<AgentConfig>) => void;
+  onFetchModels: () => void;
 }) {
   return (
     <div className="agent-config-card">
@@ -352,6 +458,9 @@ function AgentConfigEditor({ agent, onChange }: {
             onChange={(value) => onChange({ [field.key]: value })}
           />
         ))}
+        <ModelSelectField label="Model" value={agent.model} models={models} loading={loadingModels}
+          onChange={(model) => onChange({ model })} onFetch={onFetchModels}
+        />
         <Field kind="number" label="Context Window" value={agent.context_window} min={0}
           onChange={(context_window) => onChange({ context_window })}
         />
@@ -364,6 +473,34 @@ function AgentConfigEditor({ agent, onChange }: {
         </label>
       </div>
     </div>
+  );
+}
+
+function ModelSelectField({ label, value, models, loading, onChange, onFetch }: {
+  label: string;
+  value: string;
+  models: string[];
+  loading: boolean;
+  onChange: (value: string) => void;
+  onFetch: () => void;
+}) {
+  const options = Array.from(new Set([value, ...models].filter(Boolean)));
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <div className="model-select-row">
+        <Select
+          value={value}
+          filter
+          allowCreate
+          optionList={options.map((model) => ({ label: model, value: model }))}
+          onChange={(model) => typeof model === "string" && onChange(model)}
+        />
+        <Button icon={<RefreshCw size={15} />} loading={loading} disabled={loading}
+          theme="borderless" type="tertiary" onClick={onFetch} aria-label="Fetch models"
+        />
+      </div>
+    </label>
   );
 }
 

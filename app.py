@@ -1,3 +1,4 @@
+import secrets
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
@@ -9,13 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from config import ROOT_PATH, get_config
-
 from core.delegation.subagents import start_subagent_runtime, stop_subagent_runtime
 from core.lightrag.runtime import start_lightrag, stop_lightrag
 from core.runtime.session import get_agent_pool
 from database import close_engine, create_all_tables, init_engine
 from logger import get_logger
-from middleware.auth import JwtAuthMiddleware
+from middleware.auth import JwtAuthMiddleware, desktop_mode_enabled
 from middleware.response import (
     CommonResponseStatusMiddleware,
     http_exception_handler,
@@ -25,8 +25,8 @@ from middleware.response import (
 from router.agent.agents import router as agent_router
 from router.agent.sessions import router as agent_session_router
 from router.common.fallback import api_not_found_router
-from router.knowledge.resources import router as knowledge_router
 from router.desktop import router as desktop_router
+from router.knowledge.resources import router as knowledge_router
 from router.system_config.config import router as system_config_router
 from router.system_user.users import router as system_user_router
 from router.work_project.projects import router as work_project_router
@@ -37,9 +37,8 @@ from service.knowledge.runtime import (
     start_knowledge_document_runtime,
     stop_knowledge_document_runtime,
 )
-from service.system_user.users import create_system_user, query_system_user_by_username
+from service.system_user.users import create_system_user, query_system_user_by_username, update_system_user
 from utils.urllib3_compat import install_urllib3_closed_file_close_patch
-
 
 logger = get_logger(__name__)
 
@@ -66,6 +65,27 @@ async def _bootstrap_admin_user() -> None:
         role=SystemUserRole.ADMIN,
     )
     logger.info("bootstrap admin user created: %s", bootstrap.username)
+
+
+async def _bootstrap_desktop_user() -> None:
+    if not desktop_mode_enabled():
+        return
+
+    username = "desktop"
+    user = await query_system_user_by_username(username)
+    if user is None:
+        await create_system_user(
+            username=username,
+            password=secrets.token_urlsafe(32),
+            email="desktop@localhost",
+            role=SystemUserRole.ADMIN,
+        )
+        logger.info("local desktop user created")
+        return
+
+    if user.role != SystemUserRole.ADMIN and user.id is not None:
+        await update_system_user(user.id, role=SystemUserRole.ADMIN)
+        logger.info("local desktop user promoted to admin")
 
 
 async def _shutdown_step(name: str, operation: Callable[[], Awaitable[None]]) -> None:
@@ -99,6 +119,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         init_engine()
         await create_all_tables()
         await _bootstrap_admin_user()
+        await _bootstrap_desktop_user()
         await start_lightrag()
         await start_knowledge_document_runtime()
 

@@ -1,7 +1,9 @@
 import asyncio
 from dataclasses import dataclass
 from http import HTTPStatus
+from urllib.parse import urlparse
 
+import httpx
 from fastapi import HTTPException
 
 from config import (
@@ -19,7 +21,6 @@ from core.lightrag.runtime import lightrag_client, restart_lightrag
 from core.runtime.session import AgentSessionPool, get_agent_pool, replace_agent_pool
 from logger import get_logger
 from schema.system_config.config import InstanceConfigSchema, UpdateInstanceConfigRequest
-
 
 logger = get_logger(__name__)
 
@@ -76,6 +77,50 @@ async def update_instance_config(request: UpdateInstanceConfigRequest) -> Instan
                 logger.exception("failed to roll back instance config file")
                 exc.add_note(f"config file rollback also failed: {rollback_error}")
             raise
+
+
+async def fetch_provider_models(base_url: str, api_key: str) -> list[str]:
+    normalized_base_url = base_url.strip().rstrip("/")
+    parsed_url = urlparse(normalized_base_url)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST.value,
+            detail="provider base URL must be an absolute HTTP(S) URL",
+        )
+
+    headers = {"Accept": "application/json"}
+    if api_key.strip():
+        headers["Authorization"] = f"Bearer {api_key.strip()}"
+
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            response = await client.get(f"{normalized_base_url}/models", headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_GATEWAY.value,
+            detail=f"provider model endpoint returned HTTP {exc.response.status_code}",
+        ) from exc
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_GATEWAY.value,
+            detail=f"provider model request failed: {type(exc).__name__}",
+        ) from exc
+
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, list):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_GATEWAY.value,
+            detail="provider model endpoint returned an invalid response",
+        )
+
+    model_ids = {
+        item["id"].strip()
+        for item in data
+        if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip()
+    }
+    return sorted(model_ids, key=str.casefold)
 
 
 async def _apply_instance_config_from_file(file_cfg: GlobalConfig) -> InstanceConfigApplyResult:

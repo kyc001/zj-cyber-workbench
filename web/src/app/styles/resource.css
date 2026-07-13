@@ -705,6 +705,45 @@
   grid-template-columns: repeat(3, minmax(180px, 1fr));
 }
 
+.provider-quick-setup {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--z-line);
+  background: var(--z-surface-muted);
+}
+
+.provider-quick-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(220px, 1fr) minmax(220px, 1fr);
+  gap: 12px;
+}
+
+.provider-quick-actions {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.provider-quick-actions span {
+  min-width: 72px;
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
+.model-select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 4px;
+  align-items: center;
+}
+
+.model-select-row .semi-select {
+  width: 100%;
+}
+
 .switch-field {
   align-content: start;
 }
@@ -1671,7 +1710,8 @@
   }
 
   .config-grid,
-  .config-grid.compact {
+  .config-grid.compact,
+  .provider-quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1702,6 +1742,7 @@
   .project-form-grid,
   .config-grid,
   .config-grid.compact,
+  .provider-quick-grid,
   .agent-form-grid,
   .workspace-header,
   .workspace-title,

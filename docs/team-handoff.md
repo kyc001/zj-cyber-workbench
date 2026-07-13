@@ -15,12 +15,14 @@
 | 接口 | A 保证 | B 使用方式 |
 | --- | --- | --- |
 | `GET /health` | 服务名、版本、协议版本和可用状态稳定 | Sidecar 启动轮询与兼容性检查 |
+| `POST /desktop/bootstrap` | 仅在桌面模式且来源为回环地址时签发本地管理员 Token | Portable 启动后自动建立会话，不显示登录或密码界面 |
+| `POST /api/system-config/models` | 使用提交的 Base URL 和 Key 代理拉取 OpenAI-compatible 模型列表，错误中不回显 Key | Renderer 提供逐 Agent 拉取、搜索、下拉和手工输入 |
 | REST/OpenAPI | 鉴权、错误码、分页和业务状态稳定 | 只使用生成的 TypeScript 类型 |
 | Timeline WS | 稳定 `item_key`、单 Session 单调 `seq`、历史重放与实时流可幂等合并 | 不能按文本内容去重 |
 | Approval | 返回真实 Action、目标、风险、约束、过期时间和变更摘要 | UI 不得只显示模糊确认文案 |
 | Shutdown/Cancel | 有界关闭和任务取消语义 | Electron 退出先请求关闭，再处理超时进程 |
 
-B 需要向 A 回传：首次启动所需字段、桌面 Token 传递方式、Sidecar 崩溃状态、前端遇到的错误码缺口。B 不得在 Renderer 中读取数据库、模型 Key、SSH 私钥或启动子进程。
+B 需要向 A 回传：首次启动所需字段、桌面 Token 传递方式、Sidecar 崩溃状态、前端遇到的错误码缺口。Renderer 只允许在 System Config 表单的瞬时状态中处理模型 Key，并通过受保护 API 提交；不得写入 `localStorage`、日志或打包资源。B 不得在 Renderer 中读取数据库、SSH 私钥或启动子进程。
 
 ## A 向 C 交付
 

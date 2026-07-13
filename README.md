@@ -59,6 +59,19 @@ Electron Main / Preload / React Renderer
 - `docs/no-docker-portable-architecture.md`: 无 Docker 与 Portable EXE 的覆盖性架构决策。
 - `docs/development-environment.md`: Windows 开发、验证和本地文件规则。
 
+## Portable Desktop
+
+- 构建产物为 `desktop/release/ZJ-<version>-win-x64-portable.exe`；桌面主进程名为
+  `zhenjun.exe`，Python Sidecar 进程名为 `zj-core.exe`。
+- Portable 模式直接进入 `/playground`，不显示登录页，也不要求用户设置或输入密码。
+  本地管理会话由回环接口自动建立，不能从非本机地址获取。
+- 首次启动时 Provider Key 为空。在 **System Config** 中可分别配置每个 Agent 的
+  Base URL、API Key 和 Model，也可通过顶部统一配置一键应用到全部 Agent。
+- Model 控件可调用 OpenAI-compatible `<baseURL>/models` 拉取列表、搜索、下拉选择，
+  也允许手工输入服务端未列出的模型名。
+- 用户填写的 Key 只保存到便携 EXE 同目录的 `data/config.json`。构建不会把仓库根目录
+  `.env`、本地数据库或已有 `data/` 打进 EXE；这些文件也不会提交到 Git。
+
 ## Development
 
 Required baseline: Windows 10/11 x64, Node.js 22.12+, pnpm 10, Python 3.12,
@@ -82,6 +95,10 @@ The backend uses embedded SQLite and local LightRAG storage. Put provider secret
 in an ignored `.env` based on `.env.example`. First start creates `.zj/config.json`;
 never commit `.env`, `.zj/`, databases, logs, or artifacts. The original `/Z3r0/`
 checkout is fully ignored.
+
+Build the single-file Windows package with `pnpm package:portable`. End users should
+configure providers in the desktop UI; the repository `.env` is only a local
+development override and is never a release input.
 
 ## Team Ownership
 

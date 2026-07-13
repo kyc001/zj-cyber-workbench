@@ -18,7 +18,7 @@
 ./scripts/dev.ps1 install
 ```
 
-`install` 执行 `uv sync` 和 `pnpm install`。开发时将 `.env.example` 复制为仓库根目录 `.env` 并填写真实 API Key；Portable 模式使用 `data/.env`。两者都不提交 Git。首次启动后端时会从 `.z3r0/config.json.example` 创建 `.zj/config.json`，并生成新的加密密钥。
+`install` 执行 `uv sync` 和 `pnpm install`。开发时将 `.env.example` 复制为仓库根目录 `.env` 并填写真实 API Key；该文件不提交 Git。首次启动后端时会从 `.z3r0/config.json.example` 创建 `.zj/config.json`，并生成新的加密密钥。Portable 用户通过 System Config 页面填写 Provider，配置保存在 EXE 旁的 `data/config.json`，不依赖开发者的 `.env`。
 
 ## 运行
 
@@ -92,6 +92,8 @@ pnpm package:portable
 ```
 
 该命令依次构建 React Renderer、`dist/zj-core.exe`、Electron Main/Preload，并在 `desktop/release/ZJ-<version>-win-x64-portable.exe` 生成单文件便携包。`scripts/package-portable.ps1` 会检查每一步的退出码，任何子构建失败都会使整个命令失败。
+
+PyInstaller 只收集 `.z3r0/agents`、空 Key 的 `.z3r0/config.json.example`、Web 静态资源和运行依赖。Electron Builder 只再加入 `zj-core.exe`；仓库根 `.env`、`.zj/`、`data/`、数据库、日志和历史构建数据均不属于发布输入。便携程序首次启动后才在自身目录旁创建 `data/`。
 
 当前工程基线没有代码签名证书，`desktop/electron-builder.yml` 明确关闭 EXE 资源编辑与签名工具依赖，产物状态为 `NotSigned`。正式发布前由 B 配置证书、图标和签名校验，再由 D 在干净 Windows VM 验证；不要把证书或密码写入仓库。
 

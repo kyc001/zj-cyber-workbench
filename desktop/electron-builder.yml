@@ -1,5 +1,6 @@
 appId: io.github.zj-security.workbench
-productName: ZJ
+productName: Zhenjun
+executableName: zhenjun
 artifactName: ZJ-${version}-win-${arch}-portable.${ext}
 directories:
   output: release
