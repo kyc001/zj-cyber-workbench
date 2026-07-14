@@ -4,6 +4,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from fastapi import HTTPException
 
+from config import LightRAGConfig
+from core.lightrag.runtime import _configured_openai_complete, _configured_openai_embed
 from service.system_config.config import fetch_provider_models
 
 
@@ -22,6 +24,18 @@ class _ModelHandler(BaseHTTPRequestHandler):
 
 
 class ProviderModelTests(unittest.IsolatedAsyncioTestCase):
+    def test_provider_urls_are_blank_by_default(self) -> None:
+        config = LightRAGConfig()
+
+        self.assertEqual("", config.embedding_api)
+        self.assertEqual("", config.llm_api)
+
+    async def test_lightrag_requires_explicit_provider_urls(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "LightRAG 抽取模型"):
+            await _configured_openai_complete("prompt")
+        with self.assertRaisesRegex(RuntimeError, "LightRAG 嵌入模型"):
+            await _configured_openai_embed(["text"])
+
     async def test_fetches_sorts_and_deduplicates_models(self) -> None:
         server = ThreadingHTTPServer(("127.0.0.1", 0), _ModelHandler)
         server.authorization = None  # type: ignore[attr-defined]

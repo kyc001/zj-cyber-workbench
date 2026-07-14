@@ -3,6 +3,7 @@ import os
 import secrets
 import sys
 import tempfile
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,16 @@ class AgentConfig(StrictConfigModel):
     context_window: int = Field(default=1000000, ge=0)
 
 
+class PermissionMode(StrEnum):
+    NORMAL = "normal"
+    FULL_ACCESS = "full_access"
+
+
+class PermissionConfig(StrictConfigModel):
+    mode: PermissionMode = PermissionMode.NORMAL
+    approval_timeout_seconds: int = Field(default=300, ge=30, le=3600)
+
+
 # per-process agent runtime pool tuning
 class AgentPoolConfig(StrictConfigModel):
     max_size: int = Field(default=256, ge=1)
@@ -97,11 +108,11 @@ class AgentRuntimeConfig(StrictConfigModel):
 
 # LightRAG config
 class LightRAGConfig(StrictConfigModel):
-    embedding_api: str = Field(default="https://api.openai.com/v1", min_length=1)
+    embedding_api: str = Field(default="")
     embedding_key: str = Field(default="")
     embedding_model: str = Field(default="text-embedding-3-small", min_length=1)
     embedding_dim: int = Field(default=1536, ge=1)
-    llm_api: str = Field(default="https://api.openai.com/v1", min_length=1)
+    llm_api: str = Field(default="")
     llm_key: str = Field(default="")
     llm_model: str = Field(default="gpt-5", min_length=1)
     graph_matches: int = Field(default=5, ge=1, le=50)
@@ -115,6 +126,7 @@ class GlobalConfig(StrictConfigModel):
     agents: dict[str, AgentConfig] = Field(default_factory=dict)
     agent_pool: AgentPoolConfig = Field(default_factory=AgentPoolConfig)
     agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
+    permissions: PermissionConfig = Field(default_factory=PermissionConfig)
     lightrag: LightRAGConfig = Field(default_factory=LightRAGConfig)
 
 

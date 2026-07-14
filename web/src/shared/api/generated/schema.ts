@@ -521,6 +521,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runtime-permissions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pending Permissions Handler */
+        get: operations["list_pending_permissions_handler_api_runtime_permissions_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runtime-permissions/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Clear Runtime Permission Rules Handler */
+        delete: operations["clear_runtime_permission_rules_handler_api_runtime_permissions_rules_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runtime-permissions/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Runtime Permission Settings Handler */
+        get: operations["get_runtime_permission_settings_handler_api_runtime_permissions_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Runtime Permission Settings Handler */
+        patch: operations["update_runtime_permission_settings_handler_api_runtime_permissions_settings_patch"];
+        trace?: never;
+    };
+    "/api/runtime-permissions/{request_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Runtime Permission Handler */
+        post: operations["decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox-containers": {
         parameters: {
             query?: never;
@@ -1524,6 +1593,11 @@ export interface components {
             request: components["schemas"]["ApprovalCreateRequest"];
             user: components["schemas"]["AuthUser"];
         };
+        /** Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post */
+        Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post: {
+            request: components["schemas"]["RuntimePermissionDecisionRequest"];
+            user: components["schemas"]["AuthUser"];
+        };
         /** Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post */
         Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post: {
             /** Files */
@@ -2106,6 +2180,34 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[RuntimePermissionRequest] */
+        CommonResponse_RuntimePermissionRequest_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["RuntimePermissionRequest"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[RuntimePermissionSettingsResponse] */
+        CommonResponse_RuntimePermissionSettingsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["RuntimePermissionSettingsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[SandboxContainerCreateOptionsResponse] */
         CommonResponse_SandboxContainerCreateOptionsResponse_: {
             /**
@@ -2241,6 +2343,21 @@ export interface components {
             code: number;
             /** Data */
             data?: components["schemas"]["ApprovalRecord"][] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[list[RuntimePermissionRequest]] */
+        CommonResponse_list_RuntimePermissionRequest__: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            /** Data */
+            data?: components["schemas"]["RuntimePermissionRequest"][] | null;
             /**
              * Message
              * @default success
@@ -2643,6 +2760,7 @@ export interface components {
                 [key: string]: components["schemas"]["AgentConfig"];
             };
             lightrag?: components["schemas"]["LightRAGConfig"];
+            permissions?: components["schemas"]["PermissionConfig"];
         };
         /** KnowledgeDocumentDetailSchema */
         KnowledgeDocumentDetailSchema: {
@@ -2835,7 +2953,7 @@ export interface components {
             chunk_matches: number;
             /**
              * Embedding Api
-             * @default https://api.openai.com/v1
+             * @default
              */
             embedding_api: string;
             /**
@@ -2860,7 +2978,7 @@ export interface components {
             graph_matches: number;
             /**
              * Llm Api
-             * @default https://api.openai.com/v1
+             * @default
              */
             llm_api: string;
             /**
@@ -2966,6 +3084,21 @@ export interface components {
              */
             updated_at: string;
         };
+        /** PermissionConfig */
+        PermissionConfig: {
+            /**
+             * Approval Timeout Seconds
+             * @default 300
+             */
+            approval_timeout_seconds: number;
+            /** @default normal */
+            mode: components["schemas"]["PermissionMode"];
+        };
+        /**
+         * PermissionMode
+         * @enum {string}
+         */
+        PermissionMode: "normal" | "full_access";
         /** PolicyDecision */
         PolicyDecision: {
             /** Approval Ttl Seconds */
@@ -3197,6 +3330,71 @@ export interface components {
              */
             type: "run_state";
         };
+        /**
+         * RuntimePermissionDecision
+         * @enum {string}
+         */
+        RuntimePermissionDecision: "reject" | "allow_once" | "always_allow";
+        /** RuntimePermissionDecisionRequest */
+        RuntimePermissionDecisionRequest: {
+            decision: components["schemas"]["RuntimePermissionDecision"];
+        };
+        /** RuntimePermissionRequest */
+        RuntimePermissionRequest: {
+            /** Action Type */
+            action_type: string;
+            /** Agent Code */
+            agent_code: string;
+            /**
+             * Agent Name
+             * @default
+             */
+            agent_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id?: string;
+            /** Reason */
+            reason: string;
+            /** Requester Id */
+            requester_id: number;
+            risk_level: components["schemas"]["RiskLevel"];
+            /** Session Id */
+            session_id: string;
+            /** @default pending */
+            status: components["schemas"]["RuntimePermissionStatus"];
+            /** Target */
+            target: string;
+        };
+        /** RuntimePermissionSettingsResponse */
+        RuntimePermissionSettingsResponse: {
+            /**
+             * Always Allow Rules
+             * @default 0
+             */
+            always_allow_rules: number;
+            settings: components["schemas"]["PermissionConfig"];
+        };
+        /**
+         * RuntimePermissionStatus
+         * @enum {string}
+         */
+        RuntimePermissionStatus: "pending" | "allowed" | "rejected" | "expired";
         /** SandboxContainerCreateOptionsResponse */
         SandboxContainerCreateOptionsResponse: {
             /** Hosts */
@@ -3772,6 +3970,7 @@ export interface components {
                 [key: string]: components["schemas"]["UpdateAgentConfigRequest"];
             };
             lightrag: components["schemas"]["LightRAGConfig"];
+            permissions: components["schemas"]["PermissionConfig"];
         };
         /** UpdateInstanceConfigResponse */
         UpdateInstanceConfigResponse: {
@@ -3789,6 +3988,10 @@ export interface components {
             ip_address?: string | null;
             /** Ssh Port */
             ssh_port?: number | null;
+        };
+        /** UpdateRuntimePermissionSettingsRequest */
+        UpdateRuntimePermissionSettingsRequest: {
+            mode: components["schemas"]["PermissionMode"];
         };
         /** UpdateSandboxContainerEgressRequest */
         UpdateSandboxContainerEgressRequest: {
@@ -5768,6 +5971,147 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_pending_permissions_handler_api_runtime_permissions_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthUser"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_list_RuntimePermissionRequest__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    clear_runtime_permission_rules_handler_api_runtime_permissions_rules_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_RuntimePermissionSettingsResponse_"];
+                };
+            };
+        };
+    };
+    get_runtime_permission_settings_handler_api_runtime_permissions_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_RuntimePermissionSettingsResponse_"];
+                };
+            };
+        };
+    };
+    update_runtime_permission_settings_handler_api_runtime_permissions_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRuntimePermissionSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_RuntimePermissionSettingsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_RuntimePermissionRequest_"];
                 };
             };
             /** @description Validation Error */

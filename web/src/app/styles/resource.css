@@ -735,13 +735,17 @@
 
 .model-select-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 32px;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
   align-items: center;
 }
 
 .model-select-row .semi-select {
   width: 100%;
+}
+
+.model-fetch-button {
+  min-width: 94px;
 }
 
 .switch-field {

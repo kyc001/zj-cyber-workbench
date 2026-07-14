@@ -30,7 +30,9 @@ cancel_sandbox_async_job
 load_skill
 ```
 
-所有网络工具要求当前消息显式声明目标；越界目标被拒绝并写入 `.zj/audit/executions.jsonl`。同步/异步命令通过本机诊断策略、破坏性命令阻断、超时和输出上限。
+普通访问下，网络工具从当前消息提取声明目标；越界目标转为运行时授权请求，拒绝后不执行。同步/异步命令通过本机诊断策略、运行时授权、超时和输出上限。
+
+顶栏可切换权限模式。普通访问对越界目标和中高风险操作发起运行时授权，支持拒绝、本次允许和按“操作类型 + 精确目标”始终允许；完全访问绕过目标范围和运行时授权，不产生权限或执行守卫审计记录。仓库及便携包不带默认 Provider Base URL，用户必须在系统配置页或本机忽略的 `.env` 中显式填写。
 
 ## 真实案例
 
@@ -53,13 +55,15 @@ load_skill
 ## 本地验证
 
 ```text
-Python tests: 26 passed
+Python tests: 33 passed
 Web TypeScript: passed
 Desktop TypeScript: passed
 Web production build: passed
 Backend health: 200
 No-token loopback Agent/Workspace API: 200
 Host/Image/Workspace/Agent/Approval API: 200
+Runtime permission normal/full-access API: passed
+Blank default Provider configuration: passed
 WorkProject -> Workspace binding: passed
 Agent real tool loop: passed
 Upstream 432-file audit: passed

@@ -12,8 +12,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from config import ROOT_PATH
 from core.delegation.subagents import start_subagent_runtime, stop_subagent_runtime
 from core.lightrag.runtime import start_lightrag, stop_lightrag
-from core.sandbox.command_jobs import start_async_sandbox_runtime, stop_async_sandbox_commands
 from core.runtime.session import get_agent_pool
+from core.sandbox.command_jobs import start_async_sandbox_runtime, stop_async_sandbox_commands
 from database import close_engine, create_all_tables, init_engine
 from logger import get_logger
 from middleware.auth import LocalIdentityMiddleware
@@ -28,9 +28,10 @@ from router.agent.sessions import router as agent_session_router
 from router.approval import router as approval_router
 from router.common.fallback import api_not_found_router
 from router.desktop import router as desktop_router
-from router.knowledge.resources import router as knowledge_router
 from router.egress_proxy.proxies import router as egress_proxy_router
 from router.host.hosts import router as host_router
+from router.knowledge.resources import router as knowledge_router
+from router.runtime_permissions import router as runtime_permission_router
 from router.sandbox.containers import router as sandbox_container_router
 from router.sandbox.images import router as sandbox_image_router
 from router.system_config.config import router as system_config_router
@@ -39,14 +40,19 @@ from router.work_project.projects import router as work_project_router
 from schema.system_user.users import SystemUserRole
 from service.agent.recovery import recover_pending_sessions
 from service.agent.reports import start_report_cleanup_runtime, stop_report_cleanup_runtime
+from service.host.hosts import ensure_local_managed_host
 from service.knowledge.runtime import (
     start_knowledge_document_runtime,
     stop_knowledge_document_runtime,
 )
-from service.system_user.users import create_system_user, query_system_user_by_username, update_system_user
-from service.host.hosts import ensure_local_managed_host
 from service.sandbox.lifecycle import ensure_default_portable_workspace
-from service.sandbox.status import start_sandbox_container_status_monitor, stop_sandbox_container_status_monitor, set_agent_tool_binding_invalidator, invalidate_all_agent_tool_bindings
+from service.sandbox.status import (
+    invalidate_all_agent_tool_bindings,
+    set_agent_tool_binding_invalidator,
+    start_sandbox_container_status_monitor,
+    stop_sandbox_container_status_monitor,
+)
+from service.system_user.users import create_system_user, query_system_user_by_username, update_system_user
 from utils.urllib3_compat import install_urllib3_closed_file_close_patch
 
 logger = get_logger(__name__)
@@ -170,6 +176,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_router, prefix=API_PREFIX)
     app.include_router(agent_session_router, prefix=API_PREFIX)
     app.include_router(approval_router, prefix=API_PREFIX)
+    app.include_router(runtime_permission_router, prefix=API_PREFIX)
     app.include_router(system_config_router, prefix=API_PREFIX)
     app.include_router(desktop_router)
     app.include_router(api_not_found_router, prefix=API_PREFIX)

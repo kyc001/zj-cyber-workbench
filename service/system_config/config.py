@@ -12,6 +12,7 @@ from config import (
     AgentRuntimeConfig,
     GlobalConfig,
     LightRAGConfig,
+    PermissionConfig,
     get_config,
     read_config_file,
     write_config_file,
@@ -51,22 +52,27 @@ async def update_instance_config(request: UpdateInstanceConfigRequest) -> Instan
         agents = {}
         for code, agent in current.agents.items():
             patch = request.agents[code]
-            agents[code] = agent.model_copy(update={
-                "name": patch.name,
-                "description": patch.description,
-                "base_url": patch.base_url,
-                "api_key": patch.api_key,
-                "model": patch.model,
-                "use_responses": patch.use_responses,
-                "context_window": patch.context_window,
-            })
+            agents[code] = agent.model_copy(
+                update={
+                    "name": patch.name,
+                    "description": patch.description,
+                    "base_url": patch.base_url,
+                    "api_key": patch.api_key,
+                    "model": patch.model,
+                    "use_responses": patch.use_responses,
+                    "context_window": patch.context_window,
+                }
+            )
 
-        next_cfg = current.model_copy(update={
-            "agents": agents,
-            "agent_pool": request.agent_pool,
-            "agent_runtime": request.agent_runtime,
-            "lightrag": request.lightrag,
-        })
+        next_cfg = current.model_copy(
+            update={
+                "agents": agents,
+                "agent_pool": request.agent_pool,
+                "agent_runtime": request.agent_runtime,
+                "permissions": request.permissions,
+                "lightrag": request.lightrag,
+            }
+        )
         write_config_file(next_cfg)
         try:
             return await _apply_instance_config_from_file(next_cfg)
@@ -156,14 +162,16 @@ async def _apply_instance_config_from_file(file_cfg: GlobalConfig) -> InstanceCo
 def _apply_instance_config(file_cfg: GlobalConfig) -> tuple[bool, bool]:
     current = get_config()
     agent_runtime_changed = _agent_runtime_config_changed(current, file_cfg)
+    permissions_changed = current.permissions != file_cfg.permissions
     lightrag_changed = current.lightrag != file_cfg.lightrag
     lightrag_runtime_changed = _lightrag_runtime_config_changed(current.lightrag, file_cfg.lightrag)
-    if not agent_runtime_changed and not lightrag_changed:
+    if not agent_runtime_changed and not permissions_changed and not lightrag_changed:
         return False, False
 
     current.agents = _copy_agents(file_cfg.agents)
     current.agent_pool = _copy_agent_pool(file_cfg.agent_pool)
     current.agent_runtime = _copy_agent_runtime(file_cfg.agent_runtime)
+    current.permissions = _copy_permissions(file_cfg.permissions)
     current.lightrag = _copy_lightrag(file_cfg.lightrag)
     return agent_runtime_changed, lightrag_runtime_changed
 
@@ -211,6 +219,10 @@ def _copy_agent_runtime(agent_runtime: AgentRuntimeConfig) -> AgentRuntimeConfig
     return agent_runtime.model_copy(deep=True)
 
 
+def _copy_permissions(permissions: PermissionConfig) -> PermissionConfig:
+    return permissions.model_copy(deep=True)
+
+
 def _copy_lightrag(lightrag: LightRAGConfig) -> LightRAGConfig:
     return lightrag.model_copy(deep=True)
 
@@ -224,6 +236,7 @@ def _restore_instance_config(snapshot: InstanceConfigSchema) -> None:
     current.agents = _copy_agents(snapshot.agents)
     current.agent_pool = _copy_agent_pool(snapshot.agent_pool)
     current.agent_runtime = _copy_agent_runtime(snapshot.agent_runtime)
+    current.permissions = _copy_permissions(snapshot.permissions)
     current.lightrag = _copy_lightrag(snapshot.lightrag)
 
 
@@ -264,5 +277,6 @@ def _instance_config_from_global(cfg: GlobalConfig) -> InstanceConfigSchema:
         agents=cfg.agents,
         agent_pool=cfg.agent_pool,
         agent_runtime=cfg.agent_runtime,
+        permissions=cfg.permissions,
         lightrag=cfg.lightrag,
     )

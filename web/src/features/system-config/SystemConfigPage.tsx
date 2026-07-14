@@ -1,4 +1,4 @@
-import { Button, Input, InputNumber, Select, Spin, Switch, TextArea } from "@douyinfe/semi-ui";
+import { Button, Input, InputNumber, Select, Spin, Switch, TextArea, Toast } from "@douyinfe/semi-ui";
 import { Bot, CopyCheck, DatabaseZap, RefreshCw, RotateCcw, Save, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { fetchProviderModels, getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";
@@ -11,6 +11,7 @@ import type {
   AgentRuntimeConfig,
   InstanceConfig,
   LightRAGConfig,
+  PermissionConfig,
   UpdateInstanceConfigRequest,
 } from "../../shared/api/types";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
@@ -22,6 +23,7 @@ type ConfigFormValue = {
   agents: AgentFormValue[];
   agent_pool: AgentPoolConfig;
   agent_runtime: AgentRuntimeConfig;
+  permissions: PermissionConfig;
   lightrag: LightRAGFormValue;
 };
 
@@ -73,7 +75,7 @@ const AGENT_TEXT_FIELDS: AgentTextField[] = [
 const EMPTY_PROVIDER: ProviderDraft = { base_url: "", api_key: "", model: "" };
 
 function toFormValue(config: InstanceConfig): ConfigFormValue {
-  if (!config.agent_pool || !config.agent_runtime || !config.lightrag) {
+  if (!config.agent_pool || !config.agent_runtime || !config.permissions || !config.lightrag) {
     throw new Error("实例配置不完整");
   }
   const agents = Object.values(config.agents ?? {}).map((agent) => ({ ...agent }));
@@ -81,6 +83,10 @@ function toFormValue(config: InstanceConfig): ConfigFormValue {
     agents,
     agent_pool: { ...config.agent_pool },
     agent_runtime: { ...config.agent_runtime },
+    permissions: {
+      mode: config.permissions.mode ?? "normal",
+      approval_timeout_seconds: config.permissions.approval_timeout_seconds ?? 300,
+    },
     lightrag: { ...config.lightrag },
   };
 }
@@ -90,6 +96,7 @@ function cloneFormValue(values: ConfigFormValue): ConfigFormValue {
     agents: values.agents.map((agent) => ({ ...agent })),
     agent_pool: { ...values.agent_pool },
     agent_runtime: { ...values.agent_runtime },
+    permissions: { ...values.permissions },
     lightrag: { ...values.lightrag },
   };
 }
@@ -113,6 +120,7 @@ function toPayload(values: ConfigFormValue): UpdateInstanceConfigRequest {
     agents,
     agent_pool: values.agent_pool,
     agent_runtime: values.agent_runtime,
+    permissions: values.permissions,
     lightrag: values.lightrag,
   };
 }
@@ -223,7 +231,9 @@ export function SystemConfigPage() {
     if (!sharedProvider.base_url.trim() || sharedModelsLoading) return;
     setSharedModelsLoading(true);
     try {
-      setSharedModels(await loadProviderModels(sharedProvider));
+      const models = await loadProviderModels(sharedProvider);
+      setSharedModels(models);
+      models.length ? Toast.success(`已拉取 ${models.length} 个模型`) : Toast.warning("Provider 未返回可用模型");
     } catch (error) {
       showApiError(error);
     } finally {
@@ -247,6 +257,7 @@ export function SystemConfigPage() {
     try {
       const models = await loadProviderModels(agent);
       setAgentModels((current) => ({ ...current, [agent.code]: models }));
+      models.length ? Toast.success(`已为 ${agent.name} 拉取 ${models.length} 个模型`) : Toast.warning("Provider 未返回可用模型");
     } catch (error) {
       showApiError(error);
     } finally {
@@ -348,7 +359,7 @@ function ProviderQuickSetup({ value, models, loading, onChange, onFetch, onApply
         >
           应用到全部智能体
         </Button>
-        <span>{models.length ? `${models.length} 个模型` : ""}</span>
+        <span>{models.length ? `已拉取 ${models.length} 个模型，可搜索选择` : "点击“拉取模型”获取服务端列表"}</span>
       </div>
     </div>
   );
@@ -493,12 +504,14 @@ function ModelSelectField({ label, value, models, loading, onChange, onFetch }: 
           value={value}
           filter
           allowCreate
+          placeholder={models.length ? "搜索或选择模型" : "先拉取模型列表"}
+          emptyContent="没有匹配的模型，可直接输入模型名"
           optionList={options.map((model) => ({ label: model, value: model }))}
           onChange={(model) => typeof model === "string" && onChange(model)}
         />
-        <Button icon={<RefreshCw size={15} />} loading={loading} disabled={loading}
+        <Button className="model-fetch-button" icon={<RefreshCw size={15} />} loading={loading} disabled={loading}
           theme="borderless" type="tertiary" onClick={onFetch} aria-label="拉取模型列表" title="拉取模型列表"
-        />
+        >拉取模型</Button>
       </div>
     </label>
   );

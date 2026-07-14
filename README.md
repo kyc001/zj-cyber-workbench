@@ -67,10 +67,12 @@ Electron Main / Preload / React Renderer
   `zhenjun.exe`，Python Sidecar 进程名为 `zj-core.exe`。
 - 浏览器开发模式和 Portable 模式都直接进入 `/playground`，不显示登录页，也不要求用户设置或输入密码。
   Sidecar 只监听回环地址，并将本机请求直接映射为内置管理员身份；前端不申请、不保存也不传递登录 Token。
-- 首次启动时 Provider Key 为空。在 **System Config** 中可分别配置每个 Agent 的
+- 首次启动时 Provider Base URL 和 Key 均为空，不预设或推荐任何服务商。在 **System Config** 中可分别配置每个 Agent 的
   Base URL、API Key 和 Model，也可通过顶部统一配置一键应用到全部 Agent。
 - Model 控件可调用 OpenAI-compatible `<baseURL>/models` 拉取列表、搜索、下拉选择，
   也允许手工输入服务端未列出的模型名。
+- 顶栏权限模式提供“普通访问”和“完全访问”。普通访问在越出声明范围或执行中高风险操作时弹出
+  “拒绝 / 本次允许 / 始终允许”；完全访问不检查目标范围、不弹窗，也不写权限与执行守卫审计。
 - 用户填写的 Key 只保存到便携 EXE 同目录的 `data/config.json`。构建不会把仓库根目录
   `.env`、本地数据库或已有 `data/` 打进 EXE；这些文件也不会提交到 Git。
 

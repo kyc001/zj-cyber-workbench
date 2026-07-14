@@ -17,6 +17,7 @@
 | `GET /health` | 服务名、版本、协议版本和可用状态稳定 | Sidecar 启动轮询与兼容性检查 |
 | 本机身份 | Sidecar 仅监听回环地址；桌面模式默认开启，无登录接口和会话 Token | Renderer 直接调用同源 REST/WebSocket，不写登录状态 |
 | `POST /api/system-config/models` | 使用提交的 Base URL 和 Key 代理拉取 OpenAI-compatible 模型列表，错误中不回显 Key | Renderer 提供逐 Agent 拉取、搜索、下拉和手工输入 |
+| `/api/runtime-permissions/*` | 普通访问等待用户决定并持久化精确的始终允许规则；完全访问直接放行且不写权限/执行守卫审计 | 顶栏切换模式，全局弹窗处理拒绝、本次允许和始终允许 |
 | REST/OpenAPI | 鉴权、错误码、分页和业务状态稳定 | 只使用生成的 TypeScript 类型 |
 | Timeline WS | 稳定 `item_key`、单 Session 单调 `seq`、历史重放与实时流可幂等合并 | 不能按文本内容去重 |
 | Approval | 返回真实 Action、目标、风险、约束、过期时间和变更摘要 | UI 不得只显示模糊确认文案 |
@@ -57,7 +58,7 @@ Docker Socket、容器网络和 Docker Toolpack 不进入仓库；上游 Sandbox
 ### 队友开发注意
 
 - 不提交 `.env`、`.zj/`、`Z3r0/`、下载工具、SQLite、日志和报告。
-- 新机器从 `.env.example` 创建本地 `.env`；正式包在系统配置页填写 Provider，Key 不进入 EXE。
+- 新机器从 `.env.example` 创建本地 `.env`；示例不带默认 Base URL 或 Key，正式包在系统配置页填写 Provider，Key 不进入 EXE。
 - 开发阶段使用 `http://127.0.0.1:8000/` 或 Vite `http://127.0.0.1:5173/`，不需要反复打包 EXE。
 - 便携工具执行 `powershell -ExecutionPolicy Bypass -File scripts/install-portable-tools.ps1 -Proxy http://127.0.0.1:7897`。
 - 便携工具验收执行 `powershell -ExecutionPolicy Bypass -File scripts/validate-portable-tools.ps1`。

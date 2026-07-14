@@ -980,6 +980,22 @@
         "title": "Body_create_approval_handler_api_approvals_post",
         "type": "object"
       },
+      "Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post": {
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/RuntimePermissionDecisionRequest"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        },
+        "required": [
+          "request",
+          "user"
+        ],
+        "title": "Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post",
+        "type": "object"
+      },
       "Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post": {
         "properties": {
           "files": {
@@ -2056,6 +2072,58 @@
         "title": "CommonResponse[QueryWorkProjectsResponse]",
         "type": "object"
       },
+      "CommonResponse_RuntimePermissionRequest_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuntimePermissionRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[RuntimePermissionRequest]",
+        "type": "object"
+      },
+      "CommonResponse_RuntimePermissionSettingsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuntimePermissionSettingsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[RuntimePermissionSettingsResponse]",
+        "type": "object"
+      },
       "CommonResponse_SandboxContainerCreateOptionsResponse_": {
         "properties": {
           "code": {
@@ -2318,6 +2386,36 @@
           }
         },
         "title": "CommonResponse[list[ApprovalRecord]]",
+        "type": "object"
+      },
+      "CommonResponse_list_RuntimePermissionRequest__": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RuntimePermissionRequest"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[list[RuntimePermissionRequest]]",
         "type": "object"
       },
       "ContainerFileCopyRequest": {
@@ -3193,6 +3291,9 @@
           },
           "lightrag": {
             "$ref": "#/components/schemas/LightRAGConfig"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/PermissionConfig"
           }
         },
         "title": "InstanceConfigSchema",
@@ -3647,8 +3748,7 @@
             "type": "integer"
           },
           "embedding_api": {
-            "default": "https://api.openai.com/v1",
-            "minLength": 1,
+            "default": "",
             "title": "Embedding Api",
             "type": "string"
           },
@@ -3677,8 +3777,7 @@
             "type": "integer"
           },
           "llm_api": {
-            "default": "https://api.openai.com/v1",
-            "minLength": 1,
+            "default": "",
             "title": "Llm Api",
             "type": "string"
           },
@@ -3955,6 +4054,32 @@
         ],
         "title": "ManagedHostSchema",
         "type": "object"
+      },
+      "PermissionConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_timeout_seconds": {
+            "default": 300,
+            "maximum": 3600.0,
+            "minimum": 30.0,
+            "title": "Approval Timeout Seconds",
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PermissionMode",
+            "default": "normal"
+          }
+        },
+        "title": "PermissionConfig",
+        "type": "object"
+      },
+      "PermissionMode": {
+        "enum": [
+          "normal",
+          "full_access"
+        ],
+        "title": "PermissionMode",
+        "type": "string"
       },
       "PolicyDecision": {
         "properties": {
@@ -4536,6 +4661,127 @@
         ],
         "title": "RunStateEvent",
         "type": "object"
+      },
+      "RuntimePermissionDecision": {
+        "enum": [
+          "reject",
+          "allow_once",
+          "always_allow"
+        ],
+        "title": "RuntimePermissionDecision",
+        "type": "string"
+      },
+      "RuntimePermissionDecisionRequest": {
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/RuntimePermissionDecision"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "RuntimePermissionDecisionRequest",
+        "type": "object"
+      },
+      "RuntimePermissionRequest": {
+        "properties": {
+          "action_type": {
+            "title": "Action Type",
+            "type": "string"
+          },
+          "agent_code": {
+            "title": "Agent Code",
+            "type": "string"
+          },
+          "agent_name": {
+            "default": "",
+            "title": "Agent Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requester_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Requester Id",
+            "type": "integer"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RuntimePermissionStatus",
+            "default": "pending"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "agent_code",
+          "requester_id",
+          "action_type",
+          "target",
+          "reason",
+          "risk_level",
+          "expires_at"
+        ],
+        "title": "RuntimePermissionRequest",
+        "type": "object"
+      },
+      "RuntimePermissionSettingsResponse": {
+        "properties": {
+          "always_allow_rules": {
+            "default": 0,
+            "title": "Always Allow Rules",
+            "type": "integer"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/PermissionConfig"
+          }
+        },
+        "required": [
+          "settings"
+        ],
+        "title": "RuntimePermissionSettingsResponse",
+        "type": "object"
+      },
+      "RuntimePermissionStatus": {
+        "enum": [
+          "pending",
+          "allowed",
+          "rejected",
+          "expired"
+        ],
+        "title": "RuntimePermissionStatus",
+        "type": "string"
       },
       "SandboxContainerCreateOptionsResponse": {
         "properties": {
@@ -5556,12 +5802,16 @@
           },
           "lightrag": {
             "$ref": "#/components/schemas/LightRAGConfig"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/PermissionConfig"
           }
         },
         "required": [
           "agents",
           "agent_pool",
           "agent_runtime",
+          "permissions",
           "lightrag"
         ],
         "title": "UpdateInstanceConfigRequest",
@@ -5640,6 +5890,18 @@
           }
         },
         "title": "UpdateManagedHostRequest",
+        "type": "object"
+      },
+      "UpdateRuntimePermissionSettingsRequest": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/PermissionMode"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "UpdateRuntimePermissionSettingsRequest",
         "type": "object"
       },
       "UpdateSandboxContainerEgressRequest": {
@@ -8815,6 +9077,181 @@
         "summary": "Get Knowledge Vector Route",
         "tags": [
           "knowledges"
+        ]
+      }
+    },
+    "/api/runtime-permissions/pending": {
+      "get": {
+        "operationId": "list_pending_permissions_handler_api_runtime_permissions_pending_get",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_list_RuntimePermissionRequest__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pending Permissions Handler",
+        "tags": [
+          "runtime-permissions"
+        ]
+      }
+    },
+    "/api/runtime-permissions/rules": {
+      "delete": {
+        "operationId": "clear_runtime_permission_rules_handler_api_runtime_permissions_rules_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_RuntimePermissionSettingsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Clear Runtime Permission Rules Handler",
+        "tags": [
+          "runtime-permissions"
+        ]
+      }
+    },
+    "/api/runtime-permissions/settings": {
+      "get": {
+        "operationId": "get_runtime_permission_settings_handler_api_runtime_permissions_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_RuntimePermissionSettingsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Runtime Permission Settings Handler",
+        "tags": [
+          "runtime-permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "update_runtime_permission_settings_handler_api_runtime_permissions_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuntimePermissionSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_RuntimePermissionSettingsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Runtime Permission Settings Handler",
+        "tags": [
+          "runtime-permissions"
+        ]
+      }
+    },
+    "/api/runtime-permissions/{request_id}/decision": {
+      "post": {
+        "operationId": "decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_RuntimePermissionRequest_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Runtime Permission Handler",
+        "tags": [
+          "runtime-permissions"
         ]
       }
     },

@@ -6,7 +6,7 @@ from datetime import datetime
 from urllib.parse import urlsplit
 from uuid import UUID, uuid5
 
-from config import WORKSPACE
+from config import WORKSPACE, PermissionMode, get_config
 from core.policy_engine import evaluate_action
 from core.runtime.context import AgentRuntimeContext
 from schema.action import PolicyEffect, ProposedAction, RiskLevel
@@ -72,6 +72,73 @@ def authorize_network_action(
         raise PermissionError(f"策略拒绝执行：{','.join(decision.reason_codes)}")
 
 
+async def authorize_network_action_runtime(
+    context: AgentRuntimeContext,
+    *,
+    action_type: str,
+    target: str,
+    risk: RiskLevel = RiskLevel.L1,
+    reason: str = "Agent 请求执行网络操作",
+    details: dict[str, object] | None = None,
+) -> None:
+    normalized = target.strip()
+    if not normalized:
+        raise PermissionError("目标不能为空")
+    if get_config().permissions.mode == PermissionMode.FULL_ACCESS:
+        return
+
+    declared = any(_same_target(normalized, item) for item in context.allowed_targets)
+    allowed_actions = set(context.allowed_action_types)
+    needs_user_decision = (
+        not declared or (allowed_actions and action_type not in allowed_actions) or risk in {RiskLevel.L2, RiskLevel.L3}
+    )
+    if needs_user_decision:
+        from service.runtime_permissions import require_permission
+
+        await require_permission(
+            context,
+            action_type=action_type,
+            target=normalized,
+            reason=reason,
+            risk_level=risk,
+            details=details,
+        )
+        if get_config().permissions.mode == PermissionMode.FULL_ACCESS:
+            return
+        _record(context, action_type, normalized, "allow", ["user_approved"])
+        return
+    _record(context, action_type, normalized, "allow", ["scope_and_policy_satisfied"])
+
+
+async def authorize_local_action_runtime(
+    context: AgentRuntimeContext,
+    *,
+    action_type: str,
+    target: str,
+    risk: RiskLevel,
+    reason: str,
+    details: dict[str, object] | None = None,
+) -> None:
+    if get_config().permissions.mode == PermissionMode.FULL_ACCESS:
+        return
+    if risk in {RiskLevel.L2, RiskLevel.L3}:
+        from service.runtime_permissions import require_permission
+
+        await require_permission(
+            context,
+            action_type=action_type,
+            target=target,
+            reason=reason,
+            risk_level=risk,
+            details=details,
+        )
+        if get_config().permissions.mode == PermissionMode.FULL_ACCESS:
+            return
+        _record(context, action_type, target, "allow", ["user_approved"])
+        return
+    authorize_local_diagnostic(context, action_type=action_type)
+
+
 def authorize_local_diagnostic(context: AgentRuntimeContext, *, action_type: str = "host.local.diagnostic") -> None:
     if action_type not in {"host.local.diagnostic", *context.allowed_action_types}:
         raise PermissionError("本机诊断工具未被当前 Scope 授权")
@@ -95,9 +162,14 @@ def _record(context: AgentRuntimeContext, action_type: str, target: str, effect:
     try:
         _AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "timestamp": datetime.now().isoformat(), "session_id": context.session_id,
-            "agent_code": context.agent_code, "scope_id": context.scope_id,
-            "action_type": action_type, "target": target, "effect": effect, "reason_codes": reasons,
+            "timestamp": datetime.now().isoformat(),
+            "session_id": context.session_id,
+            "agent_code": context.agent_code,
+            "scope_id": context.scope_id,
+            "action_type": action_type,
+            "target": target,
+            "effect": effect,
+            "reason_codes": reasons,
         }
         with _AUDIT_PATH.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(payload, ensure_ascii=False) + "\n")

@@ -30,6 +30,10 @@
         "ttl_seconds": 1800,
         "sweep_interval_seconds": 60
     },
+    "permissions": {
+        "mode": "normal",
+        "approval_timeout_seconds": 300
+    },
     "lightrag": {
         "embedding_api": "",
         "embedding_key": "",
@@ -37,7 +41,7 @@
         "embedding_dim": 1536,
         "llm_api": "",
         "llm_key": "",
-        "llm_model": "gpt-5.6-luna",
+        "llm_model": "gpt-5.6-sol",
         "graph_matches": 5,
         "chunk_matches": 10
     },
@@ -48,7 +52,7 @@
             "description": "首席安全协调 Agent，负责理解目标、编排专家、汇总结论与交付报告",
             "base_url": "",
             "api_key": "",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-5.6-sol",
             "use_responses": false,
             "context_window": 1000000
         },
@@ -58,7 +62,7 @@
             "description": "代码审计 Agent，负责源码、依赖、配置与安全编码检查",
             "base_url": "",
             "api_key": "",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-5.6-sol",
             "use_responses": false,
             "context_window": 1000000
         },
@@ -68,7 +72,7 @@
             "description": "密码与协议 Agent，负责密码学、协议与密钥管理分析",
             "base_url": "",
             "api_key": "",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-5.6-sol",
             "use_responses": false,
             "context_window": 1000000
         },
@@ -78,7 +82,7 @@
             "description": "情报侦察 Agent，负责授权范围内的资产发现与信息收集",
             "base_url": "",
             "api_key": "",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-5.6-sol",
             "use_responses": false,
             "context_window": 1000000
         },
@@ -88,7 +92,7 @@
             "description": "安全测试 Agent，负责授权渗透测试与漏洞验证",
             "base_url": "",
             "api_key": "",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-5.6-sol",
             "use_responses": false,
             "context_window": 1000000
         },
@@ -98,7 +102,7 @@
             "description": "逆向分析 Agent，负责二进制、固件与文件分析",
             "base_url": "",
             "api_key": "",
-            "model": "gpt-5.6-luna",
+            "model": "gpt-5.6-sol",
             "use_responses": false,
             "context_window": 1000000
         }

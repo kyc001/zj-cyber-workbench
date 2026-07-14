@@ -30,17 +30,42 @@ _RAG_CONTEXT_NOTE = (
 )
 _RAG_CONTEXT_START = "--- Begin LightRAG Context ---"
 _RAG_CONTEXT_END = "--- End LightRAG Context ---"
-_RESERVED_CONTEXT_LINES = frozenset({
-    _RAG_CONTEXT_HEADER,
-    _RAG_CONTEXT_NOTE,
-    _RAG_CONTEXT_START,
-    _RAG_CONTEXT_END,
-})
+_RESERVED_CONTEXT_LINES = frozenset(
+    {
+        _RAG_CONTEXT_HEADER,
+        _RAG_CONTEXT_NOTE,
+        _RAG_CONTEXT_START,
+        _RAG_CONTEXT_END,
+    }
+)
 
 _rag: LightRAG | None = None
 _rag_condition = asyncio.Condition()
 _rag_active_operations = 0
 _rag_transitioning = False
+
+
+def _require_provider_url(base_url: str, purpose: str) -> str:
+    normalized = base_url.strip().rstrip("/")
+    if not normalized:
+        raise RuntimeError(f"请先在系统配置中设置{purpose} API 地址")
+    return normalized
+
+
+async def _configured_openai_complete(*args, base_url: str = "", **kwargs):
+    return await openai_complete(
+        *args,
+        base_url=_require_provider_url(base_url, "LightRAG 抽取模型"),
+        **kwargs,
+    )
+
+
+async def _configured_openai_embed(*args, base_url: str = "", **kwargs):
+    return await openai_embed.func(
+        *args,
+        base_url=_require_provider_url(base_url, "LightRAG 嵌入模型"),
+        **kwargs,
+    )
 
 
 async def start_lightrag() -> None:
@@ -214,20 +239,22 @@ def _format_lightrag_context(context: str) -> str:
     body = "\n".join(lines).strip()
     if not body:
         return ""
-    return "\n\n".join((
-        _RAG_CONTEXT_HEADER,
-        _RAG_CONTEXT_NOTE,
-        _RAG_CONTEXT_START,
-        body,
-        _RAG_CONTEXT_END,
-    ))
+    return "\n\n".join(
+        (
+            _RAG_CONTEXT_HEADER,
+            _RAG_CONTEXT_NOTE,
+            _RAG_CONTEXT_START,
+            body,
+            _RAG_CONTEXT_END,
+        )
+    )
 
 
 def _build_lightrag(cfg: LightRAGConfig) -> LightRAG:
     LIGHTRAG_WORKING_DIR.mkdir(parents=True, exist_ok=True)
 
     extraction_llm = partial(
-        openai_complete,
+        _configured_openai_complete,
         base_url=cfg.llm_api,
         api_key=cfg.llm_key or "unused",
     )
@@ -245,7 +272,7 @@ def _build_lightrag(cfg: LightRAGConfig) -> LightRAG:
             model_name=cfg.embedding_model,
             supports_asymmetric=True,
             func=partial(
-                openai_embed.func,
+                _configured_openai_embed,
                 model=cfg.embedding_model,
                 base_url=cfg.embedding_api,
                 api_key=cfg.embedding_key or "unused",

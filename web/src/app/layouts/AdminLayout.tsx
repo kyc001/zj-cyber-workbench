@@ -3,6 +3,7 @@ import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageSquareCode, Network
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
+import { RuntimePermissionControl } from "../../features/permissions/RuntimePermissionControl";
 import { useAgentSessionContext } from "../../features/playground/AgentSessionProvider";
 import { useAuth } from "../../shared/auth/AuthProvider";
 import { cx } from "../../shared/lib/className";
@@ -147,6 +148,7 @@ export function AdminLayout() {
           <div className="topbar-actions">
             {headerActions ? <div className="topbar-resource-actions">{headerActions}</div> : null}
             <div className="topbar-session-actions">
+              <RuntimePermissionControl />
               <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
             </div>
           </div>

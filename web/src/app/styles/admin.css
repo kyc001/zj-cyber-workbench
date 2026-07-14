@@ -179,6 +179,89 @@
   border: 1px solid var(--z-danger-border);
 }
 
+.permission-mode-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--z-text-subtle);
+}
+
+.permission-mode-control .semi-select {
+  width: 112px;
+}
+
+.permission-mode-full_access {
+  color: var(--z-danger);
+}
+
+.runtime-permission-body {
+  display: grid;
+  gap: 14px;
+}
+
+.runtime-permission-heading {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.runtime-permission-heading > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.runtime-permission-heading strong {
+  color: var(--z-text-strong);
+  font-size: 15px;
+}
+
+.runtime-permission-heading span,
+.runtime-permission-queue {
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
+.runtime-permission-target {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.runtime-permission-target span {
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
+.runtime-permission-target code,
+.runtime-permission-details {
+  overflow-wrap: anywhere;
+  color: var(--z-text);
+  background: var(--z-surface-muted);
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+}
+
+.runtime-permission-target code {
+  padding: 8px 10px;
+}
+
+.runtime-permission-details {
+  max-height: 220px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.runtime-permission-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .topbar-session-actions .semi-button {
   color: var(--z-text-subtle);
 }

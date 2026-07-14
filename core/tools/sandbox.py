@@ -6,10 +6,11 @@ from dataclasses import replace
 from agents import RunContextWrapper, function_tool
 
 from config import BUNDLED_SKILLS_DIR
-from core.execution_guard import authorize_local_diagnostic
+from core.execution_guard import authorize_local_action_runtime
 from core.runtime.context import AgentRuntimeContext
 from core.sandbox import command_output
 from core.sandbox.command_jobs import cancel_async_sandbox_command, start_async_sandbox_command
+from schema.action import RiskLevel
 from schema.common.tool_results import ToolResultSchema, ToolResultStatusSchema, ToolResultTypeSchema
 from schema.sandbox.async_jobs import SandboxAsyncJobStatus
 from service.sandbox import async_jobs as sandbox_async_jobs
@@ -23,18 +24,46 @@ _ASYNC_COMMAND_CONCURRENCY_LIMIT = 3
 _SKILL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 SKILLS_DIR = BUNDLED_SKILLS_DIR
 _BLOCKED_COMMAND_PATTERNS = (
-    r"\brm\s+-rf\b", r"\bdel\s+/[sq]\b", r"remove-item\s+.*-recurse", r"\bformat(-volume)?\b",
-    r"\bshutdown\b", r"\breboot\b", r"\breg\s+(add|delete)\b", r"\bnet\s+user\b",
-    r"\bsc\s+(delete|config|create)\b", r"\bchmod\s+777\b", r"\bmkfs\b",
+    r"\brm\s+-rf\b",
+    r"\bdel\s+/[sq]\b",
+    r"remove-item\s+.*-recurse",
+    r"\bformat(-volume)?\b",
+    r"\bshutdown\b",
+    r"\breboot\b",
+    r"\breg\s+(add|delete)\b",
+    r"\bnet\s+user\b",
+    r"\bsc\s+(delete|config|create)\b",
+    r"\bchmod\s+777\b",
+    r"\bmkfs\b",
 )
 _WINDOWS_NATIVE_SKILLS = {
-    "agent-browser-cli", "amass", "archive-file-triage", "dns-whois", "dnsx",
-    "ffuf", "gobuster", "httpx", "observer-ward", "sandbox-shell", "subfinder",
+    "agent-browser-cli",
+    "amass",
+    "archive-file-triage",
+    "dns-whois",
+    "dnsx",
+    "ffuf",
+    "gobuster",
+    "httpx",
+    "observer-ward",
+    "sandbox-shell",
+    "subfinder",
     "uv-python",
 }
 _LINUX_WORKSPACE_SKILLS = {
-    "apktool", "binwalk", "checksec", "gdb-pwndbg", "ghidra", "hydra", "jadx",
-    "nmap", "openssl", "pwntools", "seclists", "sqlmap", "strace-ltrace",
+    "apktool",
+    "binwalk",
+    "checksec",
+    "gdb-pwndbg",
+    "ghidra",
+    "hydra",
+    "jadx",
+    "nmap",
+    "openssl",
+    "pwntools",
+    "seclists",
+    "sqlmap",
+    "strace-ltrace",
 }
 
 
@@ -52,10 +81,14 @@ def _validate_command(command: str) -> str:
         raise ValueError("命令不能为空")
     if len(value) > 32_000:
         raise ValueError("命令长度超过限制")
-    lowered = value.lower()
-    if any(re.search(pattern, lowered) for pattern in _BLOCKED_COMMAND_PATTERNS):
-        raise ValueError("便携执行器已阻止潜在破坏性命令；请改用受控 Action")
     return value
+
+
+def _command_risk(command: str) -> RiskLevel:
+    lowered = command.lower()
+    if any(re.search(pattern, lowered) for pattern in _BLOCKED_COMMAND_PATTERNS):
+        return RiskLevel.L3
+    return RiskLevel.L2
 
 
 def _ensure_container(context: AgentRuntimeContext) -> int:
@@ -71,21 +104,55 @@ def _write_output(output_file: str, content: str) -> tuple[int, int]:
     return len(clipped.encode()), len(clipped.splitlines())
 
 
-def _command_result(*, status: SandboxAsyncJobStatus, output_file: str | None = None, output_bytes: int = 0, output_lines: int = 0, exit_code: int | None = None, run_id: str | None = None, error: str | None = None) -> str:
-    return command_output.result_metadata(status=status, output_file=output_file, output_bytes=output_bytes, output_lines=output_lines, exit_code=exit_code, run_id=run_id, error=error).model_dump_json(exclude_none=True, exclude_defaults=True)
+def _command_result(
+    *,
+    status: SandboxAsyncJobStatus,
+    output_file: str | None = None,
+    output_bytes: int = 0,
+    output_lines: int = 0,
+    exit_code: int | None = None,
+    run_id: str | None = None,
+    error: str | None = None,
+) -> str:
+    return command_output.result_metadata(
+        status=status,
+        output_file=output_file,
+        output_bytes=output_bytes,
+        output_lines=output_lines,
+        exit_code=exit_code,
+        run_id=run_id,
+        error=error,
+    ).model_dump_json(exclude_none=True, exclude_defaults=True)
 
 
 @function_tool
-async def execute_sync_command(ctx: RunContextWrapper[AgentRuntimeContext], command: str, timeout_seconds: int = _SYNC_COMMAND_TIMEOUT_SECONDS) -> str:
+async def execute_sync_command(
+    ctx: RunContextWrapper[AgentRuntimeContext], command: str, timeout_seconds: int = _SYNC_COMMAND_TIMEOUT_SECONDS
+) -> str:
     """在当前项目的便携本机工作区执行短时、只读诊断命令。"""
     try:
         command = _validate_command(command)
-        authorize_local_diagnostic(ctx.context)
         container_id = _ensure_container(ctx.context)
+        await authorize_local_action_runtime(
+            ctx.context,
+            action_type="workspace.command.execute",
+            target=f"workspace://{container_id}",
+            risk=_command_risk(command),
+            reason="在执行工作区运行命令",
+            details={"command": command},
+        )
         output_file = command_output.output_path_for_run(command_output.new_run_id())
-        result = await execute_sandbox_container_command(container_id, command, _clamp_timeout(timeout_seconds, _SYNC_COMMAND_TIMEOUT_SECONDS))
+        result = await execute_sandbox_container_command(
+            container_id, command, _clamp_timeout(timeout_seconds, _SYNC_COMMAND_TIMEOUT_SECONDS)
+        )
         output_bytes, output_lines = _write_output(output_file, result.output)
-        return _command_result(status=SandboxAsyncJobStatus.COMPLETED if result.exit_code == 0 else SandboxAsyncJobStatus.FAILED, output_file=output_file, output_bytes=output_bytes, output_lines=output_lines, exit_code=result.exit_code)
+        return _command_result(
+            status=SandboxAsyncJobStatus.COMPLETED if result.exit_code == 0 else SandboxAsyncJobStatus.FAILED,
+            output_file=output_file,
+            output_bytes=output_bytes,
+            output_lines=output_lines,
+            exit_code=result.exit_code,
+        )
     except SandboxContainerCommandTimeoutError:
         return _command_result(status=SandboxAsyncJobStatus.FAILED, error="命令执行超时")
     except Exception as exc:
@@ -93,12 +160,21 @@ async def execute_sync_command(ctx: RunContextWrapper[AgentRuntimeContext], comm
 
 
 @function_tool
-async def execute_async_command(ctx: RunContextWrapper[AgentRuntimeContext], command: str, timeout_seconds: int = _ASYNC_COMMAND_TIMEOUT_SECONDS) -> str:
+async def execute_async_command(
+    ctx: RunContextWrapper[AgentRuntimeContext], command: str, timeout_seconds: int = _ASYNC_COMMAND_TIMEOUT_SECONDS
+) -> str:
     """在当前项目工作区启动受控异步命令。"""
     try:
         command = _validate_command(command)
-        authorize_local_diagnostic(ctx.context)
-        _ensure_container(ctx.context)
+        container_id = _ensure_container(ctx.context)
+        await authorize_local_action_runtime(
+            ctx.context,
+            action_type="workspace.command.execute_async",
+            target=f"workspace://{container_id}",
+            risk=_command_risk(command),
+            reason="在执行工作区启动异步命令",
+            details={"command": command},
+        )
         if not ctx.context.agent_instance_id:
             raise ValueError("异步命令需要有效的 Agent 实例")
         running_jobs = await sandbox_async_jobs.count_running_async_jobs_for_agent(
@@ -122,14 +198,18 @@ async def execute_async_command(ctx: RunContextWrapper[AgentRuntimeContext], com
 
 
 @function_tool
-async def read_sandbox_command_output(ctx: RunContextWrapper[AgentRuntimeContext], output_file: str, start_line: int = 1, line_count: int = 200) -> str:
+async def read_sandbox_command_output(
+    ctx: RunContextWrapper[AgentRuntimeContext], output_file: str, start_line: int = 1, line_count: int = 200
+) -> str:
     """读取命令输出文件的有限行片段。"""
     del ctx
     try:
         start, count, _ = command_output.normalize_read_range(start_line, line_count)
         lines = command_output.local_output_path(output_file).read_text(encoding="utf-8", errors="replace").splitlines()
-        content = "\n".join(lines[start - 1:start - 1 + count])
-        return command_output.output_chunk(output_file=output_file, start_line=start, line_count=count, content=content).model_dump_json()
+        content = "\n".join(lines[start - 1 : start - 1 + count])
+        return command_output.output_chunk(
+            output_file=output_file, start_line=start, line_count=count, content=content
+        ).model_dump_json()
     except Exception as exc:
         return _command_result(status=SandboxAsyncJobStatus.FAILED, error=str(exc) or "输出读取失败")
 
@@ -163,7 +243,11 @@ async def load_skill(ctx: RunContextWrapper[AgentRuntimeContext], name: str) -> 
     if not skill_file.is_file():
         return _skill_result(ToolResultStatusSchema.ERROR, f"未找到技能：{skill_name}")
     body = skill_file.read_text(encoding="utf-8")
-    resources = [str(path.relative_to(skill_root)).replace("\\", "/") for path in skill_root.rglob("*") if path.is_file() and path.name != "SKILL.md"]
+    resources = [
+        str(path.relative_to(skill_root)).replace("\\", "/")
+        for path in skill_root.rglob("*")
+        if path.is_file() and path.name != "SKILL.md"
+    ]
     runtime_note = await _skill_runtime_note(ctx.context, skill_name)
     output = (
         f"## ZJ Execution Runtime\n\n{runtime_note}\n\n"

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from config import AgentConfig, AgentPoolConfig, AgentRuntimeConfig, LightRAGConfig
+from config import AgentConfig, AgentPoolConfig, AgentRuntimeConfig, LightRAGConfig, PermissionConfig
 
 
 class InstanceConfigSchema(BaseModel):
@@ -9,6 +9,7 @@ class InstanceConfigSchema(BaseModel):
     agents: dict[str, AgentConfig] = Field(default_factory=dict)
     agent_pool: AgentPoolConfig = Field(default_factory=AgentPoolConfig)
     agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
+    permissions: PermissionConfig = Field(default_factory=PermissionConfig)
     lightrag: LightRAGConfig = Field(default_factory=LightRAGConfig)
 
     @model_validator(mode="after")
@@ -37,6 +38,7 @@ class UpdateInstanceConfigRequest(BaseModel):
     agents: dict[str, UpdateAgentConfigRequest]
     agent_pool: AgentPoolConfig
     agent_runtime: AgentRuntimeConfig
+    permissions: PermissionConfig
     lightrag: LightRAGConfig
 
 
