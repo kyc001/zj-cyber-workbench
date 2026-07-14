@@ -30,7 +30,19 @@ By default this creates:
 - secret file: `~/.zj-wsl-sandbox-ssh.env`
 
 The generated `zj_sandbox` password is stored outside the repo with `0600` permissions.
-Do not commit or paste that file.
+For this development-only test environment, the current disposable credential is also recorded here for agent handoff.
+Do not record the Linux sudo password here.
+
+Current WSL sandbox values, generated on 2026-07-14:
+
+```text
+ip_address=192.168.203.164
+ssh_port=2222
+host_account=zj_sandbox
+host_password=WsXtTeS5ELjb2u7Nc2gzzIGR4pmBf8F6
+direct_test=ssh zj_sandbox@192.168.203.164 -p 2222
+portproxy_test=ssh zj_sandbox@127.0.0.1 -p 2222
+```
 
 Recommended WSL setup:
 
