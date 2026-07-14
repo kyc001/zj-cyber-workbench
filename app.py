@@ -36,6 +36,7 @@ from router.sandbox.containers import router as sandbox_container_router
 from router.sandbox.images import router as sandbox_image_router
 from router.system_config.config import router as system_config_router
 from router.system_user.users import router as system_user_router
+from router.toolpack import router as toolpack_router
 from router.work_project.projects import router as work_project_router
 from schema.system_user.users import SystemUserRole
 from service.agent.recovery import recover_pending_sessions
@@ -178,6 +179,7 @@ def create_app() -> FastAPI:
     app.include_router(approval_router, prefix=API_PREFIX)
     app.include_router(runtime_permission_router, prefix=API_PREFIX)
     app.include_router(system_config_router, prefix=API_PREFIX)
+    app.include_router(toolpack_router, prefix=API_PREFIX)
     app.include_router(desktop_router)
     app.include_router(api_not_found_router, prefix=API_PREFIX)
     logger.debug("api router added")
