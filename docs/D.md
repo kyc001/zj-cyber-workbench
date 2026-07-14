@@ -174,7 +174,7 @@ CI 不得依赖真实付费模型才能运行。
 - SQLite 升级恢复。
 - SSH 断连、长输出、取消和并发。
 - Electron E2E。
-- 安装版、Portable 冷启动。
+- Portable 冷启动。
 - 报告与 Timeline 对账。
 
 核心 E2E：首次启动 → 配置 Mock Model → 创建 Project/Scope → 连接 SSH → 诊断 → 提出修改 → 审批 → 执行 → 验证 → 导出报告 → 重启后数据仍在。
@@ -191,7 +191,7 @@ CI 不得依赖真实付费模型才能运行。
 - Scope 与 Host Key 绕过。
 - 日志和报告敏感信息泄漏。
 - Sidecar/WebSocket 未认证访问。
-- Docker 网络越界。
+- 本机 Workspace / SSH Workspace 目标越界。
 - 压测参数拆分绕过。
 
 成员 D 有权阻止存在 P0/P1 安全问题的版本发布。
@@ -245,7 +245,6 @@ README 必须包含真君/ZJ 品牌、安全声明、三目能力、安装、使
 正式产物：
 
 ```
-ZJ-1.0.0-win-x64-setup.exe
 ZJ-1.0.0-win-x64-portable.exe
 ZJ-1.0.0-SHA256SUMS.txt
 ZJ-1.0.0-SBOM.spdx.json

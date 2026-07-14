@@ -17,7 +17,7 @@
 - xterm.js 终端与 SFTP 文件界面。
 - 首次启动、设置、日志导出和错误恢复。
 - 产品品牌、Icon、启动页、About 页面。
-- NSIS 安装版、Portable 版和 Windows 构建流水线。
+- Portable 版和 Windows 构建流水线；NSIS 安装版可后续补充，不作为当前 v1.0 阻断项。
 
 **不负责：**Agent 决策、Policy 规则、SSH 协议底层和 Tool 执行；通过 A、C 提供的 API 与 WebSocket 使用这些能力。
 
@@ -48,7 +48,7 @@ sandbox: true
 webSecurity: true
 ```
 
-禁止 Renderer 直接使用 `fs`、`child_process`、SSH 私钥、模型 Key 和 Docker Socket；禁止加载远程脚本和任意远程页面。
+禁止 Renderer 直接使用 `fs`、`child_process`、SSH 私钥、模型 Key 和任意本机 Shell；禁止加载远程脚本和任意远程页面。
 
 ## 三、Preload 与 IPC
 
@@ -77,9 +77,7 @@ window.zj.window.close()
 负责：
 
 - 启动 `zj-core.exe`。
-- 生成随机桌面会话 Token。
 - 传入数据目录、端口和运行配置。
-- 读取握手文件中的 PID、端口、Nonce 和协议版本。
 - 轮询 `/health`。
 - 捕获标准输出和错误日志。
 - 处理 30 秒启动超时。
@@ -105,7 +103,7 @@ UI 需要显示启动、健康、崩溃、恢复和日志导出状态。
 - 最近 Project、Incident。
 - 正在运行的任务。
 - 待审批操作。
-- SSH/Sandbox 状态。
+- 本机 Workspace、SSH Workspace 和工具箱状态。
 - 三目入口：赤目、青目、天目。
 
 ### 2. Project 页面
@@ -174,12 +172,12 @@ UI 需要显示启动、健康、崩溃、恢复和日志导出状态。
 - 数据目录。
 - 模型 Provider、Endpoint 和模型名。
 - API Key 安全保存。
-- Docker 可用性检查。
-- SSH 与本机 PowerShell 功能说明。
+- 本机便携工具可用性检查。
+- SSH、SFTP、本机 PowerShell 和工具箱功能说明。
 - 授权和安全使用声明。
 - 日志和 Artifact 保留时间。
 
-无 Docker 时软件仍应正常启动，仅禁用 Sandbox、部分扫描和压测功能。
+无模型配置时仍可进入工作台并显示可理解的空状态；缺少便携工具时只禁用对应工具入口，SSH、项目、审批、报告等基础能力仍可用。
 
 ## 九、品牌与视觉
 
@@ -189,7 +187,7 @@ UI 需要显示启动、健康、崩溃、恢复和日志导出状态。
 - 英文展示：ZJ。
 - 副标题：Multi-Agent Cyber Operations Workbench。
 - 宣传语：开天眼，见真因。
-- 主程序：`zj.exe`。
+- 主程序：`zhenjun.exe`。
 - Logo、Icon、Splash Screen、About 页面。
 - 赤目、青目、天目颜色系统。
 - 深色主题、高风险警示和可读性。
@@ -200,7 +198,7 @@ Logo 使用抽象纵向天眼、终端光标和盾牌/六边形，不直接绘�
 
 负责 Electron Builder：
 
-- NSIS 安装版和 Portable 版。
+- Portable 版；NSIS 安装版可后续补充。
 - `appId`、AUMID、版本号和图标。
 - `asar` 和 Sidecar 资源配置。
 - Native Module Rebuild。
@@ -214,7 +212,6 @@ Logo 使用抽象纵向天眼、终端光标和盾牌/六边形，不直接绘�
 正式产物：
 
 ```
-ZJ-1.0.0-win-x64-setup.exe
 ZJ-1.0.0-win-x64-portable.exe
 ```
 
@@ -227,7 +224,7 @@ ZJ-1.0.0-win-x64-portable.exe
 - Approval Center、ChangeSet 页面。
 - 首次启动、设置、错误恢复、日志导出。
 - Logo、Icon、启动页和 About 页面。
-- NSIS、Portable 构建。
+- Portable 构建。
 - Electron E2E 和打包文档。
 
 ## 十二、验收标准
@@ -235,10 +232,10 @@ ZJ-1.0.0-win-x64-portable.exe
 - [ ] Renderer 没有 Node 权限。
 - [ ] 高权限能力只经白名单 IPC。
 - [ ] `zj-core.exe` 崩溃后有明确恢复路径。
-- [ ] 安装版和 Portable 版在干净 Windows 冷启动。
+- [ ] Portable 版在干净 Windows 冷启动。
 - [ ] Terminal 大输出不会卡死 UI。
 - [ ] 审批页面展示真实操作、风险和回滚。
-- [ ] 无 Docker和无模型配置时进入可理解的降级状态。
+- [ ] 无模型配置、无便携工具或无 SSH 配置时进入可理解的降级状态。
 - [ ] 数据目录不可写时提供可执行修复方案。
 - [ ] 用户可通过 UI 完成完整 Incident 闭环。
 
