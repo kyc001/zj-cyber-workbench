@@ -27,6 +27,24 @@ Remote remediation · Evidence-driven operations
 基础上，增加 Incident、授权范围、风险策略、人工审批、远程运维、变更回滚和
 独立验证能力，并通过 Electron 交付桌面产品。
 
+## Upstream & Attribution · 上游与署名
+
+ZJ is an independent derivative project based on
+[Z3r0](https://github.com/yv1ing/Z3r0), originally created by
+[yv1ing](https://github.com/yv1ing).
+
+真君（ZJ）是基于 [Z3r0](https://github.com/yv1ing/Z3r0) 二次开发的独立衍生项目。
+Z3r0 原作者为 [yv1ing](https://github.com/yv1ing)，原项目版权声明为
+`Copyright (c) 2026 yv1ing`，并采用 MIT License 发布。
+
+- Upstream project / 上游项目：[github.com/yv1ing/Z3r0](https://github.com/yv1ing/Z3r0)
+- Original author / 原作者：[github.com/yv1ing](https://github.com/yv1ing)
+- Original license / 原始许可证：[licenses/Z3r0-LICENSE](licenses/Z3r0-LICENSE)
+- Third-party notices / 第三方声明：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+
+ZJ is not an official Z3r0 release and is not endorsed by the original author.
+ZJ 不是 Z3r0 官方版本，也不代表原作者对本项目提供背书。
+
 当前仓库已经迁入 Z3r0 的 Control、Runtime、Evidence 与 Sandbox 用户能力，并将
 Docker Sandbox 替换为 Windows 本机与 SSH Linux 双后端执行工作区。HTTP/Web 检查、端口探测、SSH、
 同步/异步命令、文件管理、项目绑定、审批和审计已接通；生产写操作和高风险工具仍
@@ -159,6 +177,7 @@ development override and is never a release input.
 ## Acknowledgments
 
 ZJ is based in part on the architecture and source code of
-[Z3r0](https://github.com/yv1ing/Z3r0), originally created by yv1ing and
+[Z3r0](https://github.com/yv1ing/Z3r0), originally created by
+[yv1ing](https://github.com/yv1ing), and
 distributed under the MIT License. ZJ is an independent derivative project;
 no upstream endorsement is implied.
