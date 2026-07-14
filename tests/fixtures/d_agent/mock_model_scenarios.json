@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "diagnostic_text",
+      "outputs": [
+        {
+          "type": "message",
+          "text": "Observation: nginx is unavailable. Next step: read service status with a read-only command."
+        }
+      ]
+    },
+    {
+      "name": "fixed_tool_call",
+      "outputs": [
+        {
+          "type": "tool_call",
+          "name": "http_request",
+          "arguments": {
+            "url": "http://127.0.0.1:8000/health",
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "name": "malformed_structured_output",
+      "outputs": [
+        {
+          "type": "message",
+          "text": "{\"status\":\"ok\","
+        }
+      ]
+    },
+    {
+      "name": "timeout",
+      "failure": "timeout"
+    },
+    {
+      "name": "disconnect",
+      "failure": "disconnect"
+    },
+    {
+      "name": "token_limit",
+      "failure": "token_limit"
+    }
+  ]
+}
+

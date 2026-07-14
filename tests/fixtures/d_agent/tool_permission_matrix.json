@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "roles": [
+    "ops_lead",
+    "diagnostic_engineer",
+    "security_engineer",
+    "load_test_engineer",
+    "remediation_engineer",
+    "verification_engineer",
+    "evidence_reporter"
+  ],
+  "permissions": {
+    "load_work_project_metadata": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "load_work_project_tasks": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "load_work_project_agent_summaries": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "update_work_project_agent_summary": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "update_work_project_tasks": ["ops_lead"],
+    "list_work_project_assets": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "create_or_update_work_project_asset": ["ops_lead", "diagnostic_engineer", "security_engineer", "remediation_engineer", "verification_engineer"],
+    "list_work_project_findings": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "create_or_update_work_project_finding": ["ops_lead", "diagnostic_engineer", "security_engineer", "remediation_engineer", "verification_engineer"],
+    "load_work_project_graph": ["ops_lead", "diagnostic_engineer", "security_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "create_or_update_work_project_graph_edge": ["ops_lead", "diagnostic_engineer", "security_engineer", "remediation_engineer", "verification_engineer"],
+    "create_or_update_work_project_attack_path": ["ops_lead", "security_engineer"],
+    "create_or_update_work_project_attack_path_step": ["ops_lead", "security_engineer"],
+    "delete_work_project_record": ["ops_lead", "remediation_engineer"],
+    "search_cve_intelligence": ["ops_lead", "diagnostic_engineer", "security_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "http_request": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "browser_fetch": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "web_security_scan": ["ops_lead", "security_engineer", "verification_engineer"],
+    "port_probe": ["ops_lead", "diagnostic_engineer", "security_engineer", "verification_engineer"],
+    "ssh_command": ["ops_lead", "diagnostic_engineer", "security_engineer", "remediation_engineer", "verification_engineer"],
+    "execute_sync_command": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "execute_async_command": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "read_sandbox_command_output": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer", "evidence_reporter"],
+    "cancel_sandbox_async_job": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "load_skill": ["ops_lead", "diagnostic_engineer", "security_engineer", "load_test_engineer", "remediation_engineer", "verification_engineer"],
+    "export_report": ["ops_lead", "evidence_reporter"]
+  },
+  "must_require_approval": [
+    "web_security_scan",
+    "port_probe",
+    "ssh_command",
+    "execute_sync_command",
+    "execute_async_command",
+    "delete_work_project_record",
+    "load.k6.run"
+  ],
+  "never_allowed_for_reporter": [
+    "http_request",
+    "browser_fetch",
+    "web_security_scan",
+    "port_probe",
+    "ssh_command",
+    "execute_sync_command",
+    "execute_async_command",
+    "delete_work_project_record"
+  ]
+}
+
