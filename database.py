@@ -95,6 +95,40 @@ async def _upgrade_portable_schema(conn) -> None:
                 f"ALTER TABLE agent_notifications ADD COLUMN {name} {definition}"
             )
 
+    finding_columns = {
+        row[1]
+        for row in (await conn.exec_driver_sql("PRAGMA table_info(work_project_findings)")).fetchall()
+    }
+    finding_additions = {
+        "finding_type": "VARCHAR(32) NOT NULL DEFAULT 'general'",
+        "cve_id": "VARCHAR(32) NOT NULL DEFAULT ''",
+        "confidence": "VARCHAR(32) NOT NULL DEFAULT 'low'",
+        "cvss_score": "FLOAT",
+        "cvss_vector": "VARCHAR NOT NULL DEFAULT ''",
+        "cwes": "JSON NOT NULL DEFAULT '[]'",
+        "references": "JSON NOT NULL DEFAULT '[]'",
+        "evidence": "VARCHAR NOT NULL DEFAULT ''",
+        "remediation": "VARCHAR NOT NULL DEFAULT ''",
+        "source": "VARCHAR NOT NULL DEFAULT ''",
+        "known_exploited": "BOOLEAN NOT NULL DEFAULT 0",
+        "epss_score": "FLOAT",
+        "epss_percentile": "FLOAT",
+        "affected_version": "VARCHAR NOT NULL DEFAULT ''",
+        "fixed_versions": "JSON NOT NULL DEFAULT '[]'",
+    }
+    for name, definition in finding_additions.items():
+        if name not in finding_columns:
+            await conn.exec_driver_sql(
+                f"ALTER TABLE work_project_findings ADD COLUMN {name} {definition}"
+            )
+
+    await conn.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_work_project_findings_cve_id ON work_project_findings (cve_id)"
+    )
+    await conn.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS ix_work_project_findings_finding_type ON work_project_findings (finding_type)"
+    )
+
 
 async def close_engine() -> None:
     global _engine

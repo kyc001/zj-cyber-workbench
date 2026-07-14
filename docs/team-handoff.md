@@ -54,6 +54,9 @@ Docker Socket、容器网络和 Docker Toolpack 不进入仓库；上游 Sandbox
 - `/api/sandbox-containers/*` 保留上游命令、文件、Shell、生命周期和出口配置契约。
 - `/api/approvals/*` 提供策略评估、审批、拒绝和 Token 消费。
 - Agent 工具注册表包含 HTTP、页面读取、Web 检查、端口探测、SSH、同步/异步命令、输出读取、取消和 Skill 加载。
+- `POST /api/work-projects/{id}/cve-discovery/query` 提供 NVD/OSV 被动查询、版本区间判定、CVSS/EPSS/KEV 丰富。
+- `POST /api/work-projects/{id}/cve-discovery/import` 将候选按项目、资产和 CVE 编号去重写入 Finding；被动情报固定为 `suspected`。
+- `WorkProjectFindingSchema` 的 CVE 字段是新增的向后兼容契约；旧 SQLite 在启动时自动添加字段和索引。
 
 ### 队友开发注意
 

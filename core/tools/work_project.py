@@ -658,7 +658,11 @@ def _compact_asset(item: dict) -> dict:
 def _compact_finding(item: dict) -> dict:
     return _pick(
         item,
-        ("id", "asset_id", "edge_id", "title", "severity", "status", "description", "impact", "validated_at"),
+        (
+            "id", "asset_id", "edge_id", "title", "finding_type", "cve_id", "severity", "status",
+            "confidence", "cvss_score", "known_exploited", "epss_score", "affected_version",
+            "description", "impact", "evidence", "remediation", "validated_at",
+        ),
     )
 
 

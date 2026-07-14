@@ -7,6 +7,7 @@ export type WorkProjectSnapshotState = {
   project: WorkProject | null;
   records: WorkProjectRecords;
   loading: boolean;
+  refresh: () => void;
 };
 
 export const EMPTY_WORK_PROJECT_GRAPH: WorkProjectGraphSnapshot = {
@@ -28,7 +29,8 @@ export async function loadWorkProjectRecordSnapshot(projectId: number): Promise<
 }
 
 export function useWorkProjectRecordSnapshot(projectId: number | null, enabled = true): WorkProjectSnapshotState {
-  const [state, setState] = useState<WorkProjectSnapshotState>({
+  const [version, setVersion] = useState(0);
+  const [state, setState] = useState<Omit<WorkProjectSnapshotState, "refresh">>({
     project: null,
     records: EMPTY_WORK_PROJECT_RECORDS,
     loading: false,
@@ -58,9 +60,9 @@ export function useWorkProjectRecordSnapshot(projectId: number | null, enabled =
     return () => {
       canceled = true;
     };
-  }, [enabled, projectId]);
+  }, [enabled, projectId, version]);
 
-  return state;
+  return { ...state, refresh: () => setVersion((value) => value + 1) };
 }
 
 export type { WorkProjectRecordSnapshot, WorkProjectRecords };

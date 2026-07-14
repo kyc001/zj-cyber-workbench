@@ -6,9 +6,13 @@ import type {
   CreateWorkProjectRequest,
   CreateWorkProjectResponse,
   CreateWorkProjectSessionResponse,
+  DiscoverWorkProjectCvesRequest,
+  DiscoverWorkProjectCvesResponse,
   DeleteWorkProjectSessionResponse,
   DeleteWorkProjectResponse,
   GetWorkProjectRecordSnapshotResponse,
+  ImportWorkProjectCveRequest,
+  ImportWorkProjectCveResponse,
   ListWorkProjectSessionsResponse,
   QueryWorkProjectsParams,
   QueryWorkProjectsResponse,
@@ -31,6 +35,14 @@ export function createWorkProject(payload: CreateWorkProjectRequest) {
 
 export function getWorkProjectRecordSnapshot(id: WorkProjectPathParams["id"]) {
   return apiGet<GetWorkProjectRecordSnapshotResponse>(`${WORK_PROJECTS_PATH}/${id}/record-snapshot`);
+}
+
+export function discoverWorkProjectCves(id: number, payload: DiscoverWorkProjectCvesRequest) {
+  return apiPost<DiscoverWorkProjectCvesResponse>(`${WORK_PROJECTS_PATH}/${id}/cve-discovery/query`, payload);
+}
+
+export function importWorkProjectCve(id: number, payload: ImportWorkProjectCveRequest) {
+  return apiPost<ImportWorkProjectCveResponse>(`${WORK_PROJECTS_PATH}/${id}/cve-discovery/import`, payload);
 }
 
 export function updateWorkProjectMetadata(id: WorkProjectPathParams["id"], payload: UpdateWorkProjectMetadataRequest) {

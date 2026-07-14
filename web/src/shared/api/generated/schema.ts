@@ -1055,6 +1055,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-projects/{id}/cve-discovery/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Work Project Cve Route */
+        post: operations["import_work_project_cve_route_api_work_projects__id__cve_discovery_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-projects/{id}/cve-discovery/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discover Work Project Cves Route */
+        post: operations["discover_work_project_cves_route_api_work_projects__id__cve_discovery_query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-projects/{id}/metadata": {
         parameters: {
             query?: never;
@@ -1755,6 +1789,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[CveDiscoveryResponse] */
+        CommonResponse_CveDiscoveryResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["CveDiscoveryResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[DeleteEgressProxyResponse] */
         CommonResponse_DeleteEgressProxyResponse_: {
             /**
@@ -1875,6 +1923,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["FetchProviderModelsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[ImportCveFindingResponse] */
+        CommonResponse_ImportCveFindingResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["ImportCveFindingResponse"] | null;
             /**
              * Message
              * @default success
@@ -2541,6 +2603,141 @@ export interface components {
             /** Session Id */
             session_id: string;
         };
+        /** CveCandidateSchema */
+        CveCandidateSchema: {
+            /** Affected Versions */
+            affected_versions?: string[];
+            /** Aliases */
+            aliases?: string[];
+            /** Cve Id */
+            cve_id: string;
+            /** Cvss Score */
+            cvss_score?: number | null;
+            /**
+             * Cvss Vector
+             * @default
+             */
+            cvss_vector: string;
+            /** Cwes */
+            cwes?: string[];
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Epss Percentile */
+            epss_percentile?: number | null;
+            /** Epss Score */
+            epss_score?: number | null;
+            /** Fixed Versions */
+            fixed_versions?: string[];
+            /**
+             * Kev Due Date
+             * @default
+             */
+            kev_due_date: string;
+            /**
+             * Known Exploited
+             * @default false
+             */
+            known_exploited: boolean;
+            match_confidence: components["schemas"]["CveMatchConfidence"];
+            /** Match Reason */
+            match_reason: string;
+            /** Modified At */
+            modified_at?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Ransomware Use
+             * @default
+             */
+            ransomware_use: string;
+            /** References */
+            references?: string[];
+            /** @default info */
+            severity: components["schemas"]["WorkProjectFindingSeverity"];
+            /** Source */
+            source: string;
+            /**
+             * Source Url
+             * @default
+             */
+            source_url: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
+        /**
+         * CveDiscoveryMode
+         * @enum {string}
+         */
+        CveDiscoveryMode: "service" | "package";
+        /** CveDiscoveryRequest */
+        CveDiscoveryRequest: {
+            /** Asset Id */
+            asset_id?: number | null;
+            /**
+             * Cpe
+             * @default
+             */
+            cpe: string;
+            /**
+             * Ecosystem
+             * @default
+             */
+            ecosystem: string;
+            /**
+             * Limit
+             * @default 20
+             */
+            limit: number;
+            mode: components["schemas"]["CveDiscoveryMode"];
+            /**
+             * Package Name
+             * @default
+             */
+            package_name: string;
+            /**
+             * Product
+             * @default
+             */
+            product: string;
+            /**
+             * Vendor
+             * @default
+             */
+            vendor: string;
+            /**
+             * Version
+             * @default
+             */
+            version: string;
+        };
+        /** CveDiscoveryResponse */
+        CveDiscoveryResponse: {
+            /** Items */
+            items: components["schemas"]["CveCandidateSchema"][];
+            mode: components["schemas"]["CveDiscoveryMode"];
+            /** Query */
+            query: string;
+            /**
+             * Retrieved At
+             * Format: date-time
+             */
+            retrieved_at?: string;
+            /** Total */
+            total: number;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /**
+         * CveMatchConfidence
+         * @enum {string}
+         */
+        CveMatchConfidence: "exact" | "high" | "medium" | "low";
         /** DeleteEgressProxyResponse */
         DeleteEgressProxyResponse: {
             /** Id */
@@ -2745,6 +2942,25 @@ export interface components {
              * @default 0.1.0
              */
             version: string;
+        };
+        /** ImportCveFindingRequest */
+        ImportCveFindingRequest: {
+            /**
+             * Affected Version
+             * @default
+             */
+            affected_version: string;
+            /** Asset Id */
+            asset_id?: number | null;
+            candidate: components["schemas"]["CveCandidateSchema"];
+        };
+        /** ImportCveFindingResponse */
+        ImportCveFindingResponse: {
+            confidence: components["schemas"]["WorkProjectFindingConfidence"];
+            /** Created */
+            created: boolean;
+            /** Finding Id */
+            finding_id: number;
         };
         /** InstanceConfigSchema */
         InstanceConfigSchema: {
@@ -4291,10 +4507,22 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * WorkProjectFindingConfidence
+         * @enum {string}
+         */
+        WorkProjectFindingConfidence: "low" | "medium" | "high" | "confirmed";
         /** WorkProjectFindingSchema */
         WorkProjectFindingSchema: {
+            /**
+             * Affected Version
+             * @default
+             */
+            affected_version: string;
             /** Asset Id */
             asset_id?: number | null;
+            /** @default low */
+            confidence: components["schemas"]["WorkProjectFindingConfidence"];
             /**
              * Created At
              * Format: date-time
@@ -4311,12 +4539,39 @@ export interface components {
              */
             created_from_session_id: string;
             /**
+             * Cve Id
+             * @default
+             */
+            cve_id: string;
+            /** Cvss Score */
+            cvss_score?: number | null;
+            /**
+             * Cvss Vector
+             * @default
+             */
+            cvss_vector: string;
+            /** Cwes */
+            cwes?: string[];
+            /**
              * Description
              * @default
              */
             description: string;
             /** Edge Id */
             edge_id?: number | null;
+            /** Epss Percentile */
+            epss_percentile?: number | null;
+            /** Epss Score */
+            epss_score?: number | null;
+            /**
+             * Evidence
+             * @default
+             */
+            evidence: string;
+            /** @default general */
+            finding_type: components["schemas"]["WorkProjectFindingType"];
+            /** Fixed Versions */
+            fixed_versions?: string[];
             /** Id */
             id: number;
             /**
@@ -4324,9 +4579,26 @@ export interface components {
              * @default
              */
             impact: string;
+            /**
+             * Known Exploited
+             * @default false
+             */
+            known_exploited: boolean;
             /** Project Id */
             project_id: number;
+            /** References */
+            references?: string[];
+            /**
+             * Remediation
+             * @default
+             */
+            remediation: string;
             severity: components["schemas"]["WorkProjectFindingSeverity"];
+            /**
+             * Source
+             * @default
+             */
+            source: string;
             status: components["schemas"]["WorkProjectFindingStatus"];
             /** Title */
             title: string;
@@ -4348,6 +4620,11 @@ export interface components {
          * @enum {string}
          */
         WorkProjectFindingStatus: "suspected" | "validated" | "false_positive";
+        /**
+         * WorkProjectFindingType
+         * @enum {string}
+         */
+        WorkProjectFindingType: "general" | "cve";
         /** WorkProjectGraphEdgeSchema */
         WorkProjectGraphEdgeSchema: {
             /**
@@ -7771,6 +8048,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_WorkProjectSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    import_work_project_cve_route_api_work_projects__id__cve_discovery_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportCveFindingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ImportCveFindingResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    discover_work_project_cves_route_api_work_projects__id__cve_discovery_query_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CveDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_CveDiscoveryResponse_"];
                 };
             };
             /** @description Bad Request */

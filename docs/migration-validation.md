@@ -55,7 +55,7 @@ load_skill
 ## 本地验证
 
 ```text
-Python tests: 34 passed
+Python tests: 37 passed
 Web TypeScript: passed
 Desktop TypeScript: passed
 Web production build: passed
@@ -70,6 +70,14 @@ Upstream 432-file audit: passed
 Portable Skill validation: 25 passed
 Portable native tool validation: 10 commands + Chrome + extension passed
 ```
+
+## 2026-07-14 CVE 能力增量
+
+- NVD 服务/CPE 与 OSV 依赖查询已接入 WorkProject。
+- 版本区间、CVSS、EPSS、CISA KEV、修复版本和匹配置信度已结构化。
+- CVE 候选按资产去重进入 Finding，默认保持 `suspected`。
+- 新增 3 个确定性单元测试；全量 Python 回归为 37 项通过。
+- Web OpenAPI 生成、TypeScript 检查和生产构建通过。
 
 ## 便携工具
 

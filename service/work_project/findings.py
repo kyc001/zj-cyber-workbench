@@ -33,7 +33,10 @@ async def query_work_project_findings(
         pattern = f"%{keyword}%"
         statement = statement.where(or_(
             WorkProjectFinding.title.ilike(pattern),
+            WorkProjectFinding.cve_id.ilike(pattern),
             WorkProjectFinding.description.ilike(pattern),
+            WorkProjectFinding.evidence.ilike(pattern),
+            WorkProjectFinding.remediation.ilike(pattern),
             WorkProjectFinding.impact.ilike(pattern),
             cast(WorkProjectFinding.severity, String).ilike(pattern),
             cast(WorkProjectFinding.status, String).ilike(pattern),
@@ -64,8 +67,23 @@ async def create_work_project_finding(
             asset_id=request.asset_id,
             edge_id=request.edge_id,
             title=request.title,
+            finding_type=request.finding_type,
+            cve_id=request.cve_id,
             severity=request.severity,
             status=request.status,
+            confidence=request.confidence,
+            cvss_score=request.cvss_score,
+            cvss_vector=request.cvss_vector,
+            cwes=request.cwes,
+            references=request.references,
+            evidence=request.evidence,
+            remediation=request.remediation,
+            source=request.source,
+            known_exploited=request.known_exploited,
+            epss_score=request.epss_score,
+            epss_percentile=request.epss_percentile,
+            affected_version=request.affected_version,
+            fixed_versions=request.fixed_versions,
             description=request.description,
             impact=request.impact,
             created_by_agent_code=created_by_agent_code.strip(),
@@ -102,12 +120,30 @@ async def update_work_project_finding(
         finding.asset_id = request.asset_id
         finding.edge_id = request.edge_id
         finding.title = request.title
+        finding.finding_type = request.finding_type
+        finding.cve_id = request.cve_id
         finding.severity = request.severity
         finding.status = request.status
+        finding.confidence = request.confidence
+        finding.cvss_score = request.cvss_score
+        finding.cvss_vector = request.cvss_vector
+        finding.cwes = request.cwes
+        finding.references = request.references
+        finding.evidence = request.evidence
+        finding.remediation = request.remediation
+        finding.source = request.source
+        finding.known_exploited = request.known_exploited
+        finding.epss_score = request.epss_score
+        finding.epss_percentile = request.epss_percentile
+        finding.affected_version = request.affected_version
+        finding.fixed_versions = request.fixed_versions
         finding.description = request.description
         finding.impact = request.impact
         finding.updated_at = now
-        if request.status == WorkProjectFindingStatus.VALIDATED and previous_status != WorkProjectFindingStatus.VALIDATED:
+        if (
+            request.status == WorkProjectFindingStatus.VALIDATED
+            and previous_status != WorkProjectFindingStatus.VALIDATED
+        ):
             finding.validated_at = now
         elif request.status != WorkProjectFindingStatus.VALIDATED:
             finding.validated_at = None
@@ -120,6 +156,38 @@ async def update_work_project_finding(
             return None, "asset or graph edge not found"
         await session.refresh(finding)
     return WorkProjectFindingSchema.model_validate(finding), ""
+
+
+async def upsert_cve_work_project_finding(
+    project_id: int,
+    request: WorkProjectFindingRequest,
+    *,
+    created_by_agent_code: str = "",
+    created_from_session_id: str = "",
+) -> tuple[WorkProjectFindingSchema | None, str, bool]:
+    """Upsert one CVE candidate by project, asset, and CVE id."""
+    if not request.cve_id:
+        return None, "cve_id is required", False
+    async with get_async_session() as session:
+        statement = select(WorkProjectFinding).where(
+            WorkProjectFinding.project_id == project_id,
+            WorkProjectFinding.asset_id == request.asset_id,
+            WorkProjectFinding.cve_id == request.cve_id,
+        )
+        existing = (await session.exec(statement)).first()
+    if existing is None or existing.id is None:
+        created, error = await create_work_project_finding(
+            project_id,
+            request,
+            created_by_agent_code=created_by_agent_code,
+            created_from_session_id=created_from_session_id,
+        )
+        return created, error, True
+
+    if existing.status != WorkProjectFindingStatus.SUSPECTED:
+        request = request.model_copy(update={"status": existing.status})
+    saved, error = await update_work_project_finding(project_id, existing.id, request)
+    return saved, error, False
 
 
 async def delete_work_project_finding(project_id: int, finding_id: int) -> str:

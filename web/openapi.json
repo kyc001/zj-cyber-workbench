@@ -1276,6 +1276,32 @@
         "title": "CommonResponse[CreateWorkProjectSessionResponse]",
         "type": "object"
       },
+      "CommonResponse_CveDiscoveryResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CveDiscoveryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[CveDiscoveryResponse]",
+        "type": "object"
+      },
       "CommonResponse_DeleteEgressProxyResponse_": {
         "properties": {
           "code": {
@@ -1508,6 +1534,32 @@
           }
         },
         "title": "CommonResponse[FetchProviderModelsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ImportCveFindingResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportCveFindingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ImportCveFindingResponse]",
         "type": "object"
       },
       "CommonResponse_InstanceConfigSchema_": {
@@ -2887,6 +2939,292 @@
         "title": "CreateWorkProjectSessionResponse",
         "type": "object"
       },
+      "CveCandidateSchema": {
+        "properties": {
+          "affected_versions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Versions",
+            "type": "array"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "cve_id": {
+            "title": "Cve Id",
+            "type": "string"
+          },
+          "cvss_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cvss Score"
+          },
+          "cvss_vector": {
+            "default": "",
+            "title": "Cvss Vector",
+            "type": "string"
+          },
+          "cwes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cwes",
+            "type": "array"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "epss_percentile": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epss Percentile"
+          },
+          "epss_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epss Score"
+          },
+          "fixed_versions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fixed Versions",
+            "type": "array"
+          },
+          "kev_due_date": {
+            "default": "",
+            "title": "Kev Due Date",
+            "type": "string"
+          },
+          "known_exploited": {
+            "default": false,
+            "title": "Known Exploited",
+            "type": "boolean"
+          },
+          "match_confidence": {
+            "$ref": "#/components/schemas/CveMatchConfidence"
+          },
+          "match_reason": {
+            "title": "Match Reason",
+            "type": "string"
+          },
+          "modified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "ransomware_use": {
+            "default": "",
+            "title": "Ransomware Use",
+            "type": "string"
+          },
+          "references": {
+            "items": {
+              "type": "string"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/WorkProjectFindingSeverity",
+            "default": "info"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "default": "",
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cve_id",
+          "source",
+          "match_confidence",
+          "match_reason"
+        ],
+        "title": "CveCandidateSchema",
+        "type": "object"
+      },
+      "CveDiscoveryMode": {
+        "enum": [
+          "service",
+          "package"
+        ],
+        "title": "CveDiscoveryMode",
+        "type": "string"
+      },
+      "CveDiscoveryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "cpe": {
+            "default": "",
+            "maxLength": 512,
+            "title": "Cpe",
+            "type": "string"
+          },
+          "ecosystem": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Ecosystem",
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CveDiscoveryMode"
+          },
+          "package_name": {
+            "default": "",
+            "maxLength": 255,
+            "title": "Package Name",
+            "type": "string"
+          },
+          "product": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Product",
+            "type": "string"
+          },
+          "vendor": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Vendor",
+            "type": "string"
+          },
+          "version": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "CveDiscoveryRequest",
+        "type": "object"
+      },
+      "CveDiscoveryResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CveCandidateSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CveDiscoveryMode"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "retrieved_at": {
+            "format": "date-time",
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "query",
+          "total",
+          "items"
+        ],
+        "title": "CveDiscoveryResponse",
+        "type": "object"
+      },
+      "CveMatchConfidence": {
+        "enum": [
+          "exact",
+          "high",
+          "medium",
+          "low"
+        ],
+        "title": "CveMatchConfidence",
+        "type": "string"
+      },
       "DeleteEgressProxyResponse": {
         "properties": {
           "id": {
@@ -3255,6 +3593,59 @@
           }
         },
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImportCveFindingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_version": {
+            "default": "",
+            "maxLength": 255,
+            "title": "Affected Version",
+            "type": "string"
+          },
+          "asset_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/CveCandidateSchema"
+          }
+        },
+        "required": [
+          "candidate"
+        ],
+        "title": "ImportCveFindingRequest",
+        "type": "object"
+      },
+      "ImportCveFindingResponse": {
+        "properties": {
+          "confidence": {
+            "$ref": "#/components/schemas/WorkProjectFindingConfidence"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "finding_id",
+          "created",
+          "confidence"
+        ],
+        "title": "ImportCveFindingResponse",
         "type": "object"
       },
       "InstanceConfigSchema": {
@@ -6526,8 +6917,23 @@
         "title": "WorkProjectAttackPathStepSchema",
         "type": "object"
       },
+      "WorkProjectFindingConfidence": {
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "confirmed"
+        ],
+        "title": "WorkProjectFindingConfidence",
+        "type": "string"
+      },
       "WorkProjectFindingSchema": {
         "properties": {
+          "affected_version": {
+            "default": "",
+            "title": "Affected Version",
+            "type": "string"
+          },
           "asset_id": {
             "anyOf": [
               {
@@ -6538,6 +6944,10 @@
               }
             ],
             "title": "Asset Id"
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/WorkProjectFindingConfidence",
+            "default": "low"
           },
           "created_at": {
             "format": "date-time",
@@ -6553,6 +6963,34 @@
             "default": "",
             "title": "Created From Session Id",
             "type": "string"
+          },
+          "cve_id": {
+            "default": "",
+            "title": "Cve Id",
+            "type": "string"
+          },
+          "cvss_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cvss Score"
+          },
+          "cvss_vector": {
+            "default": "",
+            "title": "Cvss Vector",
+            "type": "string"
+          },
+          "cwes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cwes",
+            "type": "array"
           },
           "description": {
             "default": "",
@@ -6570,6 +7008,44 @@
             ],
             "title": "Edge Id"
           },
+          "epss_percentile": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epss Percentile"
+          },
+          "epss_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epss Score"
+          },
+          "evidence": {
+            "default": "",
+            "title": "Evidence",
+            "type": "string"
+          },
+          "finding_type": {
+            "$ref": "#/components/schemas/WorkProjectFindingType",
+            "default": "general"
+          },
+          "fixed_versions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fixed Versions",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -6579,12 +7055,34 @@
             "title": "Impact",
             "type": "string"
           },
+          "known_exploited": {
+            "default": false,
+            "title": "Known Exploited",
+            "type": "boolean"
+          },
           "project_id": {
             "title": "Project Id",
             "type": "integer"
           },
+          "references": {
+            "items": {
+              "type": "string"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "remediation": {
+            "default": "",
+            "title": "Remediation",
+            "type": "string"
+          },
           "severity": {
             "$ref": "#/components/schemas/WorkProjectFindingSeverity"
+          },
+          "source": {
+            "default": "",
+            "title": "Source",
+            "type": "string"
           },
           "status": {
             "$ref": "#/components/schemas/WorkProjectFindingStatus"
@@ -6641,6 +7139,14 @@
           "false_positive"
         ],
         "title": "WorkProjectFindingStatus",
+        "type": "string"
+      },
+      "WorkProjectFindingType": {
+        "enum": [
+          "general",
+          "cve"
+        ],
+        "title": "WorkProjectFindingType",
         "type": "string"
       },
       "WorkProjectGraphEdgeSchema": {
@@ -11517,6 +12023,150 @@
           }
         },
         "summary": "Cancel Work Project Route",
+        "tags": [
+          "work-projects"
+        ]
+      }
+    },
+    "/api/work-projects/{id}/cve-discovery/import": {
+      "post": {
+        "operationId": "import_work_project_cve_route_api_work_projects__id__cve_discovery_import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportCveFindingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ImportCveFindingResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Work Project Cve Route",
+        "tags": [
+          "work-projects"
+        ]
+      }
+    },
+    "/api/work-projects/{id}/cve-discovery/query": {
+      "post": {
+        "operationId": "discover_work_project_cves_route_api_work_projects__id__cve_discovery_query_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CveDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_CveDiscoveryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discover Work Project Cves Route",
         "tags": [
           "work-projects"
         ]

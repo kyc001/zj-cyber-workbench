@@ -2,7 +2,16 @@ from dataclasses import dataclass
 
 from agents import Tool
 
+from core.tools.cve import search_cve_intelligence
+from core.tools.network import browser_fetch, http_request, port_probe, ssh_command, web_security_scan
 from core.tools.reports import export_report
+from core.tools.sandbox import (
+    cancel_sandbox_async_job,
+    execute_async_command,
+    execute_sync_command,
+    load_skill,
+    read_sandbox_command_output,
+)
 from core.tools.work_project import (
     create_or_update_work_project_asset,
     create_or_update_work_project_attack_path,
@@ -19,8 +28,6 @@ from core.tools.work_project import (
     update_work_project_agent_summary,
     update_work_project_tasks,
 )
-from core.tools.network import browser_fetch, http_request, port_probe, ssh_command, web_security_scan
-from core.tools.sandbox import cancel_sandbox_async_job, execute_async_command, execute_sync_command, load_skill, read_sandbox_command_output
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +66,7 @@ WORK_PROJECT_RECORD_TOOLS = (
     ToolMount(create_or_update_work_project_attack_path, requires_work_project=True),
     ToolMount(create_or_update_work_project_attack_path_step, requires_work_project=True),
     ToolMount(delete_work_project_record, requires_work_project=True),
+    ToolMount(search_cve_intelligence, requires_work_project=True),
 )
 
 SPECIALIST_TOOLS = (

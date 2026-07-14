@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 
+from handler.work_project.cve import (
+    discover_work_project_cves_handler,
+    import_work_project_cve_handler,
+)
 from handler.work_project.projects import (
     cancel_work_project_handler,
     create_work_project_handler,
@@ -15,6 +19,12 @@ from handler.work_project.projects import (
 from middleware.auth import AuthUser, require_admin, require_user
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, not_found_response
 from schema.common.responses import CommonResponse
+from schema.work_project.cve import (
+    CveDiscoveryRequest,
+    CveDiscoveryResponse,
+    ImportCveFindingRequest,
+    ImportCveFindingResponse,
+)
 from schema.work_project.projects import (
     CreateWorkProjectRequest,
     CreateWorkProjectSessionResponse,
@@ -26,7 +36,6 @@ from schema.work_project.projects import (
 )
 from schema.work_project.records import WorkProjectRecordSnapshotSchema
 from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
-
 
 NOT_FOUND_RESPONSE = not_found_response("Work project")
 
@@ -58,6 +67,22 @@ async def get_work_project_record_snapshot_route(
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse[WorkProjectRecordSnapshotSchema]:
     return await get_work_project_record_snapshot_handler(id=id, user=user)
+
+
+async def discover_work_project_cves_route(
+    id: int,
+    request: CveDiscoveryRequest,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[CveDiscoveryResponse]:
+    return await discover_work_project_cves_handler(id=id, request=request, user=user)
+
+
+async def import_work_project_cve_route(
+    id: int,
+    request: ImportCveFindingRequest,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[ImportCveFindingResponse]:
+    return await import_work_project_cve_handler(id=id, request=request, user=user)
 
 
 async def update_work_project_metadata_route(
@@ -133,6 +158,22 @@ router.add_api_route(
     methods=["GET"],
     response_model=CommonResponse[WorkProjectRecordSnapshotSchema],
     responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/{id}/cve-discovery/query",
+    discover_work_project_cves_route,
+    methods=["POST"],
+    response_model=CommonResponse[CveDiscoveryResponse],
+    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/{id}/cve-discovery/import",
+    import_work_project_cve_route,
+    methods=["POST"],
+    response_model=CommonResponse[ImportCveFindingResponse],
+    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(

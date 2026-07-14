@@ -32,6 +32,20 @@ Docker Sandbox 替换为 Windows 本机与 SSH Linux 双后端执行工作区。
 同步/异步命令、文件管理、项目绑定、审批和审计已接通；生产写操作和高风险工具仍
 必须经过 Scope 与审批，不得把当前版本用于未授权目标。
 
+## CVE Discovery
+
+项目工作台内置结构化 CVE 发现链路：
+
+- 服务与中间件：按 CPE 2.3 或厂商/产品查询 NVD，并对目标版本执行精确版本、区间版本和弱候选分级。
+- 软件依赖：按生态、包名和精确版本查询 OSV，保留受影响范围与已知修复版本。
+- 风险优先级：聚合 CVSS、EPSS 与 CISA KEV，已知在野利用候选优先展示。
+- 证据闭环：候选可绑定 WorkProject 资产并去重写入 Finding，保存 CWE、引用、版本、证据和修复建议。
+- 误报控制：被动情报只能进入 `suspected`；必须完成独立主动验证后才能标记 `validated`。
+
+相较仓库内固定基线 `Z3r0@79776a2`，ZJ 新增了专用 CVE 数据契约、情报 API、版本适用性判定、
+KEV/EPSS 丰富、SQLite 升级、Agent 查询工具和可操作工作台。因而在 CVE 发现与分级这一条能力线上，
+ZJ 明显更强；这不等于所有安全工具覆盖都全面超过 Z3r0，主动模板扫描和 Linux 专属验证仍由 C 组继续集成。
+
 ## Architecture
 
 ```text
@@ -60,6 +74,7 @@ Electron Main / Preload / React Renderer
 - `docs/development-environment.md`: Windows 开发、验证和本地文件规则。
 - `docs/migration-validation.md`: 完整迁移范围、真实 Agent 工具案例和验证结果。
 - `docs/tool-capability-matrix.md`: 25 个 Skill 的 Windows/SSH 实际执行路径。
+- `docs/a-handoff-2026-07-14.md`: A 组当前交付、CVE 契约、验证结果与 B/C/D 接手清单。
 
 ## Portable Desktop
 

@@ -1,5 +1,5 @@
 import { Empty, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
-import { Boxes, Bug, FileText, Network, Route } from "lucide-react";
+import { Boxes, Bug, FileText, Network, Route, ShieldAlert } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { WORK_PROJECT_ASSET_TYPE } from "../../shared/api/contract";
 import type {
@@ -24,21 +24,26 @@ import {
   WORK_PROJECT_FINDING_STATUS_LABEL,
 } from "../../shared/lib/labels";
 import { ProjectGraphCanvas } from "./ProjectGraphCanvas";
+import { CveDiscoveryPanel } from "./CveDiscoveryPanel";
 import { filledDetailItems, type DetailItem } from "./workProjectDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
 
-export type ProjectRecordTab = "assets" | "findings" | "attack-paths" | "graph";
+export type ProjectRecordTab = "assets" | "findings" | "cve" | "attack-paths" | "graph";
 
 type WorkProjectRecordTabsProps = {
   records: WorkProjectRecords;
   initialTab?: ProjectRecordTab;
   className?: string;
+  projectId?: number;
+  onRecordsChanged?: () => void;
 };
 
 export function WorkProjectRecordTabs({
   records,
   initialTab = "assets",
   className,
+  projectId,
+  onRecordsChanged,
 }: WorkProjectRecordTabsProps) {
   return (
     <Tabs
@@ -52,6 +57,15 @@ export function WorkProjectRecordTabs({
       <TabPane tab={<TabLabel icon={<Bug size={14} />} text="发现" />} itemKey="findings">
         <FindingList findings={records.findings} assets={records.assets} />
       </TabPane>
+      {projectId ? (
+        <TabPane tab={<TabLabel icon={<ShieldAlert size={14} />} text="CVE 发现" />} itemKey="cve">
+          <CveDiscoveryPanel
+            projectId={projectId}
+            assets={records.assets}
+            onImported={onRecordsChanged}
+          />
+        </TabPane>
+      ) : null}
       <TabPane tab={<TabLabel icon={<Route size={14} />} text="攻击路径" />} itemKey="attack-paths">
         <AttackPathList assets={records.assets} graph={records.graph} />
       </TabPane>
@@ -101,10 +115,18 @@ export function FindingList({ findings, assets }: { findings: WorkProjectFinding
           </header>
           <p>{finding.description || finding.impact || "暂无描述"}</p>
           <RecordDetails items={[
+            ["CVE", finding.cve_id],
+            ["CVSS", finding.cvss_score?.toFixed(1)],
+            ["置信度", finding.confidence],
+            ["EPSS", finding.epss_score == null ? undefined : `${(finding.epss_score * 100).toFixed(1)}%`],
+            ["已知利用", finding.known_exploited ? "CISA KEV" : undefined],
+            ["受影响版本", finding.affected_version],
             ["资产", finding.asset_id ? assetLabels.get(finding.asset_id) ?? `#${finding.asset_id}` : undefined],
             ["支持关系边", finding.edge_id ? `#${finding.edge_id}` : undefined],
             ["更新时间", formatDateTime(finding.updated_at)],
           ]} />
+          {finding.evidence ? <p className="project-finding-evidence">{finding.evidence}</p> : null}
+          {finding.remediation ? <p className="project-finding-remediation">{finding.remediation}</p> : null}
         </article>
       ))}
     </div>
