@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import mimetypes
 import posixpath
@@ -9,6 +10,8 @@ import stat
 import zipfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
+from uuid import uuid4
 
 import asyncssh
 
@@ -113,9 +116,14 @@ async def upload_files(
                     else:
                         raise FileExistsError(name)
                 data = source.stream.read()
-                async with sftp.open(target, "wb") as stream:
-                    await stream.write(data)
-                uploaded.append(ContainerFileUploadItem(name=name, path=_display(root, target), size=len(data)))
+                backup = await _replace_file_atomic(sftp, root, target, data)
+                uploaded.append(ContainerFileUploadItem(
+                    name=name,
+                    path=_display(root, target),
+                    size=len(data),
+                    sha256=hashlib.sha256(data).hexdigest(),
+                    backup_path=_display(root, backup) if backup else "",
+                ))
         finally:
             for source in sources:
                 source.stream.close()
@@ -161,8 +169,7 @@ async def write_file(host: ManagedHost, container_id: int, raw_path: str, conten
     async with _sftp_session(host, container_id) as (_, sftp, root):
         target = _path(root, raw_path)
         await sftp.makedirs(posixpath.dirname(target), exist_ok=True)
-        async with sftp.open(target, "w", encoding="utf-8") as stream:
-            await stream.write(content)
+        await _replace_file_atomic(sftp, root, target, content.encode("utf-8"))
 
 
 async def copy_files(host: ManagedHost, container_id: int, sources: list[str], destination: str) -> None:
@@ -206,3 +213,50 @@ async def delete_files(host: ManagedHost, container_id: int, raw_paths: list[str
 async def make_directory(host: ManagedHost, container_id: int, raw_path: str) -> None:
     async with _sftp_session(host, container_id) as (_, sftp, root):
         await sftp.makedirs(_path(root, raw_path), exist_ok=True)
+
+
+async def _backup_existing_file(sftp, root: str, target: str) -> str | None:
+    try:
+        attrs = await sftp.lstat(target)
+    except asyncssh.SFTPNoSuchFile:
+        return None
+    permissions = attrs.permissions or 0
+    if stat.S_ISLNK(permissions):
+        raise PermissionError("refusing to overwrite a symbolic link")
+    if not stat.S_ISREG(permissions):
+        raise IsADirectoryError(target)
+    backup_dir = posixpath.join(root, ".zj-backups")
+    await sftp.makedirs(backup_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup = posixpath.join(backup_dir, f"{timestamp}-{uuid4().hex[:8]}-{posixpath.basename(target)}")
+    await sftp.rename(target, backup)
+    return backup
+
+
+async def _write_bytes_atomic(sftp, target: str, data: bytes) -> None:
+    directory = posixpath.dirname(target)
+    await sftp.makedirs(directory, exist_ok=True)
+    temp_path = posixpath.join(directory, f".zj-upload-{uuid4().hex}.tmp")
+    try:
+        async with sftp.open(temp_path, "wb") as stream:
+            await stream.write(data)
+        await sftp.rename(temp_path, target)
+    finally:
+        try:
+            await sftp.remove(temp_path)
+        except asyncssh.SFTPNoSuchFile:
+            pass
+
+
+async def _replace_file_atomic(sftp, root: str, target: str, data: bytes) -> str | None:
+    backup = await _backup_existing_file(sftp, root, target)
+    try:
+        await _write_bytes_atomic(sftp, target, data)
+    except Exception:
+        if backup is not None:
+            try:
+                await sftp.rename(backup, target)
+            except Exception:
+                pass
+        raise
+    return backup

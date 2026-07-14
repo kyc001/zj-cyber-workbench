@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -11,8 +12,10 @@ from model.egress_proxy.proxies import EgressProxy
 from schema.egress_proxy.proxies import EgressProxyType
 from schema.sandbox.containers import SandboxContainerEgressMode
 from schema.system_user.users import SystemUserRole
+from service.sandbox import files as sandbox_files
 from service.sandbox import local_runtime, remote_files, remote_runtime
 from service.sandbox.egress import SandboxEgressSelection, sandbox_portable_process_environment
+from service.sandbox.files import ContainerUploadSource
 
 
 class PortableRuntimeTests(unittest.TestCase):
@@ -134,6 +137,50 @@ class RemoteFileRuntimeTests(unittest.IsolatedAsyncioTestCase):
         sftp.realpath.assert_awaited_once_with(".")
         connection.close.assert_called_once()
         connection.wait_closed.assert_awaited_once()
+
+
+class LocalFileRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_write_file_uses_backup_and_atomic_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "sandboxes"
+            with (
+                patch.object(local_runtime, "SANDBOX_ROOT", root),
+                patch.object(sandbox_files, "_remote_host", new=AsyncMock(return_value=None)),
+            ):
+                target = local_runtime.resolve_sandbox_path(1, "/notes.txt")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("old", encoding="utf-8")
+
+                await sandbox_files.write_container_file(1, "/notes.txt", "new")
+
+                self.assertEqual("new", target.read_text(encoding="utf-8"))
+                backups = list(local_runtime.resolve_sandbox_path(1, "/.zj-backups").glob("*-notes.txt"))
+                self.assertEqual(1, len(backups))
+                self.assertEqual("old", backups[0].read_text(encoding="utf-8"))
+                self.assertFalse(list(target.parent.glob(".zj-upload-*.tmp")))
+
+    async def test_upload_file_reports_sha256_and_backup(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "sandboxes"
+            with (
+                patch.object(local_runtime, "SANDBOX_ROOT", root),
+                patch.object(sandbox_files, "_remote_host", new=AsyncMock(return_value=None)),
+            ):
+                target = local_runtime.resolve_sandbox_path(1, "/upload.txt")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("old", encoding="utf-8")
+
+                uploaded = await sandbox_files.upload_container_files(
+                    1,
+                    "/",
+                    [ContainerUploadSource(filename="upload.txt", stream=BytesIO(b"new"))],
+                    overwrite=True,
+                )
+
+                self.assertEqual("new", target.read_text(encoding="utf-8"))
+                self.assertEqual(1, len(uploaded))
+                self.assertEqual("11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437", uploaded[0].sha256)
+                self.assertTrue(uploaded[0].backup_path.startswith("/.zj-backups/"))
 
 
 if __name__ == "__main__":

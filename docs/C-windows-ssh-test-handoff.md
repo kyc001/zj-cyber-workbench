@@ -1,0 +1,112 @@
+# C Module Windows and SSH Test Handoff
+
+This document records tests that cannot be completed reliably in the current WSL-only environment.
+Run this checklist after moving the project to the target Windows desktop environment and after preparing at least one SSH Linux host.
+
+## Environment
+
+- Windows 10/11 desktop with the packaged or development ZJ app.
+- `portable-tools/` or `.zj/tools/` contains Windows binaries for `httpx`, `dnsx`, and `ffuf`.
+- One SSH Linux host with `nmap` and `sqlmap` installed.
+- Runtime permission mode set to normal unless the test explicitly says otherwise.
+- Test only against owned lab targets such as `example.test`, local mock services, or an internal training range.
+
+## Windows Local Workspace Tests
+
+- Start ZJ and confirm `GET /api/sandbox-containers/available?include_non_running=true` returns the default local workspace.
+- Run `GET /api/toolpack/tools` and confirm `local.httpx`, `local.dnsx`, and `local.ffuf` show `available=true` after tools are installed.
+- Run `local.httpx` against a lab HTTP URL and confirm:
+  - `ExecutionResult.ok=true`
+  - `structured.records` contains parsed output
+  - `exit_code=0`
+  - no secrets appear in `summary`, `structured.stdout`, or artifact files.
+- Run `local.dnsx` against a lab domain and confirm structured records are returned.
+- Run `local.ffuf` with a URL containing `FUZZ`, low `rps`, and a small lab wordlist.
+- Run `local.ffuf` without `FUZZ` and confirm `error_code=policy_denied`.
+- Temporarily remove one tool binary and confirm the corresponding run returns `error_code=tool_missing` instead of crashing.
+
+## File Safety Tests
+
+- Upload a file over an existing file and confirm:
+  - upload response includes `sha256`
+  - original content is copied under `/.zj-backups/`
+  - final content matches the uploaded content
+  - no `.zj-upload-*.tmp` files remain after success.
+- Write over an existing file through `/api/sandbox-containers/{id}/files/write` and confirm backup is created.
+- Try path traversal such as `../../outside.txt` and confirm the request is rejected.
+- Try overwriting a symlink that points outside the workspace and confirm the request is rejected.
+- Download a directory and confirm the archive does not include files outside the workspace.
+
+## PowerShell Diagnostics Tests
+
+- Run `GET /api/local-actions/powershell/actions` on Windows and confirm every action has `enabled=true`.
+- Run each read-only action:
+  - `system.summary`
+  - `process.list`
+  - `service.list`
+  - `network.ports`
+  - `firewall.status`
+  - `scheduled_tasks.list`
+- Confirm each action returns an `ExecutionResult` and does not accept arbitrary user command text.
+- Confirm process output does not include command-line secrets, tokens, or private keys.
+- Confirm the same endpoints on WSL/Linux return `platform_unsupported`.
+
+## UAC Helper Tests
+
+- Confirm `GET /api/local-actions/uac-helper/status` returns `enabled=false`.
+- Confirm no endpoint accepts arbitrary elevated shell strings.
+- When the helper is implemented later, add tests for one-time task files, HMAC/signature validation, nonce expiry, action hash verification, and result file deletion.
+
+## SSH Workspace Tests
+
+- Create an SSH managed host and a workspace bound to that host.
+- First connection:
+  - confirm known host behavior is explicit and stored under `.zj/ssh/known_hosts`
+  - confirm host key entries distinguish hostname/IP and port.
+- Host key change:
+  - change or simulate the server host key
+  - confirm command/tool execution returns `error_code=host_key_changed`
+  - confirm Agent cannot auto-accept the changed key.
+- Authentication:
+  - test password auth
+  - test invalid password returns `auth_failed`
+  - test connection timeout returns `connect_failed` or `timeout`.
+- SSH command and cancel:
+  - run a long command through Toolpack or workspace command execution
+  - cancel it
+  - confirm remote process exits and result status becomes `canceled`.
+- SSH SFTP:
+  - list/read/write/upload/download/copy/move/delete inside the workspace
+  - confirm path traversal is rejected
+  - confirm overwrite creates backup
+  - confirm failed replace restores the previous file when possible.
+- Project isolation:
+  - create two projects/workspaces using the same host
+  - confirm sessions and permissions do not leak across projects.
+
+## SSH Linux Toolpack Tests
+
+- Run `GET /api/toolpack/tools?sandbox_container_id=<ssh_workspace_id>` and confirm SSH tools are visible.
+- Run `ssh.nmap` against an authorized lab target and confirm structured output/artifact behavior.
+- Run `ssh.sqlmap` against an authorized vulnerable lab URL and confirm bounded execution.
+- Remove `nmap` or `sqlmap` from the SSH host and confirm `tool_missing`.
+- Run SSH Linux tools against a local workspace and confirm `platform_unsupported`.
+
+## Regression Checks
+
+Run these after the Windows/SSH checks:
+
+```powershell
+python -m pytest tests/unit -q
+python -m ruff check schema/toolpack.py service/toolpack.py router/toolpack.py schema/local_actions.py service/host/powershell.py router/local_actions.py
+pnpm typecheck
+pnpm build
+```
+
+Record failures with:
+
+- OS version and architecture.
+- ZJ commit hash.
+- Tool versions and paths.
+- SSH server version and host key fingerprint.
+- Sanitized request/response payloads.

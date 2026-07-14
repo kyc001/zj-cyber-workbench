@@ -86,7 +86,10 @@ class CreateSandboxContainerRequest(BaseModel):
     image_id: int = Field(gt=0)
     egress_mode: SandboxContainerEgressMode = SandboxContainerEgressMode.DIRECT
     egress_proxy_id: int | None = Field(default=None, gt=0)
-    owner_id: int | None = Field(default=None, description="Assign container owner user ID. Admin only; defaults to the creator.")
+    owner_id: int | None = Field(
+        default=None,
+        description="Assign container owner user ID. Admin only; defaults to the creator.",
+    )
     port_mappings: list[SandboxContainerPortMapping] = Field(default_factory=list, max_length=32)
 
     @model_validator(mode="after")
@@ -162,6 +165,8 @@ class ContainerFileUploadItem(BaseModel):
     name: str
     path: str
     size: int
+    sha256: str = ""
+    backup_path: str = ""
 
 
 class ContainerFileUploadResponse(BaseModel):

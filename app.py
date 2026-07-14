@@ -31,6 +31,7 @@ from router.desktop import router as desktop_router
 from router.egress_proxy.proxies import router as egress_proxy_router
 from router.host.hosts import router as host_router
 from router.knowledge.resources import router as knowledge_router
+from router.local_actions import router as local_actions_router
 from router.runtime_permissions import router as runtime_permission_router
 from router.sandbox.containers import router as sandbox_container_router
 from router.sandbox.images import router as sandbox_image_router
@@ -174,6 +175,7 @@ def create_app() -> FastAPI:
     app.include_router(sandbox_container_router, prefix=API_PREFIX)
     app.include_router(work_project_router, prefix=API_PREFIX)
     app.include_router(knowledge_router, prefix=API_PREFIX)
+    app.include_router(local_actions_router, prefix=API_PREFIX)
     app.include_router(agent_router, prefix=API_PREFIX)
     app.include_router(agent_session_router, prefix=API_PREFIX)
     app.include_router(approval_router, prefix=API_PREFIX)

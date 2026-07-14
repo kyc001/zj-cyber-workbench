@@ -1,19 +1,29 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import mimetypes
 import os
 import shutil
 import stat
+import tempfile
 import zipfile
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import BinaryIO
+from uuid import uuid4
 
-from schema.sandbox.containers import ContainerFileInfo, ContainerFileType, ContainerFileUploadItem, SandboxContainerStatus
-from service.sandbox.local_runtime import display_sandbox_path, resolve_sandbox_path, sandbox_workspace
+from schema.sandbox.containers import (
+    ContainerFileInfo,
+    ContainerFileType,
+    ContainerFileUploadItem,
+    SandboxContainerStatus,
+)
 from service.sandbox import remote_files
+from service.sandbox.local_runtime import display_sandbox_path, resolve_sandbox_path, sandbox_workspace
 from service.sandbox.remote_runtime import is_local_host, resolve_container_host
 from service.sandbox.status import resolve_sandbox_container_status
 
@@ -46,7 +56,10 @@ async def list_container_files(container_id: int, path: str) -> list[ContainerFi
     directory = resolve_sandbox_path(container_id, path, must_exist=True)
     if not directory.is_dir():
         raise NotADirectoryError(path)
-    return [_file_info(container_id, item) for item in sorted(directory.iterdir(), key=lambda value: value.name.lower())]
+    return [
+        _file_info(container_id, item)
+        for item in sorted(directory.iterdir(), key=lambda value: value.name.lower())
+    ]
 
 
 async def get_container_file_info(container_id: int, path: str) -> ContainerFileInfo | None:
@@ -60,7 +73,13 @@ async def get_container_file_info(container_id: int, path: str) -> ContainerFile
     return _file_info(container_id, item)
 
 
-async def read_container_file(container_id: int, path: str, max_bytes: int = 1_048_576, *, base64_mode: bool = False) -> str:
+async def read_container_file(
+    container_id: int,
+    path: str,
+    max_bytes: int = 1_048_576,
+    *,
+    base64_mode: bool = False,
+) -> str:
     remote_host = await _remote_host(container_id)
     if remote_host is not None:
         return await remote_files.read_file(remote_host, container_id, path, max_bytes, base64_mode)
@@ -71,7 +90,12 @@ async def read_container_file(container_id: int, path: str, max_bytes: int = 1_0
     return base64.b64encode(data).decode("ascii") if base64_mode else data.decode(errors="replace")
 
 
-async def upload_container_files(container_id: int, path: str, sources: list[ContainerUploadSource], overwrite: bool) -> list[ContainerFileUploadItem]:
+async def upload_container_files(
+    container_id: int,
+    path: str,
+    sources: list[ContainerUploadSource],
+    overwrite: bool,
+) -> list[ContainerFileUploadItem]:
     remote_host = await _remote_host(container_id)
     if remote_host is not None:
         return await remote_files.upload_files(remote_host, container_id, path, sources, overwrite)
@@ -85,8 +109,15 @@ async def upload_container_files(container_id: int, path: str, sources: list[Con
             if target.exists() and not overwrite:
                 raise FileExistsError(name)
             data = source.stream.read()
-            target.write_bytes(data)
-            uploaded.append(ContainerFileUploadItem(name=name, path=display_sandbox_path(container_id, target), size=len(data)))
+            backup = _backup_existing_file(container_id, target) if target.exists() else None
+            _write_bytes_atomic(target, data)
+            uploaded.append(ContainerFileUploadItem(
+                name=name,
+                path=display_sandbox_path(container_id, target),
+                size=len(data),
+                sha256=hashlib.sha256(data).hexdigest(),
+                backup_path=display_sandbox_path(container_id, backup) if backup is not None else "",
+            ))
     finally:
         for source in sources:
             source.stream.close()
@@ -131,7 +162,10 @@ async def write_container_file(container_id: int, path: str, content: str) -> bo
         return True
     target = resolve_sandbox_path(container_id, path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    if target.is_symlink():
+        raise PermissionError("refusing to overwrite a symbolic link")
+    _backup_existing_file(container_id, target)
+    _write_bytes_atomic(target, content.encode("utf-8"))
     return True
 
 
@@ -144,7 +178,10 @@ async def copy_container_files(container_id: int, sources: list[str], destinatio
     target_dir.mkdir(parents=True, exist_ok=True)
     for source in sources:
         item = resolve_sandbox_path(container_id, source, must_exist=True)
-        shutil.copytree(item, target_dir / item.name, dirs_exist_ok=True) if item.is_dir() else shutil.copy2(item, target_dir / item.name)
+        if item.is_dir():
+            shutil.copytree(item, target_dir / item.name, dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, target_dir / item.name)
     return True
 
 
@@ -209,3 +246,37 @@ class PathName:
 async def _remote_host(container_id: int):
     _, host = await resolve_container_host(container_id)
     return None if is_local_host(host) else host
+
+
+def _backup_existing_file(container_id: int, target: Path) -> Path | None:
+    if not target.exists():
+        return None
+    if target.is_symlink():
+        raise PermissionError("refusing to overwrite a symbolic link")
+    if not target.is_file():
+        raise IsADirectoryError(str(target))
+    backup_dir = resolve_sandbox_path(container_id, "/.zj-backups")
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup = backup_dir / f"{timestamp}-{uuid4().hex[:8]}-{target.name}"
+    shutil.copy2(target, backup)
+    return backup
+
+
+def _write_bytes_atomic(target: Path, data: bytes) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "wb",
+            dir=target.parent,
+            prefix=f".zj-upload-{uuid4().hex[:8]}-",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temp_path = Path(stream.name)
+            stream.write(data)
+        temp_path.replace(target)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
 
 from middleware.auth import AuthUser, require_user
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, FORBIDDEN_RESPONSE, not_found_response
@@ -13,7 +14,13 @@ from schema.toolpack import (
     ToolRunRequest,
     ToolRunSnapshot,
 )
-from service.toolpack import cancel_tool_run, get_tool_run, list_toolpack_tools, start_tool_run
+from service.toolpack import (
+    cancel_tool_run,
+    get_tool_run,
+    list_toolpack_tools,
+    resolve_tool_artifact_path,
+    start_tool_run,
+)
 
 router = APIRouter(prefix="/toolpack", tags=["toolpack"])
 
@@ -59,6 +66,19 @@ async def cancel_tool_run_route(
     return CommonResponse(data=await cancel_tool_run(run_id))
 
 
+async def download_tool_artifact_route(
+    artifact_id: str,
+    _: AuthUser = Depends(require_user),
+) -> FileResponse | CommonResponse:
+    try:
+        path = resolve_tool_artifact_path(artifact_id)
+    except FileNotFoundError as exc:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message=str(exc))
+    except (PermissionError, ValueError) as exc:
+        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
+    return FileResponse(path, media_type="text/plain", filename=path.name)
+
+
 router.add_api_route(
     "/tools",
     list_tools_route,
@@ -89,4 +109,12 @@ router.add_api_route(
     methods=["POST"],
     response_model=CommonResponse[ToolRunCancelResponse],
     responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/artifacts/{artifact_id}",
+    download_tool_artifact_route,
+    methods=["GET"],
+    response_model=None,
+    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )

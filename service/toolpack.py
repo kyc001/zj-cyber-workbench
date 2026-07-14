@@ -256,6 +256,21 @@ async def cancel_tool_run(run_id: str) -> ToolRunCancelResponse:
     return ToolRunCancelResponse(run_id=run_id, canceled=True, status=status.value)
 
 
+def resolve_tool_artifact_path(artifact_id: str):
+    safe_id = artifact_id.strip()
+    if not safe_id or "/" in safe_id or "\\" in safe_id or safe_id in {".", ".."}:
+        raise ValueError("invalid artifact id")
+    path = (_ARTIFACT_ROOT / f"{safe_id}.txt").resolve()
+    root = _ARTIFACT_ROOT.resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise PermissionError("artifact path escapes toolpack artifact root") from exc
+    if not path.is_file():
+        raise FileNotFoundError("tool artifact not found")
+    return path
+
+
 async def _execute_tool_run(
     run_id: str,
     definition: _ToolDefinition,
