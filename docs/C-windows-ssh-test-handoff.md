@@ -16,6 +16,22 @@ Run this checklist after moving the project to the target Windows desktop enviro
 For a first Windows-side SSH validation, WSL can be used as the SSH Linux host.
 In this setup, ZJ runs on Windows and connects to WSL through SSH.
 
+The repo includes a helper script which creates a low-privilege SSH-only test account:
+
+```bash
+cd /home/liu/projects/zj/zj-cyber-workbench
+./scripts/setup-wsl-ssh-sandbox.sh
+```
+
+By default this creates:
+
+- user: `zj_sandbox`
+- SSH port: `2222`
+- secret file: `~/.zj-wsl-sandbox-ssh.env`
+
+The generated `zj_sandbox` password is stored outside the repo with `0600` permissions.
+Do not commit or paste that file.
+
 Recommended WSL setup:
 
 ```bash
