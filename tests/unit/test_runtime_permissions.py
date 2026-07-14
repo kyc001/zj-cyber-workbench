@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from app import create_app
 from config import PermissionConfig, PermissionMode, get_config
 from core.execution_guard import authorize_network_action_runtime
 from core.runtime.context import AgentRuntimeContext, AgentUserContext
@@ -46,6 +47,11 @@ class RuntimePermissionTests(unittest.IsolatedAsyncioTestCase):
             ),
             agent_code="cso",
         )
+
+    def test_pending_endpoint_does_not_require_a_request_body(self) -> None:
+        operation = create_app().openapi()["paths"]["/api/runtime-permissions/pending"]["get"]
+
+        self.assertNotIn("requestBody", operation)
 
     async def test_normal_mode_waits_for_allow_once(self) -> None:
         task = asyncio.create_task(

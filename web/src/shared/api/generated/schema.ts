@@ -528,8 +528,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Pending Permissions Handler */
-        get: operations["list_pending_permissions_handler_api_runtime_permissions_pending_get"];
+        /** List Pending Permissions Endpoint */
+        get: operations["list_pending_permissions_endpoint_api_runtime_permissions_pending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -548,8 +548,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Clear Runtime Permission Rules Handler */
-        delete: operations["clear_runtime_permission_rules_handler_api_runtime_permissions_rules_delete"];
+        /** Clear Runtime Permission Rules Endpoint */
+        delete: operations["clear_runtime_permission_rules_endpoint_api_runtime_permissions_rules_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -562,15 +562,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Runtime Permission Settings Handler */
-        get: operations["get_runtime_permission_settings_handler_api_runtime_permissions_settings_get"];
+        /** Get Runtime Permission Settings Endpoint */
+        get: operations["get_runtime_permission_settings_endpoint_api_runtime_permissions_settings_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Runtime Permission Settings Handler */
-        patch: operations["update_runtime_permission_settings_handler_api_runtime_permissions_settings_patch"];
+        /** Update Runtime Permission Settings Endpoint */
+        patch: operations["update_runtime_permission_settings_endpoint_api_runtime_permissions_settings_patch"];
         trace?: never;
     };
     "/api/runtime-permissions/{request_id}/decision": {
@@ -582,8 +582,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Decide Runtime Permission Handler */
-        post: operations["decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post"];
+        /** Decide Runtime Permission Endpoint */
+        post: operations["decide_runtime_permission_endpoint_api_runtime_permissions__request_id__decision_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1591,11 +1591,6 @@ export interface components {
         /** Body_create_approval_handler_api_approvals_post */
         Body_create_approval_handler_api_approvals_post: {
             request: components["schemas"]["ApprovalCreateRequest"];
-            user: components["schemas"]["AuthUser"];
-        };
-        /** Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post */
-        Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post: {
-            request: components["schemas"]["RuntimePermissionDecisionRequest"];
             user: components["schemas"]["AuthUser"];
         };
         /** Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post */
@@ -5984,18 +5979,14 @@ export interface operations {
             };
         };
     };
-    list_pending_permissions_handler_api_runtime_permissions_pending_get: {
+    list_pending_permissions_endpoint_api_runtime_permissions_pending_get: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AuthUser"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -6006,18 +5997,9 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_list_RuntimePermissionRequest__"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
         };
     };
-    clear_runtime_permission_rules_handler_api_runtime_permissions_rules_delete: {
+    clear_runtime_permission_rules_endpoint_api_runtime_permissions_rules_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -6037,7 +6019,7 @@ export interface operations {
             };
         };
     };
-    get_runtime_permission_settings_handler_api_runtime_permissions_settings_get: {
+    get_runtime_permission_settings_endpoint_api_runtime_permissions_settings_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -6057,7 +6039,7 @@ export interface operations {
             };
         };
     };
-    update_runtime_permission_settings_handler_api_runtime_permissions_settings_patch: {
+    update_runtime_permission_settings_endpoint_api_runtime_permissions_settings_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -6090,7 +6072,7 @@ export interface operations {
             };
         };
     };
-    decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post: {
+    decide_runtime_permission_endpoint_api_runtime_permissions__request_id__decision_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -6101,7 +6083,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post"];
+                "application/json": components["schemas"]["RuntimePermissionDecisionRequest"];
             };
         };
         responses: {

@@ -980,22 +980,6 @@
         "title": "Body_create_approval_handler_api_approvals_post",
         "type": "object"
       },
-      "Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post": {
-        "properties": {
-          "request": {
-            "$ref": "#/components/schemas/RuntimePermissionDecisionRequest"
-          },
-          "user": {
-            "$ref": "#/components/schemas/AuthUser"
-          }
-        },
-        "required": [
-          "request",
-          "user"
-        ],
-        "title": "Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post",
-        "type": "object"
-      },
       "Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post": {
         "properties": {
           "files": {
@@ -9082,17 +9066,7 @@
     },
     "/api/runtime-permissions/pending": {
       "get": {
-        "operationId": "list_pending_permissions_handler_api_runtime_permissions_pending_get",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthUser"
-              }
-            }
-          },
-          "required": true
-        },
+        "operationId": "list_pending_permissions_endpoint_api_runtime_permissions_pending_get",
         "responses": {
           "200": {
             "content": {
@@ -9103,19 +9077,9 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
-        "summary": "List Pending Permissions Handler",
+        "summary": "List Pending Permissions Endpoint",
         "tags": [
           "runtime-permissions"
         ]
@@ -9123,7 +9087,7 @@
     },
     "/api/runtime-permissions/rules": {
       "delete": {
-        "operationId": "clear_runtime_permission_rules_handler_api_runtime_permissions_rules_delete",
+        "operationId": "clear_runtime_permission_rules_endpoint_api_runtime_permissions_rules_delete",
         "responses": {
           "200": {
             "content": {
@@ -9136,7 +9100,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Clear Runtime Permission Rules Handler",
+        "summary": "Clear Runtime Permission Rules Endpoint",
         "tags": [
           "runtime-permissions"
         ]
@@ -9144,7 +9108,7 @@
     },
     "/api/runtime-permissions/settings": {
       "get": {
-        "operationId": "get_runtime_permission_settings_handler_api_runtime_permissions_settings_get",
+        "operationId": "get_runtime_permission_settings_endpoint_api_runtime_permissions_settings_get",
         "responses": {
           "200": {
             "content": {
@@ -9157,13 +9121,13 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Get Runtime Permission Settings Handler",
+        "summary": "Get Runtime Permission Settings Endpoint",
         "tags": [
           "runtime-permissions"
         ]
       },
       "patch": {
-        "operationId": "update_runtime_permission_settings_handler_api_runtime_permissions_settings_patch",
+        "operationId": "update_runtime_permission_settings_endpoint_api_runtime_permissions_settings_patch",
         "requestBody": {
           "content": {
             "application/json": {
@@ -9196,7 +9160,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Update Runtime Permission Settings Handler",
+        "summary": "Update Runtime Permission Settings Endpoint",
         "tags": [
           "runtime-permissions"
         ]
@@ -9204,7 +9168,7 @@
     },
     "/api/runtime-permissions/{request_id}/decision": {
       "post": {
-        "operationId": "decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post",
+        "operationId": "decide_runtime_permission_endpoint_api_runtime_permissions__request_id__decision_post",
         "parameters": [
           {
             "in": "path",
@@ -9221,7 +9185,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_decide_runtime_permission_handler_api_runtime_permissions__request_id__decision_post"
+                "$ref": "#/components/schemas/RuntimePermissionDecisionRequest"
               }
             }
           },
@@ -9249,7 +9213,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Decide Runtime Permission Handler",
+        "summary": "Decide Runtime Permission Endpoint",
         "tags": [
           "runtime-permissions"
         ]
