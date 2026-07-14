@@ -11,6 +11,65 @@ Run this checklist after moving the project to the target Windows desktop enviro
 - Runtime permission mode set to normal unless the test explicitly says otherwise.
 - Test only against owned lab targets such as `example.test`, local mock services, or an internal training range.
 
+## Use WSL as the SSH Linux Host
+
+For a first Windows-side SSH validation, WSL can be used as the SSH Linux host.
+In this setup, ZJ runs on Windows and connects to WSL through SSH.
+
+Recommended WSL setup:
+
+```bash
+sudo apt update
+sudo apt install -y openssh-server nmap sqlmap
+sudo mkdir -p /run/sshd
+sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.zj-test.bak
+```
+
+Use a non-default test port such as `2222` to avoid colliding with Windows OpenSSH:
+
+```bash
+sudo sh -c 'cat >/etc/ssh/sshd_config.d/zj-test.conf <<EOF
+Port 2222
+ListenAddress 0.0.0.0
+PasswordAuthentication yes
+PubkeyAuthentication yes
+PermitRootLogin no
+EOF'
+sudo service ssh restart
+```
+
+Create or use a normal WSL user with a password for the first smoke test:
+
+```bash
+passwd
+```
+
+From Windows PowerShell, get the WSL IP and verify SSH manually:
+
+```powershell
+wsl hostname -I
+ssh <wsl_user>@<wsl_ip> -p 2222
+```
+
+If direct WSL IP access is unstable, create a Windows portproxy from `127.0.0.1:2222` to the current WSL IP.
+Run PowerShell as Administrator:
+
+```powershell
+$wslIp = (wsl hostname -I).Trim().Split()[0]
+netsh interface portproxy delete v4tov4 listenaddress=127.0.0.1 listenport=2222
+netsh interface portproxy add v4tov4 listenaddress=127.0.0.1 listenport=2222 connectaddress=$wslIp connectport=2222
+netsh advfirewall firewall add rule name="ZJ WSL SSH 2222" dir=in action=allow protocol=TCP localport=2222
+ssh <wsl_user>@127.0.0.1 -p 2222
+```
+
+In ZJ, configure the SSH managed host as either:
+
+- `ip_address=<wsl_ip>`, `ssh_port=2222`, when connecting directly to the WSL IP.
+- `ip_address=127.0.0.1`, `ssh_port=2222`, when using Windows portproxy.
+
+WSL IPs can change after `wsl --shutdown`, reboot, or network reset.
+If portproxy is used, refresh the `connectaddress` before running SSH tests.
+
 ## Windows Local Workspace Tests
 
 - Start ZJ and confirm `GET /api/sandbox-containers/available?include_non_running=true` returns the default local workspace.
