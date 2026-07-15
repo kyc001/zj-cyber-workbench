@@ -1,5 +1,5 @@
 import { Button, Input, InputNumber, Select, Spin, Tag, TextArea, Toast } from "@douyinfe/semi-ui";
-import { Boxes, Download, PackageSearch, Play, Square, Wrench } from "lucide-react";
+import { Activity, Boxes, Download, Globe2, PackageSearch, Play, Radar, ShieldCheck, Square, Wrench } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
 import {
@@ -9,6 +9,7 @@ import {
   listToolpackTools,
   startToolRun,
   type ExecutionArtifact,
+  type ExecutionResult,
   type JsonSchemaProperty,
   type ToolInputSchema,
   type ToolRunSnapshot,
@@ -24,6 +25,96 @@ import { formatDateTime } from "../../shared/lib/date";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 
 type ToolInputValues = Record<string, string | number | boolean | null>;
+type ToolGroupId = "all" | "ops-basic" | "web" | "network" | "security" | "ssh";
+
+type ToolMeta = {
+  title: string;
+  group: Exclude<ToolGroupId, "all">;
+  description: string;
+};
+
+const TOOL_GROUPS: { id: ToolGroupId; label: string; icon: typeof Boxes }[] = [
+  { id: "all", label: "全部工具", icon: Boxes },
+  { id: "ops-basic", label: "常用诊断", icon: Activity },
+  { id: "web", label: "Web 检查", icon: Globe2 },
+  { id: "network", label: "网络检查", icon: Radar },
+  { id: "security", label: "安全测试", icon: ShieldCheck },
+  { id: "ssh", label: "SSH/Linux", icon: Wrench },
+];
+
+const TOOL_META: Record<string, ToolMeta> = {
+  "local.webcheck": {
+    title: "HTTP 健康检查",
+    group: "ops-basic",
+    description: "检查 URL 的状态码、耗时和常用响应头。",
+  },
+  "local.http.headers": {
+    title: "HTTP 响应头",
+    group: "web",
+    description: "使用 HEAD 请求查看目标响应头，自动隐藏敏感 Set-Cookie。",
+  },
+  "local.tls.inspect": {
+    title: "TLS 证书检查",
+    group: "web",
+    description: "查看证书有效期、签发者、SAN、TLS 版本和 cipher。",
+  },
+  "local.dns.lookup": {
+    title: "DNS 解析",
+    group: "network",
+    description: "通过本机解析器查询 A / AAAA 记录。",
+  },
+  "local.ping": {
+    title: "Ping 连通性",
+    group: "network",
+    description: "执行受限次数的 ping，查看基础可达性。",
+  },
+  "local.port.scan": {
+    title: "端口探测",
+    group: "network",
+    description: "探测小范围 TCP 端口，最多 32 个端口。",
+  },
+  "local.httpx": {
+    title: "httpx 探测",
+    group: "security",
+    description: "使用 ProjectDiscovery httpx 进行 HTTP 服务探测。",
+  },
+  "local.dnsx": {
+    title: "dnsx 解析",
+    group: "security",
+    description: "使用 ProjectDiscovery dnsx 进行 DNS 解析。",
+  },
+  "local.ffuf": {
+    title: "ffuf 目录扫描",
+    group: "security",
+    description: "执行受限 ffuf FUZZ 任务，限制速率和参数。",
+  },
+  "ssh.nmap": {
+    title: "nmap 扫描",
+    group: "ssh",
+    description: "在 SSH Linux workspace 中运行 nmap。",
+  },
+  "ssh.sqlmap": {
+    title: "sqlmap 检测",
+    group: "ssh",
+    description: "在 SSH Linux workspace 中运行低风险 sqlmap 探测模板。",
+  },
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  url: "URL",
+  target: "目标",
+  host: "主机",
+  domain: "域名",
+  ports: "端口",
+  port: "端口",
+  method: "方法",
+  count: "次数",
+  timeout_seconds: "超时秒数",
+  server_name: "SNI",
+  wordlist: "字典文件",
+  rps: "每秒请求",
+  concurrency: "并发",
+};
 
 const RUN_STATUS_COLOR: Record<ToolRunSnapshot["status"], "blue" | "green" | "red" | "grey" | "orange"> = {
   running: "blue",
@@ -48,6 +139,7 @@ export function ToolpackPage() {
   const [workspaces, setWorkspaces] = useState<SandboxContainer[]>([]);
   const [workspaceId, setWorkspaceId] = useState<number | undefined>();
   const [tools, setTools] = useState<ToolSchema[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<ToolGroupId>("all");
   const [selectedToolId, setSelectedToolId] = useState<string>("");
   const [inputs, setInputs] = useState<ToolInputValues>({});
   const [timeoutSeconds, setTimeoutSeconds] = useState<number | undefined>();
@@ -64,6 +156,19 @@ export function ToolpackPage() {
   const selectedWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === workspaceId) ?? null,
     [workspaceId, workspaces],
+  );
+
+  const groupedCounts = useMemo(() => {
+    const counts: Record<ToolGroupId, number> = { all: tools.length, "ops-basic": 0, web: 0, network: 0, security: 0, ssh: 0 };
+    tools.forEach((tool) => {
+      counts[toolMeta(tool).group] += 1;
+    });
+    return counts;
+  }, [tools]);
+
+  const visibleTools = useMemo(
+    () => tools.filter((tool) => selectedGroup === "all" || toolMeta(tool).group === selectedGroup),
+    [selectedGroup, tools],
   );
 
   const loadPage = useCallback(async () => {
@@ -134,8 +239,9 @@ export function ToolpackPage() {
     return () => window.clearInterval(timer);
   }, [run]);
 
-  const handleToolSelect = (value: unknown) => {
-    setSelectedToolId(String(value ?? ""));
+  const handleToolSelect = (tool: ToolSchema) => {
+    setSelectedToolId(tool.id);
+    setSelectedGroup(toolMeta(tool).group);
     setRun(null);
   };
 
@@ -213,25 +319,47 @@ export function ToolpackPage() {
           emptyIcon={<PackageSearch size={52} />}
           emptyTitle="暂无 Toolpack"
         >
+          <div className="toolpack-group-list">
+            {TOOL_GROUPS.map((group) => {
+              const Icon = group.icon;
+              const active = selectedGroup === group.id;
+              return (
+                <button
+                  type="button"
+                  key={group.id}
+                  className={active ? "toolpack-group-item is-active" : "toolpack-group-item"}
+                  onClick={() => setSelectedGroup(group.id)}
+                >
+                  <Icon size={15} />
+                  <span>{group.label}</span>
+                  <small>{groupedCounts[group.id]}</small>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="toolpack-tool-list">
-            {tools.map((tool) => (
-              <button
-                type="button"
-                key={tool.id}
-                className={tool.id === selectedTool?.id ? "toolpack-tool-item is-active" : "toolpack-tool-item"}
-                onClick={() => handleToolSelect(tool.id)}
-              >
-                <ResourceIdentity
-                  icon={<Boxes size={18} />}
-                  title={tool.id}
-                  detail={<span>{tool.category}</span>}
-                />
-                <span className="toolpack-tool-tags">
-                  <Tag color={BACKEND_COLOR[tool.backend]}>{tool.backend}</Tag>
-                  <Tag color={tool.available === false ? "red" : "green"}>{tool.available === false ? "缺失" : "可用"}</Tag>
-                </span>
-              </button>
-            ))}
+            {visibleTools.map((tool) => {
+              const meta = toolMeta(tool);
+              return (
+                <button
+                  type="button"
+                  key={tool.id}
+                  className={tool.id === selectedTool?.id ? "toolpack-tool-item is-active" : "toolpack-tool-item"}
+                  onClick={() => handleToolSelect(tool)}
+                >
+                  <ResourceIdentity
+                    icon={<Boxes size={18} />}
+                    title={meta.title}
+                    detail={<span>{tool.id}</span>}
+                  />
+                  <span className="toolpack-tool-tags">
+                    <Tag color={BACKEND_COLOR[tool.backend]}>{tool.backend}</Tag>
+                    <Tag color={tool.available === false ? "red" : "green"}>{tool.available === false ? "不可用" : "可用"}</Tag>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </ResourcePanel>
 
@@ -248,14 +376,15 @@ export function ToolpackPage() {
                 <header className="toolpack-run-header">
                   <ResourceIdentity
                     icon={<Wrench size={18} />}
-                    title={selectedTool.name}
-                    detail={<span>{selectedTool.description}</span>}
+                    title={toolMeta(selectedTool).title}
+                    detail={<span>{toolMeta(selectedTool).description}</span>}
                   />
                   <div className="toolpack-run-actions">
                     <Tag color={BACKEND_COLOR[selectedTool.backend]}>{selectedTool.backend}</Tag>
                     <Tag color={selectedTool.available === false ? "red" : "green"}>
-                      {selectedTool.available === false ? "缺失" : "可用"}
+                      {selectedTool.available === false ? "不可用" : "可用"}
                     </Tag>
+                    <Tag color="grey">{selectedTool.manifest.risk_level}</Tag>
                   </div>
                 </header>
 
@@ -268,9 +397,9 @@ export function ToolpackPage() {
                 ) : null}
 
                 <div className="toolpack-form-grid">
-                  {renderInputFields(selectedTool.manifest.input_schema, inputs, updateInput)}
+                  {renderInputFields(selectedTool.id, selectedTool.manifest.input_schema, inputs, updateInput)}
                   <label className="toolpack-field">
-                    <span>timeout_seconds</span>
+                    <span>运行超时</span>
                     <InputNumber
                       value={timeoutSeconds}
                       min={1}
@@ -312,18 +441,24 @@ export function ToolpackPage() {
   );
 }
 
-function renderInputFields(schema: ToolInputSchema, values: ToolInputValues, onChange: (name: string, value: string | number | boolean | null) => void) {
+function renderInputFields(
+  toolId: string,
+  schema: ToolInputSchema,
+  values: ToolInputValues,
+  onChange: (name: string, value: string | number | boolean | null) => void,
+) {
   const properties = schema.properties ?? {};
   const required = new Set(schema.required ?? []);
   return Object.entries(properties).map(([name, property]) => (
     <label className="toolpack-field" key={name}>
-      <span>{required.has(name) ? `${name} *` : name}</span>
-      {renderInputField(name, property, values[name], onChange)}
+      <span>{fieldLabel(name)}{required.has(name) ? " *" : ""}</span>
+      {renderInputField(toolId, name, property, values[name], onChange)}
     </label>
   ));
 }
 
 function renderInputField(
+  toolId: string,
   name: string,
   property: JsonSchemaProperty,
   value: string | number | boolean | null | undefined,
@@ -355,7 +490,7 @@ function renderInputField(
     return <TextArea value={String(value ?? "")} autosize={{ minRows: 2, maxRows: 5 }} onChange={(next) => onChange(name, next)} />;
   }
 
-  return <Input value={String(value ?? "")} onChange={(next) => onChange(name, next)} />;
+  return <Input value={String(value ?? "")} placeholder={fieldPlaceholder(toolId, name)} onChange={(next) => onChange(name, next)} />;
 }
 
 function RunResult({ run }: { run: ToolRunSnapshot | null }) {
@@ -374,6 +509,7 @@ function RunResult({ run }: { run: ToolRunSnapshot | null }) {
       </div>
       {run.result ? (
         <>
+          <ResultSummary result={run.result} />
           <div className="toolpack-result-facts">
             <span>ok: {String(run.result.ok)}</span>
             <span>exit_code: {run.result.exit_code ?? "null"}</span>
@@ -387,6 +523,46 @@ function RunResult({ run }: { run: ToolRunSnapshot | null }) {
       ) : null}
     </section>
   );
+}
+
+function ResultSummary({ result }: { result: ExecutionResult }) {
+  const records = Array.isArray(result.structured.records) ? result.structured.records : [];
+  const first = records[0];
+  if (!isRecord(first)) return null;
+  const facts = summarizeRecord(first);
+  if (!facts.length) return null;
+  return (
+    <div className="toolpack-summary-grid">
+      {facts.map((fact) => (
+        <div key={fact.label}>
+          <span>{fact.label}</span>
+          <strong>{fact.value}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function summarizeRecord(record: Record<string, unknown>) {
+  const facts: { label: string; value: string }[] = [];
+  addFact(facts, "状态", record.status_code);
+  addFact(facts, "耗时", typeof record.elapsed_ms === "number" ? `${record.elapsed_ms} ms` : undefined);
+  addFact(facts, "TLS", record.tls_version);
+  addFact(facts, "证书到期", record.not_after);
+  addFact(facts, "地址数", Array.isArray(record.records) ? record.records.length : undefined);
+  addFact(facts, "开放端口", openPortCount(record));
+  addFact(facts, "目标", record.host ?? record.url ?? record.target);
+  return facts.slice(0, 4);
+}
+
+function addFact(facts: { label: string; value: string }[], label: string, value: unknown) {
+  if (value === undefined || value === null || value === "") return;
+  facts.push({ label, value: String(value) });
+}
+
+function openPortCount(record: Record<string, unknown>) {
+  if (!Array.isArray(record.ports)) return undefined;
+  return record.ports.filter((item) => isRecord(item) && item.open === true).length;
 }
 
 function ArtifactList({ artifacts }: { artifacts: ExecutionArtifact[] }) {
@@ -417,8 +593,12 @@ function defaultValueForField(toolId: string, name: string, property: JsonSchema
   if (property.default !== undefined && typeof property.default !== "object") return property.default as string | number | boolean;
   if (toolId === "local.webcheck" && name === "url") return "http://127.0.0.1:8000/health";
   if (toolId === "local.webcheck" && name === "method") return "GET";
+  if (toolId === "local.http.headers" && name === "url") return "http://127.0.0.1:8000/health";
   if (toolId === "local.tls.inspect" && name === "host") return "example.com";
   if (toolId === "local.tls.inspect" && name === "port") return 443;
+  if (toolId === "local.dns.lookup" && name === "host") return "example.com";
+  if (toolId === "local.ping" && name === "host") return "127.0.0.1";
+  if (toolId === "local.ping" && name === "count") return 4;
   if (toolId === "local.port.scan" && name === "host") return "127.0.0.1";
   if (toolId === "local.port.scan" && name === "ports") return "8000,2222";
   if (toolId === "local.httpx" && name === "target") return "http://127.0.0.1:8000/health";
@@ -439,4 +619,27 @@ function cleanInputs(schema: ToolInputSchema, values: ToolInputValues) {
       .map(([name]) => [name, values[name]])
       .filter(([, value]) => value !== undefined && value !== null && value !== ""),
   );
+}
+
+function toolMeta(tool: ToolSchema) {
+  return TOOL_META[tool.id] ?? {
+    title: tool.name,
+    group: tool.backend === "ssh" ? "ssh" : "security",
+    description: tool.description,
+  };
+}
+
+function fieldLabel(name: string) {
+  return FIELD_LABELS[name] ?? name;
+}
+
+function fieldPlaceholder(toolId: string, name: string) {
+  if (toolId === "local.port.scan" && name === "ports") return "80,443,8000-8010";
+  if (name === "url") return "https://example.com";
+  if (name === "host") return "example.com";
+  return "";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

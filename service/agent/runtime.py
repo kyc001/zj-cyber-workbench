@@ -1,23 +1,22 @@
 from config import BUNDLED_SKILLS_DIR
+from core.execution_guard import extract_urls
 from core.runtime.context import AgentRuntimeContext, AgentUserContext, main_agent_instance_id
 from core.runtime.input_items import display_text_from_content
 from core.runtime.session import get_agent_pool
-from core.execution_guard import extract_urls
 from middleware.auth import AuthUser
 from schema.agent.events import AgentEventSchema, AgentInputPart
 from service.agent import sessions as agent_sessions
-from service.work_project.projects import (
-    can_run_work_project_session,
-    sandbox_container_id_for_work_project,
-    work_project_allows_sandbox_container,
-)
 from service.sandbox.lifecycle import ensure_default_portable_workspace
 from service.sandbox.status import (
     resolve_project_sandbox_container_tool_binding,
     resolve_sandbox_container_selection,
     resolve_sandbox_container_tool_binding,
 )
-
+from service.work_project.projects import (
+    can_run_work_project_session,
+    sandbox_container_id_for_work_project,
+    work_project_allows_sandbox_container,
+)
 
 _MAX_SANDBOX_SKILLS = 64
 _SKILLS_DIR = BUNDLED_SKILLS_DIR
@@ -233,7 +232,11 @@ async def build_runtime_context(
     if work_project_id is not None:
         sandbox_container_id = await sandbox_container_id_for_work_project(work_project_id)
     elif sandbox_container_id is None and meta is not None:
-        sandbox_container_id = meta.runtime_sandbox_container_id if meta.is_running else meta.selected_sandbox_container_id
+        sandbox_container_id = (
+            meta.runtime_sandbox_container_id
+            if meta.is_running
+            else meta.selected_sandbox_container_id
+        )
     if sandbox_container_id is None:
         sandbox_container_id = await ensure_default_portable_workspace(user.id)
     binding = await resolve_sandbox_container_tool_binding(
@@ -263,7 +266,8 @@ async def build_runtime_context(
         sandbox_skill_metadata=sandbox_skill_metadata,
         allowed_targets=allowed_targets,
         allowed_action_types=(
-            "web.http.health", "web.tls.inspect", "security.web.scan", "network.port.probe",
+            "web.http.health", "web.http.headers", "web.tls.inspect", "security.web.scan",
+            "network.dns.lookup", "network.ping", "network.port.probe",
             "host.local.diagnostic", "ssh.command",
         ),
         scope_id=f"session:{session_id}",

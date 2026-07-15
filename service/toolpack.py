@@ -211,6 +211,111 @@ print(json.dumps({"host": host, "ports": records}, ensure_ascii=False))
 """.strip()
 
 
+_DNS_LOOKUP_SCRIPT = r"""
+import json
+import socket
+import sys
+
+host, timeout_text = sys.argv[1], sys.argv[2]
+socket.setdefaulttimeout(max(1.0, min(float(timeout_text), 10.0)))
+try:
+    infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    records = []
+    seen = set()
+    for family, _, _, canonname, sockaddr in infos:
+        address = sockaddr[0]
+        key = (family, address)
+        if key in seen:
+            continue
+        seen.add(key)
+        records.append({
+            "family": "A" if family == socket.AF_INET else "AAAA" if family == socket.AF_INET6 else str(family),
+            "address": address,
+            "canonname": canonname,
+        })
+    print(json.dumps({"host": host, "ok": bool(records), "records": records}, ensure_ascii=False))
+    raise SystemExit(0 if records else 1)
+except Exception as exc:
+    print(json.dumps({"host": host, "ok": False, "error": str(exc)}, ensure_ascii=False))
+    raise SystemExit(1)
+""".strip()
+
+
+_PING_SCRIPT = r"""
+import json
+import platform
+import subprocess
+import sys
+
+host, count_text, timeout_text = sys.argv[1], sys.argv[2], sys.argv[3]
+count = max(1, min(int(count_text), 10))
+timeout = max(1, min(int(timeout_text), 10))
+if platform.system().lower().startswith("win"):
+    command = ["ping", "-n", str(count), "-w", str(timeout * 1000), host]
+else:
+    command = ["ping", "-c", str(count), "-W", str(timeout), host]
+completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+print(json.dumps({
+    "host": host,
+    "count": count,
+    "timeout_seconds": timeout,
+    "ok": completed.returncode == 0,
+    "exit_code": completed.returncode,
+    "stdout": completed.stdout[-4096:],
+    "stderr": completed.stderr[-1024:],
+}, ensure_ascii=False))
+raise SystemExit(completed.returncode)
+""".strip()
+
+
+_HTTP_HEADERS_SCRIPT = r"""
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+url, timeout_text = sys.argv[1], sys.argv[2]
+timeout = max(1.0, min(float(timeout_text), 30.0))
+started = time.perf_counter()
+request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "ZJ-Toolpack/1.0"})
+try:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        headers = {
+            key.lower(): value
+            for key, value in response.headers.items()
+            if key.lower() not in {"set-cookie", "authorization"}
+        }
+        print(json.dumps({
+            "url": url,
+            "ok": True,
+            "status_code": response.status,
+            "reason": response.reason,
+            "elapsed_ms": elapsed_ms,
+            "headers": headers,
+        }, ensure_ascii=False))
+except urllib.error.HTTPError as exc:
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    headers = {
+        key.lower(): value
+        for key, value in exc.headers.items()
+        if key.lower() not in {"set-cookie", "authorization"}
+    }
+    print(json.dumps({
+        "url": url,
+        "ok": False,
+        "status_code": exc.code,
+        "reason": exc.reason,
+        "elapsed_ms": elapsed_ms,
+        "headers": headers,
+    }, ensure_ascii=False))
+except Exception as exc:
+    print(json.dumps({"url": url, "ok": False, "error": str(exc)}, ensure_ascii=False))
+    raise SystemExit(1)
+""".strip()
+
+
 _TOOLS: dict[str, _ToolDefinition] = {
     "local.webcheck": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -317,6 +422,107 @@ _TOOLS: dict[str, _ToolDefinition] = {
             _required_host(payload, "host"),
             ",".join(str(port) for port in _required_ports(payload, "ports", max_ports=32)),
             str(_optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)),
+        ],
+    ),
+    "local.dns.lookup": _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id="local.dns.lookup",
+            name="dns.lookup",
+            description="Resolve A and AAAA records with the local system resolver.",
+            backend=ToolBackend.LOCAL,
+            executable="python",
+            category="ops-dns",
+            action_type="network.dns.lookup",
+            risk_level=RiskLevel.L1,
+            default_timeout_seconds=30,
+            max_timeout_seconds=60,
+            input_schema={
+                "type": "object",
+                "required": ["host"],
+                "properties": {
+                    "host": {"type": "string", "minLength": 1, "maxLength": 255},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10},
+                },
+                "additionalProperties": False,
+            },
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True},
+        ),
+        install_hint="Python runtime is required for built-in local operations tools.",
+        build_args=lambda payload: [
+            "python",
+            "-c",
+            _DNS_LOOKUP_SCRIPT,
+            _required_host(payload, "host"),
+            str(_optional_int(payload, "timeout_seconds", 5, minimum=1, maximum=10)),
+        ],
+    ),
+    "local.ping": _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id="local.ping",
+            name="ping",
+            description="Run a bounded ping connectivity check from the local workspace.",
+            backend=ToolBackend.LOCAL,
+            executable="python",
+            category="ops-network",
+            action_type="network.ping",
+            risk_level=RiskLevel.L1,
+            default_timeout_seconds=30,
+            max_timeout_seconds=60,
+            input_schema={
+                "type": "object",
+                "required": ["host"],
+                "properties": {
+                    "host": {"type": "string", "minLength": 1, "maxLength": 255},
+                    "count": {"type": "integer", "minimum": 1, "maximum": 10},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10},
+                },
+                "additionalProperties": False,
+            },
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True, "max_count": 10},
+        ),
+        install_hint="Python runtime and system ping command are required.",
+        build_args=lambda payload: [
+            "python",
+            "-c",
+            _PING_SCRIPT,
+            _required_host(payload, "host"),
+            str(_optional_int(payload, "count", 4, minimum=1, maximum=10)),
+            str(_optional_int(payload, "timeout_seconds", 2, minimum=1, maximum=10)),
+        ],
+    ),
+    "local.http.headers": _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id="local.http.headers",
+            name="http.headers",
+            description="Fetch response headers with a bounded HTTP HEAD request.",
+            backend=ToolBackend.LOCAL,
+            executable="python",
+            category="ops-http",
+            action_type="web.http.headers",
+            risk_level=RiskLevel.L1,
+            default_timeout_seconds=30,
+            max_timeout_seconds=60,
+            input_schema={
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                    "url": {"type": "string", "minLength": 1, "maxLength": 2048},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                },
+                "additionalProperties": False,
+            },
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True},
+        ),
+        install_hint="Python runtime is required for built-in local operations tools.",
+        build_args=lambda payload: [
+            "python",
+            "-c",
+            _HTTP_HEADERS_SCRIPT,
+            _required_url(payload, "url"),
+            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
         ],
     ),
     "local.httpx": _ToolDefinition(
@@ -693,6 +899,16 @@ def _validate_policy(definition: _ToolDefinition, payload: dict[str, Any]) -> No
         _required_host(payload, "host")
         _required_ports(payload, "ports", max_ports=int(definition.manifest.policy.get("max_ports", 32)))
         _optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)
+    if definition.manifest.id == "local.dns.lookup":
+        _required_host(payload, "host")
+        _optional_int(payload, "timeout_seconds", 5, minimum=1, maximum=10)
+    if definition.manifest.id == "local.ping":
+        _required_host(payload, "host")
+        _optional_int(payload, "count", 4, minimum=1, maximum=10)
+        _optional_int(payload, "timeout_seconds", 2, minimum=1, maximum=10)
+    if definition.manifest.id == "local.http.headers":
+        _required_url(payload, "url")
+        _optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)
     max_rps = int(definition.manifest.policy.get("max_rps", 50))
     max_concurrency = int(definition.manifest.policy.get("max_concurrency", 20))
     if int(payload.get("rps") or 1) > max_rps:

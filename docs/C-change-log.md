@@ -74,6 +74,26 @@ Effect:
 - Users can run low-risk diagnostics directly from `/toolpack` without installing extra binaries beyond the local Python runtime.
 - The new tools still use the same Toolpack `ExecutionResult`, timeout, cancellation, artifact, and parsing path.
 
+### feat: productize Toolpack UI and add more low-risk diagnostics
+
+- Added `local.dns.lookup` for A / AAAA lookup through the local resolver.
+- Added `local.ping` for bounded ping connectivity checks.
+- Added `local.http.headers` for HEAD-based response header inspection with sensitive response headers filtered.
+- Registered new operation action types in the C action registry and Agent runtime scope.
+- Reworked `/toolpack` into a grouped Chinese toolbox UI:
+  - 常用诊断
+  - Web 检查
+  - 网络检查
+  - 安全测试
+  - SSH/Linux
+- Added Chinese tool names, descriptions, parameter labels, defaults, and result summary cards.
+
+Reason:
+- The project is being repositioned as a desktop security-learning and lightweight operations toolbox. This improves course-demo value without rewriting the Agent architecture.
+
+Effect:
+- Toolpack now has a clearer product shape for manual use, while preserving the same backend execution gateway and structured result contract.
+
 ## Deferred Items
 
 ### D-TODO-1: L3 destructive pattern can be masked by always-allow in normal mode

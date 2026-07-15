@@ -39,10 +39,50 @@
 }
 
 .toolpack-tool-list,
-.toolpack-run-grid {
+.toolpack-run-grid,
+.toolpack-group-list {
   display: grid;
   min-width: 0;
   gap: 10px;
+}
+
+.toolpack-group-list {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--z-line);
+}
+
+.toolpack-group-item {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 18px minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  color: var(--z-text);
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.toolpack-group-item:hover,
+.toolpack-group-item.is-active {
+  background: var(--z-bg-elevated);
+  border-color: var(--z-accent);
+}
+
+.toolpack-group-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolpack-group-item small {
+  color: var(--z-text-subtle);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .toolpack-tool-item {
@@ -162,6 +202,41 @@
   gap: 8px;
 }
 
+.toolpack-summary-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.toolpack-summary-grid div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 10px;
+  background: var(--z-bg-elevated);
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+}
+
+.toolpack-summary-grid span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--z-text-subtle);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolpack-summary-grid strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--z-text-strong);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .toolpack-result-facts span {
   min-width: 0;
   overflow: hidden;
@@ -239,7 +314,8 @@
 @media (max-width: 900px) {
   .toolpack-layout,
   .toolpack-form-grid,
-  .toolpack-result-facts {
+  .toolpack-result-facts,
+  .toolpack-summary-grid {
     grid-template-columns: 1fr;
   }
 

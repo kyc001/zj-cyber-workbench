@@ -53,6 +53,9 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
                 "local.webcheck",
                 "local.tls.inspect",
                 "local.port.scan",
+                "local.dns.lookup",
+                "local.ping",
+                "local.http.headers",
                 "local.httpx",
                 "local.dnsx",
                 "local.ffuf",
@@ -149,6 +152,20 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(finished.result)
         self.assertEqual(ExecutionErrorCode.POLICY_DENIED, finished.result.error_code)
         self.assertEqual("port count exceeds policy limit 32", finished.result.summary)
+
+    async def test_ping_policy_limits_count(self) -> None:
+        with self.local_workspace_patches(), patch.object(toolpack, "_local_tool_path", return_value="/tmp/python"):
+            snapshot = await toolpack.start_tool_run(
+                "local.ping",
+                ToolRunRequest(sandbox_container_id=1, input={"host": "127.0.0.1", "count": 99}),
+                self.user(),
+            )
+            finished = await self.wait_for_terminal(snapshot.run_id)
+
+        self.assertEqual(ToolRunStatus.FAILED, finished.status)
+        self.assertIsNotNone(finished.result)
+        self.assertEqual(ExecutionErrorCode.POLICY_DENIED, finished.result.error_code)
+        self.assertEqual("count must be between 1 and 10", finished.result.summary)
 
     async def test_webcheck_tool_run_uses_python_runtime_and_parses_record(self) -> None:
         command_result = SandboxContainerCommandResult(
