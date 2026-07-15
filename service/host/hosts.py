@@ -34,6 +34,7 @@ class UpdateManagedHostResult:
 
 async def create_managed_host(
     *,
+    display_name: str = "",
     ip_address: str,
     ssh_port: int,
     host_account: str,
@@ -41,6 +42,7 @@ async def create_managed_host(
 ) -> ManagedHost:
     now = datetime.now()
     host = ManagedHost(
+        display_name=_display_name_or_default(display_name, ip_address, is_local=False),
         ip_address=ip_address,
         ssh_port=ssh_port,
         host_account=host_account,
@@ -58,6 +60,7 @@ async def create_managed_host(
 async def update_managed_host(
     *,
     id: int,
+    display_name: str | None = None,
     ip_address: str | None = None,
     ssh_port: int | None = None,
     host_account: str | None = None,
@@ -68,11 +71,19 @@ async def update_managed_host(
         if host is None:
             return UpdateManagedHostResult(host=None, not_found=True, message="managed host not found")
         for name, value in (
+            ("display_name", display_name),
             ("ip_address", ip_address), ("ssh_port", ssh_port), ("host_account", host_account),
             ("host_password", host_password),
         ):
             if value is not None:
-                setattr(host, name, value)
+                if name == "display_name":
+                    setattr(
+                        host,
+                        name,
+                        _display_name_or_default(value, host.ip_address, is_local=id == DEFAULT_LOCAL_HOST_ID),
+                    )
+                else:
+                    setattr(host, name, value)
         host.updated_at = datetime.now()
         session.add(host)
         await session.commit()
@@ -103,6 +114,7 @@ async def query_managed_hosts(page: int = 1, size: int = 100, keyword: str = "")
         statement = statement.where(
             or_(
                 ManagedHost.ip_address.ilike(pattern),
+                ManagedHost.display_name.ilike(pattern),
                 ManagedHost.host_account.ilike(pattern),
                 cast(ManagedHost.ssh_port, String).ilike(pattern),
             )
@@ -143,6 +155,7 @@ async def ensure_local_managed_host() -> ManagedHost:
             now = datetime.now()
             host = ManagedHost(
                 id=DEFAULT_LOCAL_HOST_ID,
+                display_name="本机",
                 ip_address="127.0.0.1",
                 ssh_port=22,
                 host_account=username,
@@ -153,7 +166,22 @@ async def ensure_local_managed_host() -> ManagedHost:
             session.add(host)
             await session.commit()
             await session.refresh(host)
+        elif not host.display_name:
+            host.display_name = "本机"
+            host.updated_at = datetime.now()
+            session.add(host)
+            await session.commit()
+            await session.refresh(host)
         return host
+
+
+def _display_name_or_default(display_name: str, ip_address: str, *, is_local: bool) -> str:
+    normalized = display_name.strip()
+    if normalized:
+        return normalized
+    if is_local:
+        return "本机"
+    return f"SSH-{ip_address}"
 
 
 def _detect_local_username() -> str:

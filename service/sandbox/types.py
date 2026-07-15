@@ -14,7 +14,11 @@ class SandboxContainerRecord:
     supports_tor: bool
     control_proxy_port: int
     owner_username: str
+    host_display_name: str
     host_ip_address: str
+    host_account: str
+    host_ssh_port: int
+    host_execution_backend: Literal["local", "ssh"]
     egress_label: str = ""
 
 

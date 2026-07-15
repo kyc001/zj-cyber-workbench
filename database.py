@@ -122,6 +122,26 @@ async def _upgrade_portable_schema(conn) -> None:
                 f"ALTER TABLE work_project_findings ADD COLUMN {name} {definition}"
             )
 
+    managed_host_columns = {
+        row[1]
+        for row in (await conn.exec_driver_sql("PRAGMA table_info(managed_hosts)")).fetchall()
+    }
+    managed_host_additions = {
+        "display_name": "VARCHAR NOT NULL DEFAULT ''",
+    }
+    for name, definition in managed_host_additions.items():
+        if name not in managed_host_columns:
+            await conn.exec_driver_sql(
+                f"ALTER TABLE managed_hosts ADD COLUMN {name} {definition}"
+            )
+    await conn.exec_driver_sql(
+        """
+        UPDATE managed_hosts
+        SET display_name = CASE WHEN id = 1 THEN '本机' ELSE 'WSL测试机' END
+        WHERE display_name IS NULL OR TRIM(display_name) = ''
+        """
+    )
+
     await conn.exec_driver_sql(
         "CREATE INDEX IF NOT EXISTS ix_work_project_findings_cve_id ON work_project_findings (cve_id)"
     )

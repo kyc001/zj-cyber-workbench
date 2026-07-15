@@ -301,7 +301,7 @@ export function ToolpackPage() {
           loading={loading}
           optionList={workspaces.map((workspace) => ({
             value: workspace.id,
-            label: `${workspace.container_name} · ${workspace.status}`,
+            label: formatWorkspaceLocation(workspace),
           }))}
         />
         {selectedWorkspace ? (
@@ -642,4 +642,13 @@ function fieldPlaceholder(toolId: string, name: string) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatWorkspaceLocation(workspace: SandboxContainer) {
+  const status = SANDBOX_CONTAINER_STATUS_LABEL[workspace.status];
+  if (workspace.host_execution_backend === "local") {
+    return `本机 · 本地执行 · ${status}`;
+  }
+  const hostName = workspace.host_display_name || "SSH主机";
+  return `SSH · ${hostName} · ${workspace.host_account}@${workspace.host_ip_address}:${workspace.host_ssh_port} · ${status}`;
 }

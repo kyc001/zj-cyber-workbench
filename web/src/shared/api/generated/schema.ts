@@ -2799,6 +2799,11 @@ export interface components {
         };
         /** CreateManagedHostRequest */
         CreateManagedHostRequest: {
+            /**
+             * Display Name
+             * @default
+             */
+            display_name: string;
             /** Host Account */
             host_account: string;
             /** Host Password */
@@ -3657,6 +3662,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Display Name */
+            display_name: string;
             /**
              * Has Password
              * @default false
@@ -4011,15 +4018,21 @@ export interface components {
         SandboxContainerEgressMode: "direct" | "proxy" | "tor";
         /** SandboxContainerHostOptionSchema */
         SandboxContainerHostOptionSchema: {
+            /** Display Name */
+            display_name: string;
             /**
              * Execution Backend
              * @enum {string}
              */
             execution_backend: "local" | "ssh";
+            /** Host Account */
+            host_account: string;
             /** Id */
             id: number;
             /** Ip Address */
             ip_address: string;
+            /** Ssh Port */
+            ssh_port: number;
         };
         /** SandboxContainerPortMapping */
         SandboxContainerPortMapping: {
@@ -4056,10 +4069,21 @@ export interface components {
             egress_mode: components["schemas"]["SandboxContainerEgressMode"];
             /** Egress Proxy Id */
             egress_proxy_id: number | null;
+            /** Host Account */
+            host_account: string;
+            /** Host Display Name */
+            host_display_name: string;
+            /**
+             * Host Execution Backend
+             * @enum {string}
+             */
+            host_execution_backend: "local" | "ssh";
             /** Host Id */
             host_id: number;
             /** Host Ip Address */
             host_ip_address: string;
+            /** Host Ssh Port */
+            host_ssh_port: number;
             /** Id */
             id: number;
             /** Image Id */
@@ -4718,6 +4742,8 @@ export interface components {
         };
         /** UpdateManagedHostRequest */
         UpdateManagedHostRequest: {
+            /** Display Name */
+            display_name?: string | null;
             /** Host Account */
             host_account?: string | null;
             /** Host Password */

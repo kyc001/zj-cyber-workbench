@@ -116,6 +116,21 @@ Effect:
 - Agent no longer needs the user to repeat the SSH host IP when the current Workspace already identifies the Managed Host.
 - Host key changes are still blocked by normal known_hosts verification unless the user explicitly trusts the new fingerprint.
 
+### feat: add readable SSH execution workspace names
+
+- Added editable Managed Host `display_name`.
+- Added additive SQLite upgrade for existing portable databases.
+- Backfilled the current local host as `本机` and existing SSH hosts as `WSL测试机`.
+- Extended Workspace API payloads with host display name, SSH account, SSH port, and execution backend.
+- Updated Host Management, Workspace creation, Toolpack, Workspace list, and Playground selector displays to use readable execution locations.
+
+Reason:
+- Workspace hashes such as `bf7ccfd59419` are useful as internal identifiers, but they are hard to remember during user acceptance and course demonstrations.
+
+Effect:
+- Users now see execution locations like `SSH · WSL测试机 · zj_sandbox@192.168.203.164:2222 · 运行中`.
+- The hash remains available as secondary Workspace ID detail in dropdown options.
+
 ## Deferred Items
 
 ### D-TODO-1: L3 destructive pattern can be masked by always-allow in normal mode

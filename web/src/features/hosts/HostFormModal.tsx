@@ -1,5 +1,5 @@
 import { Input, InputNumber } from "@douyinfe/semi-ui";
-import { KeyRound, Network, Server, User } from "lucide-react";
+import { KeyRound, Network, Server, Tag, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateManagedHostRequest, ManagedHost, UpdateManagedHostRequest } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
@@ -18,6 +18,7 @@ type HostFormModalProps = {
 };
 
 const EMPTY: HostFormValues = {
+  display_name: "",
   ip_address: "",
   ssh_port: 22,
   host_account: "root",
@@ -27,6 +28,7 @@ const EMPTY: HostFormValues = {
 function initial(host: ManagedHost | null): HostFormValues {
   if (!host) return EMPTY;
   return {
+    display_name: host.display_name,
     ip_address: host.ip_address,
     ssh_port: host.ssh_port,
     host_account: host.host_account,
@@ -49,6 +51,7 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
 
   const submit = async () => {
     const hostPayload = {
+      display_name: values.display_name.trim(),
       ip_address: values.ip_address.trim(),
       ssh_port: values.ssh_port,
       host_account: values.host_account.trim(),
@@ -59,11 +62,14 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
       return;
     }
 
-    await onUpdate(host, isLocalHostEdit ? {} : {
+    await onUpdate(host, {
+      display_name: hostPayload.display_name,
+      ...(isLocalHostEdit ? {} : {
       ip_address: hostPayload.ip_address,
       ssh_port: hostPayload.ssh_port,
       host_account: hostPayload.host_account,
       ...(hostPayload.host_password ? { host_password: hostPayload.host_password } : {}),
+      }),
     });
   };
 
@@ -88,6 +94,16 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
       onCancel={onCancel}
       onSubmit={submit}
     >
+      <div className="host-form-row">
+        <label>
+          <span>主机名称</span>
+          <Input prefix={<Tag size={16} />} value={values.display_name} maxLength={128}
+            placeholder="例如：WSL测试机"
+            autoComplete="off"
+            onChange={(value) => setValue("display_name", value)}
+          />
+        </label>
+      </div>
       <div className="host-form-row">
         <label>
           <span>IP 地址</span>

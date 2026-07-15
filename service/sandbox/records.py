@@ -9,7 +9,12 @@ from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
-from schema.sandbox.containers import SandboxContainerCreateOptionsResponse, SandboxContainerHostOptionSchema, SandboxContainerSchema, SandboxContainerStatus
+from schema.sandbox.containers import (
+    SandboxContainerCreateOptionsResponse,
+    SandboxContainerHostOptionSchema,
+    SandboxContainerSchema,
+    SandboxContainerStatus,
+)
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import Page, paginate_statement
 from service.host.hosts import DEFAULT_LOCAL_HOST_ID
@@ -19,7 +24,8 @@ from service.sandbox.types import SandboxContainerRecord
 def _base_statement():
     return (
         select(SandboxContainer, SandboxImage.image_name, SandboxImage.supports_tor, SandboxImage.control_proxy_port,
-               SystemUser.username, ManagedHost.ip_address, EgressProxy)
+               SystemUser.username, ManagedHost.display_name, ManagedHost.ip_address, ManagedHost.host_account,
+               ManagedHost.ssh_port, EgressProxy)
         .join(SandboxImage, SandboxContainer.image_id == SandboxImage.id)
         .join(SystemUser, SandboxContainer.owner_id == SystemUser.id)
         .join(ManagedHost, SandboxContainer.host_id == ManagedHost.id)
@@ -40,14 +46,20 @@ def _filter(statement, keyword: str):
 
 
 def _record(row) -> SandboxContainerRecord:
-    container, image_name, supports_tor, control_proxy_port, owner_username, host_ip, proxy = row
+    (
+        container, image_name, supports_tor, control_proxy_port, owner_username, host_display_name, host_ip,
+        host_account, host_ssh_port, proxy,
+    ) = row
     label = "直接网络"
     if proxy is not None:
         label = f"代理：{proxy.proxy_host}:{proxy.proxy_port}"
     return SandboxContainerRecord(
         container=container, image_name=image_name, supports_tor=supports_tor,
         control_proxy_port=control_proxy_port, owner_username=owner_username,
-        host_ip_address=host_ip, egress_label=label,
+        host_display_name=host_display_name or ("本机" if container.host_id == DEFAULT_LOCAL_HOST_ID else host_ip),
+        host_ip_address=host_ip, host_account=host_account, host_ssh_port=host_ssh_port,
+        host_execution_backend="local" if container.host_id == DEFAULT_LOCAL_HOST_ID else "ssh",
+        egress_label=label,
     )
 
 
@@ -57,14 +69,25 @@ async def load_sandbox_container_record(id: int) -> SandboxContainerRecord | Non
         return _record(row) if row is not None else None
 
 
-def sandbox_container_can_manage(container: SandboxContainer, user_id: int | None, user_role: SystemUserRole | None) -> bool:
+def sandbox_container_can_manage(
+    container: SandboxContainer,
+    user_id: int | None,
+    user_role: SystemUserRole | None,
+) -> bool:
     return user_role == SystemUserRole.ADMIN or (user_id is not None and container.owner_id == user_id)
 
 
-def sandbox_container_schema(record: SandboxContainerRecord, *, user_id: int | None = None, user_role: SystemUserRole | None = None) -> SandboxContainerSchema:
+def sandbox_container_schema(
+    record: SandboxContainerRecord,
+    *,
+    user_id: int | None = None,
+    user_role: SystemUserRole | None = None,
+) -> SandboxContainerSchema:
     container = record.container
     return SandboxContainerSchema(
-        id=container.id or 0, host_id=container.host_id, host_ip_address=record.host_ip_address,
+        id=container.id or 0, host_id=container.host_id, host_display_name=record.host_display_name,
+        host_ip_address=record.host_ip_address, host_account=record.host_account, host_ssh_port=record.host_ssh_port,
+        host_execution_backend=record.host_execution_backend,
         container_name=container.container_name, container_hash=container.container_hash,
         image_id=container.image_id, image_name=record.image_name, supports_tor=record.supports_tor,
         control_proxy_port=record.control_proxy_port, egress_mode=container.egress_mode,
@@ -81,14 +104,28 @@ async def _query(statement, page: int, size: int) -> Page[SandboxContainerRecord
     return Page(page=result.page, size=result.size, total=result.total, items=[_record(row) for row in result.items])
 
 
-async def query_sandbox_containers(user_id: int, user_role: SystemUserRole, page: int = 1, size: int = 100, keyword: str = "") -> Page[SandboxContainerRecord]:
+async def query_sandbox_containers(
+    user_id: int,
+    user_role: SystemUserRole,
+    page: int = 1,
+    size: int = 100,
+    keyword: str = "",
+) -> Page[SandboxContainerRecord]:
     statement = _filter(_base_statement().order_by(SandboxContainer.id), keyword)
     if user_role != SystemUserRole.ADMIN:
         statement = statement.where(SandboxContainer.owner_id == user_id)
     return await _query(statement, page, size)
 
 
-async def query_available_sandbox_containers(user_id: int, user_role: SystemUserRole, work_project_id: int | None = None, include_non_running: bool = False, page: int = 1, size: int = 100, keyword: str = "") -> Page[SandboxContainerRecord]:
+async def query_available_sandbox_containers(
+    user_id: int,
+    user_role: SystemUserRole,
+    work_project_id: int | None = None,
+    include_non_running: bool = False,
+    page: int = 1,
+    size: int = 100,
+    keyword: str = "",
+) -> Page[SandboxContainerRecord]:
     statement = _filter(_base_statement().order_by(SandboxContainer.id), keyword)
     if user_role != SystemUserRole.ADMIN:
         statement = statement.where(SandboxContainer.owner_id == user_id)
@@ -104,7 +141,10 @@ async def sandbox_container_create_options() -> SandboxContainerCreateOptionsRes
     return SandboxContainerCreateOptionsResponse(
         hosts=[SandboxContainerHostOptionSchema(
             id=host.id or 0,
+            display_name=host.display_name or ("本机" if host.id == DEFAULT_LOCAL_HOST_ID else host.ip_address),
             ip_address=host.ip_address,
+            host_account=host.host_account,
+            ssh_port=host.ssh_port,
             execution_backend="local" if host.id == DEFAULT_LOCAL_HOST_ID else "ssh",
         ) for host in hosts],
         images=images,

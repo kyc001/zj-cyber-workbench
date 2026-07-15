@@ -102,7 +102,9 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
           placeholder={loading ? "正在加载主机" : "选择运行主机"}
           emptyContent={loading ? <Spin size="small" /> : "暂无主机"}
           optionList={hosts.map((host) => ({
-            label: `${host.ip_address} · ${host.execution_backend === "local" ? "本机" : "SSH"}`,
+            label: host.execution_backend === "local"
+              ? `${host.display_name || "本机"} · 本地执行`
+              : `SSH · ${host.display_name || host.ip_address} · ${host.host_account}@${host.ip_address}:${host.ssh_port}`,
             value: host.id,
           }))}
           onChange={(value) => typeof value === "number" && setHostId(value)}

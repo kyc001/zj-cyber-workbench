@@ -109,7 +109,11 @@ export function HostsPage() {
     {
       key: "host", header: "主机", width: "minmax(0, 0.7fr)",
       render: (host) => (
-        <ResourceIdentity icon={<Server size={18} />} title={host.ip_address} detail={`SSH ${host.ssh_port}`} />
+        <ResourceIdentity
+          icon={<Server size={18} />}
+          title={host.display_name || host.ip_address}
+          detail={`${host.host_account}@${host.ip_address}:${host.ssh_port}`}
+        />
       ),
     },
     {
@@ -150,7 +154,7 @@ export function HostsPage() {
   return (
     <>
       <ResourcePageShell
-        searchPlaceholder="搜索 IP、账号或 SSH 端口"
+        searchPlaceholder="搜索主机名称、IP、账号或 SSH 端口"
         keyword={keyword}
         loading={loading}
         metrics={[

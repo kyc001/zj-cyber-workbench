@@ -34,6 +34,7 @@ from schema.work_project.projects import (
 from schema.work_project.records import WorkProjectRecordSnapshotSchema, WorkProjectRecordsSchema
 from service.agent.sessions import cancel_sessions, delete_session, ensure_sdk_session_row, list_sessions
 from service.common.pagination import Page, paginate_statement
+from service.host.hosts import DEFAULT_LOCAL_HOST_ID
 from service.sandbox.egress import sandbox_egress_label
 from service.sandbox.records import sandbox_container_schema
 from service.sandbox.status import status_generation
@@ -570,7 +571,10 @@ async def _sandbox_container_by_project(
             SandboxImage.supports_tor,
             SandboxImage.control_proxy_port,
             SystemUser.username,
+            ManagedHost.display_name,
             ManagedHost.ip_address,
+            ManagedHost.host_account,
+            ManagedHost.ssh_port,
             EgressProxy,
         )
         .join(SandboxContainer, SandboxContainer.id == WorkProjectSandboxContainer.sandbox_container_id)
@@ -582,7 +586,10 @@ async def _sandbox_container_by_project(
         .order_by(WorkProjectSandboxContainer.project_id, WorkProjectSandboxContainer.position)
     )).all()
     result: dict[int, SandboxContainerSchema | None] = {project_id: None for project_id in ids}
-    for link, container, image_name, supports_tor, control_proxy_port, owner_username, host_ip, proxy in rows:
+    for (
+        link, container, image_name, supports_tor, control_proxy_port, owner_username, host_display_name, host_ip,
+        host_account, host_ssh_port, proxy,
+    ) in rows:
         if result[link.project_id] is not None:
             continue
         record = SandboxContainerRecord(
@@ -591,7 +598,11 @@ async def _sandbox_container_by_project(
             supports_tor=supports_tor,
             control_proxy_port=control_proxy_port,
             owner_username=owner_username,
+            host_display_name=host_display_name or ("本机" if container.host_id == DEFAULT_LOCAL_HOST_ID else host_ip),
             host_ip_address=host_ip,
+            host_account=host_account,
+            host_ssh_port=host_ssh_port,
+            host_execution_backend="local" if container.host_id == DEFAULT_LOCAL_HOST_ID else "ssh",
             egress_label=sandbox_egress_label(container, proxy),
         )
         result[link.project_id] = sandbox_container_schema(record, user_id=user_id, user_role=user_role)

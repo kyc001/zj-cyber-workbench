@@ -59,6 +59,7 @@ logger = get_logger(__name__)
 def _managed_host_schema(host) -> ManagedHostSchema:
     return ManagedHostSchema(
         id=host.id or 0,
+        display_name=host.display_name,
         ip_address=host.ip_address,
         ssh_port=host.ssh_port,
         host_account=host.host_account,
@@ -70,6 +71,7 @@ def _managed_host_schema(host) -> ManagedHostSchema:
 
 async def create_managed_host_handler(request: CreateManagedHostRequest) -> CommonResponse:
     host = await create_managed_host(
+        display_name=request.display_name,
         ip_address=request.ip_address,
         ssh_port=request.ssh_port,
         host_account=request.host_account,
@@ -81,6 +83,7 @@ async def create_managed_host_handler(request: CreateManagedHostRequest) -> Comm
 async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest) -> CommonResponse:
     result = await update_managed_host(
         id=id,
+        display_name=request.display_name,
         ip_address=request.ip_address,
         ssh_port=request.ssh_port,
         host_account=request.host_account,

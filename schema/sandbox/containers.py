@@ -42,7 +42,11 @@ class SandboxContainerSchema(BaseModel):
 
     id: int
     host_id: int
+    host_display_name: str
     host_ip_address: str
+    host_account: str
+    host_ssh_port: int
+    host_execution_backend: Literal["local", "ssh"]
     container_name: str
     container_hash: str
     image_id: int
@@ -64,7 +68,10 @@ class SandboxContainerSchema(BaseModel):
 
 class SandboxContainerHostOptionSchema(BaseModel):
     id: int
+    display_name: str
     ip_address: str
+    host_account: str
+    ssh_port: int
     execution_backend: Literal["local", "ssh"]
 
 

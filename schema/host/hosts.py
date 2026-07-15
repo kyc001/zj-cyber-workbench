@@ -11,6 +11,7 @@ class ManagedHostSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    display_name: str
     ip_address: str
     ssh_port: int
     host_account: str
@@ -20,11 +21,13 @@ class ManagedHostSchema(BaseModel):
 
 
 class CreateManagedHostRequest(BaseModel):
+    display_name: str = Field(default="", max_length=128)
     ip_address: str = Field(min_length=1, max_length=255)
     ssh_port: int = Field(default=22, ge=1, le=65535)
     host_account: str = Field(min_length=1, max_length=128)
     host_password: str = Field(min_length=1, max_length=512)
-    @field_validator("ip_address", "host_account", mode="before")
+
+    @field_validator("display_name", "ip_address", "host_account", mode="before")
     @classmethod
     def normalize_text(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -40,11 +43,13 @@ class CreateManagedHostRequest(BaseModel):
             raise ValueError("ip address must be a valid IPv4 or IPv6 address") from exc
 
 class UpdateManagedHostRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=128)
     ip_address: str | None = Field(default=None, min_length=1, max_length=255)
     ssh_port: int | None = Field(default=None, ge=1, le=65535)
     host_account: str | None = Field(default=None, min_length=1, max_length=128)
     host_password: str | None = Field(default=None, min_length=1, max_length=512)
-    @field_validator("ip_address", "host_account", mode="before")
+
+    @field_validator("display_name", "ip_address", "host_account", mode="before")
     @classmethod
     def normalize_text(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -70,6 +75,7 @@ class UpdateManagedHostRequest(BaseModel):
                 self.ssh_port,
                 self.host_account,
                 self.host_password,
+                self.display_name,
             )
         ):
             raise ValueError("at least one field must be provided")

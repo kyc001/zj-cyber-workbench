@@ -122,7 +122,12 @@ export function SandboxContainerFormModal({
           disabled={hosts.length === 0}
           placeholder="选择运行主机"
           onChange={(value) => typeof value === "number" && setHostId(value)}
-          optionList={hosts.map((host) => ({ label: host.ip_address, value: host.id }))}
+          optionList={hosts.map((host) => ({
+            label: host.id === 1
+              ? `${host.display_name || "本机"} · 本地执行`
+              : `SSH · ${host.display_name || host.ip_address} · ${host.host_account}@${host.ip_address}:${host.ssh_port}`,
+            value: host.id,
+          }))}
         />
       </label>
 

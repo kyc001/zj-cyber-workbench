@@ -153,7 +153,11 @@ export function SandboxContainersPage() {
     },
     {
       key: "host", header: "主机", width: "150px",
-      render: (container) => <ResourceText title={container.host_ip_address}>{container.host_ip_address}</ResourceText>,
+      render: (container) => (
+        <ResourceText title={formatContainerHost(container)}>
+          {container.host_display_name || container.host_ip_address}
+        </ResourceText>
+      ),
     },
     {
       key: "image", header: "工具基线", width: "minmax(0, 0.62fr)",
@@ -383,6 +387,11 @@ function ContainerEgressModal({
 function renderContainerHash(containerHash: string) {
   if (!containerHash) return <>等待创建</>;
   return <Tooltip content={containerHash}>{containerHash.slice(0, 12)}</Tooltip>;
+}
+
+function formatContainerHost(container: SandboxContainer) {
+  if (container.host_execution_backend === "local") return `${container.host_display_name || "本机"} · 本地执行`;
+  return `${container.host_display_name || container.host_ip_address} · ${container.host_account}@${container.host_ip_address}:${container.host_ssh_port}`;
 }
 
 function renderContainerPorts(container: SandboxContainer) {

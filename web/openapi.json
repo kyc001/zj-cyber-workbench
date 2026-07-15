@@ -2914,6 +2914,12 @@
       },
       "CreateManagedHostRequest": {
         "properties": {
+          "display_name": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Display Name",
+            "type": "string"
+          },
           "host_account": {
             "maxLength": 128,
             "minLength": 1,
@@ -4805,6 +4811,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
           "has_password": {
             "default": false,
             "title": "Has Password",
@@ -4834,6 +4844,7 @@
         },
         "required": [
           "id",
+          "display_name",
           "ip_address",
           "ssh_port",
           "host_account",
@@ -5638,12 +5649,20 @@
       },
       "SandboxContainerHostOptionSchema": {
         "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
           "execution_backend": {
             "enum": [
               "local",
               "ssh"
             ],
             "title": "Execution Backend",
+            "type": "string"
+          },
+          "host_account": {
+            "title": "Host Account",
             "type": "string"
           },
           "id": {
@@ -5653,11 +5672,18 @@
           "ip_address": {
             "title": "Ip Address",
             "type": "string"
+          },
+          "ssh_port": {
+            "title": "Ssh Port",
+            "type": "integer"
           }
         },
         "required": [
           "id",
+          "display_name",
           "ip_address",
+          "host_account",
+          "ssh_port",
           "execution_backend"
         ],
         "title": "SandboxContainerHostOptionSchema",
@@ -5739,6 +5765,22 @@
             ],
             "title": "Egress Proxy Id"
           },
+          "host_account": {
+            "title": "Host Account",
+            "type": "string"
+          },
+          "host_display_name": {
+            "title": "Host Display Name",
+            "type": "string"
+          },
+          "host_execution_backend": {
+            "enum": [
+              "local",
+              "ssh"
+            ],
+            "title": "Host Execution Backend",
+            "type": "string"
+          },
           "host_id": {
             "title": "Host Id",
             "type": "integer"
@@ -5746,6 +5788,10 @@
           "host_ip_address": {
             "title": "Host Ip Address",
             "type": "string"
+          },
+          "host_ssh_port": {
+            "title": "Host Ssh Port",
+            "type": "integer"
           },
           "id": {
             "title": "Id",
@@ -5790,7 +5836,11 @@
         "required": [
           "id",
           "host_id",
+          "host_display_name",
           "host_ip_address",
+          "host_account",
+          "host_ssh_port",
+          "host_execution_backend",
           "container_name",
           "container_hash",
           "image_id",
@@ -6966,6 +7016,18 @@
       },
       "UpdateManagedHostRequest": {
         "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
           "host_account": {
             "anyOf": [
               {
