@@ -1,5 +1,5 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
-import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageSquareCode, Network, Server, Settings } from "lucide-react";
+import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageSquareCode, Network, Server, Settings, Wrench } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
@@ -30,6 +30,7 @@ const navItems = [
   { path: "/egress-proxies", label: "出口代理", eyebrow: "网络出口配置", icon: Network, adminOnly: true },
   { path: "/sandbox-images", label: "工具基线", eyebrow: "便携工具配置", icon: Boxes, adminOnly: true },
   { path: "/sandbox-containers", label: "执行工作区", eyebrow: "本机运行实例", icon: Box, adminOnly: true },
+  { path: "/toolpack", label: "Toolpack", eyebrow: "工具执行入口", icon: Wrench, adminOnly: true },
   { path: "/system-config", label: "系统配置", eyebrow: "运行时与模型配置", icon: Settings, adminOnly: true },
 ];
 

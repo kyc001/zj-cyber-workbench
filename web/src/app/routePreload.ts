@@ -8,6 +8,7 @@ const routeLoaders = {
   workProjectWorkspace: () => import("../features/work-projects/WorkProjectWorkspacePage"),
   sandboxImages: () => import("../features/sandbox-images/SandboxImagesPage"),
   sandboxContainers: () => import("../features/sandbox-containers/SandboxContainersPage"),
+  toolpack: () => import("../features/toolpack/ToolpackPage"),
   systemConfig: () => import("../features/system-config/SystemConfigPage"),
 } as const;
 
@@ -20,6 +21,7 @@ const adminRouteLoaders: Record<string, () => Promise<unknown>> = {
   "/work-projects/:projectId": routeLoaders.workProjectWorkspace,
   "/sandbox-images": routeLoaders.sandboxImages,
   "/sandbox-containers": routeLoaders.sandboxContainers,
+  "/toolpack": routeLoaders.toolpack,
   "/system-config": routeLoaders.systemConfig,
 };
 
@@ -34,6 +36,7 @@ export const loadWorkProjectsPage = routeLoaders.workProjects;
 export const loadWorkProjectWorkspacePage = routeLoaders.workProjectWorkspace;
 export const loadSandboxImagesPage = routeLoaders.sandboxImages;
 export const loadSandboxContainersPage = routeLoaders.sandboxContainers;
+export const loadToolpackPage = routeLoaders.toolpack;
 export const loadSystemConfigPage = routeLoaders.systemConfig;
 
 export function preloadAdminRoute(path: string) {

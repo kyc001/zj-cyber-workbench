@@ -197,3 +197,61 @@ Record failures with:
 - Tool versions and paths.
 - SSH server version and host key fingerprint.
 - Sanitized request/response payloads.
+
+## Windows/WSL Validation Record - 2026-07-14
+
+Environment:
+
+- Windows development checkout: `D:\zj-cyber-workbench`.
+- Sidecar test API: `http://127.0.0.1:8765`.
+- Local workspace id: `1`.
+- WSL SSH workspace id: `2`.
+- WSL SSH host: `192.168.203.164:2222`, account `zj_sandbox`.
+- Trusted host key fingerprint: `SHA256:FrbtciW9zZBU4zGdlvQKTcsbgmzKWpDZmu4QFF32F/4`.
+
+Results:
+
+- Managed Host creation: passed via `POST /api/hosts`, host id `2`.
+- SSH Workspace creation/start: passed via `POST /api/sandbox-containers/{id}/start`.
+- First SSH connection with empty `known_hosts`: blocked as expected with host key trust error; no auto-accept occurred.
+- Explicit host key pinning: passed; entry stored in `.zj/ssh/known_hosts` as `[192.168.203.164]:2222`.
+- Host key changed simulation: passed; Toolpack returned `error_code=host_key_changed`.
+- `GET /api/toolpack/tools?sandbox_container_id=1`: passed; `local.httpx`, `local.dnsx`, and `local.ffuf` reported `available=true`.
+- `local.httpx`: passed against `http://127.0.0.1:8765`, `ok=true`, `exit_code=0`, parsed records returned.
+- `local.dnsx`: passed after switching executor input to stdin/list mode, `ok=true`, `exit_code=0`, parsed records returned.
+- `local.ffuf`: passed against `http://127.0.0.1:8765/FUZZ`, `ok=true`, `exit_code=0`, parsed records returned.
+- `local.ffuf` without `FUZZ`: passed; returned `error_code=policy_denied`.
+- `ssh.nmap`: passed against `127.0.0.1` inside WSL SSH workspace, `ok=true`, `exit_code=0`, parsed records returned.
+- `ssh.sqlmap`: passed against temporary lab URL `http://192.168.192.1:8877/?id=1`, `ok=true`, `exit_code=0`, parsed records returned.
+- Tool cancel: passed; canceling a running `ssh.sqlmap` run returned final status `canceled` and `error_code=canceled`.
+- SSH SFTP list/read/write/upload/download/copy/move/delete: passed through `/api/sandbox-containers/2/files*`.
+- SFTP path traversal `/../../outside.txt`: passed; rejected with HTTP `403` and message `path escapes the portable workspace`.
+- SFTP overwrite backup: passed; overwriting `/c-smoke/alpha.txt` created an entry under `/.zj-backups/`.
+- PowerShell diagnostics list: passed; all 6 actions reported `enabled=true`.
+- PowerShell diagnostics run: passed for `system.summary`, `process.list`, `service.list`, `network.ports`, `firewall.status`, and `scheduled_tasks.list`; each returned an `ExecutionResult`.
+
+Fixes made during validation:
+
+- `service/toolpack.py`: Windows local Toolpack command generation now uses PowerShell-safe `Get-Command` precheck and quoted argument invocation instead of POSIX `command -v`/`exec`.
+- `service/toolpack.py`: `local.dnsx` now feeds the domain through stdin and uses `-j` JSONL output for current dnsx versions.
+- `service/toolpack.py`: `ssh.sqlmap` is bounded with batch, no coloring, low level/risk, short timeout, no retries, and flush-session options.
+- `service/sandbox/remote_files.py`: remote SFTP paths now re-check server-side `realpath` containment for existing paths and writable parents.
+- `handler/sandbox/containers.py`: file operation `PermissionError` now maps to stable HTTP `403`.
+- `tests/unit/test_toolpack.py`: platform-specific command wrapping assertions updated.
+
+Regression checks:
+
+- `.\.venv\Scripts\python.exe -m pytest tests/unit -q`: passed, `51 passed`.
+- `.\.venv\Scripts\python.exe -m ruff check core/action_registry.py schema/toolpack.py service/toolpack.py router/toolpack.py schema/local_actions.py service/host/powershell.py router/local_actions.py`: passed.
+- TypeScript typecheck equivalent using workspace-local binaries:
+  - `web/node_modules/.bin/tsc --noEmit`: passed.
+  - `desktop/node_modules/.bin/tsc -p tsconfig.json --noEmit`: passed.
+- Desktop build equivalent `desktop/node_modules/.bin/tsc -p tsconfig.json`: passed.
+- `pnpm typecheck` and `pnpm build`: blocked in the managed Codex sandbox after permissions changed because the pnpm/npm shims under `C:\Users\Asus` became unreadable.
+- Web build equivalent progressed through `openapi-typescript` and TypeScript, then blocked at Vite/Rolldown because optional native package `@rolldown/binding-win32-x64-msvc@1.1.5` was missing from `node_modules`; the sandbox also blocked network access to fetch the missing tarball.
+
+Follow-up:
+
+- Re-run `pnpm install --frozen-lockfile` in a normal Windows shell to restore missing optional dependencies, then run `pnpm build`.
+- Add a product API for explicit first-use host key enrollment/fingerprint display; this run pinned the key manually for development validation.
+- Add an automated symlink escape integration test for SSH SFTP once a stable test SSH fixture is available.

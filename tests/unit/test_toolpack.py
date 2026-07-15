@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -89,8 +90,12 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(finished.result.ok)
         self.assertEqual("http://example.test/", finished.result.structured["records"][0]["url"])
         command = execute.await_args.args[1]
-        self.assertIn("command -v httpx", command)
-        self.assertIn("-u http://example.test/", command)
+        if os.name == "nt":
+            self.assertIn("Get-Command 'httpx'", command)
+            self.assertIn("'http://example.test/'", command)
+        else:
+            self.assertIn("command -v httpx", command)
+            self.assertIn("-u http://example.test/", command)
 
     async def test_ffuf_policy_requires_fuzz_marker(self) -> None:
         with self.local_workspace_patches(), patch.object(toolpack, "_local_tool_path", return_value="/tmp/ffuf"):

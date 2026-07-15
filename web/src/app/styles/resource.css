@@ -8,6 +8,248 @@
   color: var(--z-text);
 }
 
+.toolpack-page {
+  display: grid;
+  min-height: 0;
+  gap: 14px;
+  color: var(--z-text);
+}
+
+.toolpack-workspace-bar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolpack-workspace-bar .semi-select {
+  width: min(420px, 100%);
+}
+
+.toolpack-layout {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(280px, 0.38fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.toolpack-tools-panel,
+.toolpack-run-panel {
+  min-height: 0;
+}
+
+.toolpack-tool-list,
+.toolpack-run-grid {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.toolpack-tool-item {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  color: var(--z-text);
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.toolpack-tool-item:hover,
+.toolpack-tool-item.is-active {
+  background: var(--z-bg-elevated);
+  border-color: var(--z-accent);
+}
+
+.toolpack-tool-tags,
+.toolpack-run-actions,
+.toolpack-command-row,
+.toolpack-result-head,
+.toolpack-artifacts a {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolpack-run-header {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--z-line);
+}
+
+.toolpack-inline-alert {
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--z-warning);
+  background: var(--z-warning-bg);
+  border: 1px solid var(--z-warning-border);
+  border-radius: 6px;
+}
+
+.toolpack-form-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.toolpack-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--z-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.toolpack-field > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--z-text-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolpack-field .semi-input-wrapper,
+.toolpack-field .semi-select,
+.toolpack-field .semi-inputNumber,
+.toolpack-field .semi-input-textarea-wrapper {
+  width: 100%;
+}
+
+.toolpack-command-row {
+  padding-top: 2px;
+}
+
+.toolpack-result-empty,
+.toolpack-result {
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--z-line);
+}
+
+.toolpack-result-empty {
+  color: var(--z-text-subtle);
+  font-size: 13px;
+}
+
+.toolpack-result {
+  display: grid;
+  gap: 10px;
+}
+
+.toolpack-result-head {
+  flex-wrap: wrap;
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
+.toolpack-result-facts {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.toolpack-result-facts span {
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px 10px;
+  color: var(--z-text);
+  background: var(--z-bg-deep);
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolpack-result-summary {
+  min-width: 0;
+  margin: 0;
+  color: var(--z-text);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.toolpack-output {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 320px;
+  min-width: 0;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  color: var(--z-text);
+  background: var(--z-bg-deep);
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.toolpack-artifacts {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.toolpack-artifacts a {
+  min-width: 0;
+  color: var(--z-accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.toolpack-artifacts span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolpack-artifacts small {
+  flex: 0 0 auto;
+  color: var(--z-text-subtle);
+}
+
+@media (min-width: 901px) {
+  .toolpack-page {
+    height: 100%;
+    grid-template-rows: max-content minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .toolpack-layout,
+  .toolpack-form-grid,
+  .toolpack-result-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .toolpack-run-header,
+  .toolpack-workspace-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .knowledge-tabs > .semi-tabs-bar {
   margin: 0;
   padding-inline: 4px;

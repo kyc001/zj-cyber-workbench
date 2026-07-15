@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shlex
 import shutil
 from collections.abc import Callable
@@ -53,6 +54,7 @@ class _ToolDefinition:
     manifest: ToolManifestSchema
     install_hint: str
     build_args: Callable[[dict[str, Any]], list[str]]
+    stdin_text: Callable[[dict[str, Any]], str] | None = None
 
 
 @dataclass
@@ -127,7 +129,8 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"max_rps": 50, "max_concurrency": 20, "requires_scope": True},
         ),
         install_hint="Install ProjectDiscovery dnsx into portable-tools or PATH.",
-        build_args=lambda payload: ["dnsx", "-d", _required_text(payload, "domain"), "-silent", "-json"],
+        build_args=lambda payload: ["dnsx", "-silent", "-j"],
+        stdin_text=lambda payload: _required_text(payload, "domain"),
     ),
     "local.ffuf": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -201,7 +204,18 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"max_rps": 10, "max_concurrency": 4, "requires_scope": True},
         ),
         install_hint="Install sqlmap on the configured SSH Linux host.",
-        build_args=lambda payload: ["sqlmap", "-u", _required_text(payload, "target"), "--batch"],
+        build_args=lambda payload: [
+            "sqlmap",
+            "-u",
+            _required_text(payload, "target"),
+            "--batch",
+            "--disable-coloring",
+            "--level=1",
+            "--risk=1",
+            "--timeout=5",
+            "--retries=0",
+            "--flush-session",
+        ],
     ),
 }
 
@@ -293,14 +307,16 @@ async def _execute_tool_run(
                 ToolRunStatus.FAILED,
             )
             return
-        command = _shell_command(definition.build_args(request.input))
+        args = definition.build_args(request.input)
+        stdin_text = definition.stdin_text(request.input) if definition.stdin_text is not None else None
+        command = _shell_command(args, stdin_text=stdin_text)
         timeout = min(
             request.timeout_seconds or definition.manifest.default_timeout_seconds,
             definition.manifest.max_timeout_seconds,
         )
         command_result = await execute_sandbox_container_command(
             request.sandbox_container_id,
-            _with_tool_precheck(definition, command),
+            _with_tool_precheck(definition, command, args=args, stdin_text=stdin_text),
             timeout,
             execution_id=run_id,
         )
@@ -456,11 +472,40 @@ def _local_tool_path(executable: str) -> str | None:
     return shutil.which(executable, path=portable_tool_environment().get("PATH"))
 
 
-def _shell_command(tokens: list[str]) -> str:
-    return " ".join(shlex.quote(token) for token in tokens)
+def _shell_command(tokens: list[str], *, stdin_text: str | None = None) -> str:
+    if os.name == "nt":
+        return _powershell_command(tokens, stdin_text=stdin_text)
+    command = " ".join(shlex.quote(token) for token in tokens)
+    if stdin_text is None:
+        return command
+    return f"printf '%s\\n' {shlex.quote(stdin_text)} | {command}"
 
 
-def _with_tool_precheck(definition: _ToolDefinition, command: str) -> str:
+def _powershell_command(tokens: list[str], *, stdin_text: str | None = None) -> str:
+    quoted = " ".join(_powershell_quote(token) for token in tokens)
+    if stdin_text is not None:
+        return f"{_powershell_quote(stdin_text)} | & {quoted}; exit $LASTEXITCODE"
+    return f"& {quoted}; exit $LASTEXITCODE"
+
+
+def _powershell_quote(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _with_tool_precheck(
+    definition: _ToolDefinition,
+    command: str,
+    *,
+    args: list[str],
+    stdin_text: str | None,
+) -> str:
+    if definition.manifest.backend == ToolBackend.LOCAL and os.name == "nt":
+        executable = _powershell_quote(definition.manifest.executable)
+        return (
+            f"if (-not (Get-Command {executable} -ErrorAction SilentlyContinue)) "
+            "{ exit 127 }; "
+            f"{_powershell_command(args, stdin_text=stdin_text)}"
+        )
     executable = shlex.quote(definition.manifest.executable)
     return f"command -v {executable} >/dev/null 2>&1 || exit 127; exec {command}"
 

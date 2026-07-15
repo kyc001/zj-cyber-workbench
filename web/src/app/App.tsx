@@ -10,6 +10,7 @@ import {
   loadSandboxContainersPage,
   loadSandboxImagesPage,
   loadSystemConfigPage,
+  loadToolpackPage,
   loadWorkProjectWorkspacePage,
   loadWorkProjectsPage,
 } from "./routePreload";
@@ -31,6 +32,7 @@ const SystemConfigPage = lazyRoute(loadSystemConfigPage, "SystemConfigPage");
 const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
 const SandboxContainersPage = lazyRoute(loadSandboxContainersPage, "SandboxContainersPage");
 const SandboxImagesPage = lazyRoute(loadSandboxImagesPage, "SandboxImagesPage");
+const ToolpackPage = lazyRoute(loadToolpackPage, "ToolpackPage");
 
 function ProtectedRoute() {
   const { isAuthenticated, ready } = useAuth();
@@ -70,6 +72,7 @@ export function App() {
                   <Route path="/work-projects/:projectId" element={<WorkProjectWorkspacePage />} />
                   <Route path="/sandbox-images" element={<SandboxImagesPage />} />
                   <Route path="/sandbox-containers" element={<SandboxContainersPage />} />
+                  <Route path="/toolpack" element={<ToolpackPage />} />
                   <Route path="/system-config" element={<SystemConfigPage />} />
                 </Route>
               </Route>

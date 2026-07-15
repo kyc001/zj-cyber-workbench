@@ -402,6 +402,8 @@ async def handle_list_files(id: int, path: str, user=None) -> CommonResponse:
         return error
     try:
         files = await list_container_files(id, path)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to list container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to list container files")
@@ -418,11 +420,15 @@ async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=N
             return _file_container_error(HTTPStatus.NOT_FOUND.value, "file not found")
         if info.type == ContainerFileType.DIRECTORY:
             return _file_container_error(HTTPStatus.BAD_REQUEST.value, "cannot read a directory")
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to get container file info: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to get container file info")
     try:
         content = await read_container_file(id, path, base64_mode=base64_mode)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to read container file: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to read container file")
@@ -439,6 +445,8 @@ async def handle_write_file(id: int, body: ContainerFileWriteRequest, user=None)
         return error
     try:
         ok = await write_container_file(id, body.path, body.content)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to write container file: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to write container file")
@@ -465,6 +473,8 @@ async def handle_upload_files(
         uploaded = await upload_container_files(id, path, sources, overwrite)
     except ValueError as exc:
         return _file_container_error(HTTPStatus.BAD_REQUEST.value, str(exc))
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except FileExistsError as exc:
         return _file_container_error(HTTPStatus.CONFLICT.value, str(exc))
     except FileNotFoundError as exc:
@@ -488,6 +498,8 @@ async def handle_download_files(id: int, paths: list[str], user=None) -> Streami
 
     try:
         download = await download_container_paths(id, paths)
+    except PermissionError as exc:
+        return _file_container_json_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except ValueError as exc:
         return _file_container_json_error(HTTPStatus.BAD_REQUEST.value, str(exc))
     except FileNotFoundError as exc:
@@ -514,6 +526,8 @@ async def handle_copy_files(id: int, body: ContainerFileCopyRequest, user=None) 
         return error
     try:
         ok = await copy_container_files(id, body.sources, body.destination)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to copy container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to copy container files")
@@ -528,6 +542,8 @@ async def handle_move_files(id: int, body: ContainerFileMoveRequest, user=None) 
         return error
     try:
         ok = await move_container_files(id, body.sources, body.destination)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to move container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to move container files")
@@ -542,6 +558,8 @@ async def handle_delete_files(id: int, body: ContainerFileDeleteRequest, user=No
         return error
     try:
         ok = await delete_container_files(id, body.paths)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to delete container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to delete container files")
@@ -556,6 +574,8 @@ async def handle_mkdir(id: int, body: ContainerFileMkdirRequest, user=None) -> C
         return error
     try:
         ok = await create_container_directory(id, body.path)
+    except PermissionError as exc:
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, str(exc))
     except Exception:
         logger.exception("failed to create container directory: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to create container directory")
