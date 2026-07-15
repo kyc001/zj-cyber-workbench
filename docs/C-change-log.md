@@ -94,6 +94,28 @@ Reason:
 Effect:
 - Toolpack now has a clearer product shape for manual use, while preserving the same backend execution gateway and structured result contract.
 
+### feat: complete SSH Workspace acceptance bridge
+
+- Added Agent `ssh_command` credential resolution from the current SSH Workspace's Managed Host when `credential_ref` is empty.
+- Made `ssh_command.target` optional when the current session is bound to an SSH Workspace.
+- Added target matching so a Workspace host credential cannot be reused for a different SSH endpoint.
+- Updated Agent runtime guidance to prefer the current SSH Workspace credentials instead of asking users for SSH secrets.
+- Added host key preview and explicit trust APIs:
+  - `GET /api/hosts/{id}/host-key`
+  - `POST /api/hosts/{id}/host-key/trust`
+- Added a Host Management UI trust button which displays the current SSH host key fingerprint before writing `.zj/ssh/known_hosts`.
+- Added `docs/C-ssh-acceptance-guide.md` with the user-facing acceptance flow.
+- Added unit tests for SSH Workspace credential reuse and host mismatch rejection.
+
+Reason:
+- The manual frontend flow could register SSH hosts and run SSH workspaces, but Agent SSH still required a separate `credential_ref`.
+- First-use SSH host key enrollment also required manual file editing, which made the frontend acceptance flow incomplete.
+
+Effect:
+- A user can register a host once in the frontend, trust its SSH host key, create an SSH Workspace, run manual shell/Toolpack operations, and let Agent execute SSH commands through the same host after authorization.
+- Agent no longer needs the user to repeat the SSH host IP when the current Workspace already identifies the Managed Host.
+- Host key changes are still blocked by normal known_hosts verification unless the user explicitly trusts the new fingerprint.
+
 ## Deferred Items
 
 ### D-TODO-1: L3 destructive pattern can be masked by always-allow in normal mode

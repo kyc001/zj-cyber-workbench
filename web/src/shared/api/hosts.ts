@@ -17,6 +17,21 @@ import type {
 
 const HOSTS_PATH = "/api/hosts";
 
+export type ManagedHostKeyInfo = {
+  host_id: number;
+  endpoint: string;
+  algorithm: string;
+  fingerprint_sha256: string;
+  public_key: string;
+  trusted: boolean;
+};
+
+export type ManagedHostKeyResponse = {
+  code: number;
+  message: string;
+  data?: ManagedHostKeyInfo;
+};
+
 export function queryManagedHosts(params: QueryManagedHostsParams) {
   return apiGet<QueryManagedHostsResponse>(`${HOSTS_PATH}${buildQuery(params)}`);
 }
@@ -43,6 +58,16 @@ export function pullManagedHostImages(id: ManagedHostPathParams["id"], payload: 
 
 export function removeManagedHostImage(id: ManagedHostPathParams["id"], payload: DeleteManagedHostImageRequest) {
   return apiPost(`${HOSTS_PATH}/${id}/images/remove`, payload);
+}
+
+export function previewManagedHostKey(id: ManagedHostPathParams["id"]) {
+  return apiGet<ManagedHostKeyResponse>(`${HOSTS_PATH}/${id}/host-key`);
+}
+
+export function trustManagedHostKey(id: ManagedHostPathParams["id"], fingerprintSha256: string) {
+  return apiPost<ManagedHostKeyResponse>(`${HOSTS_PATH}/${id}/host-key/trust`, {
+    fingerprint_sha256: fingerprintSha256,
+  });
 }
 
 export function buildHostShellUrl(id: ManagedHostPathParams["id"]) {

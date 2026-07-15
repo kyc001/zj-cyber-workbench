@@ -1822,6 +1822,58 @@
         "title": "CommonResponse[ListWorkProjectSessionsResponse]",
         "type": "object"
       },
+      "CommonResponse_LocalPowerShellRunResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalPowerShellRunResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[LocalPowerShellRunResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ManagedHostKeySchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManagedHostKeySchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ManagedHostKeySchema]",
+        "type": "object"
+      },
       "CommonResponse_ManagedHostSchema_": {
         "properties": {
           "code": {
@@ -1978,6 +2030,32 @@
         "title": "CommonResponse[QueryKnowledgeVectorsResponse]",
         "type": "object"
       },
+      "CommonResponse_QueryLocalPowerShellActionsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryLocalPowerShellActionsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryLocalPowerShellActionsResponse]",
+        "type": "object"
+      },
       "CommonResponse_QueryManagedHostsResponse_": {
         "properties": {
           "code": {
@@ -2080,6 +2158,32 @@
           }
         },
         "title": "CommonResponse[QuerySystemUsersResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QueryToolpackToolsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryToolpackToolsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryToolpackToolsResponse]",
         "type": "object"
       },
       "CommonResponse_QueryWorkProjectsResponse_": {
@@ -2288,6 +2392,84 @@
           }
         },
         "title": "CommonResponse[TestEgressProxyResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ToolRunCancelResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolRunCancelResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ToolRunCancelResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ToolRunSnapshot_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolRunSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ToolRunSnapshot]",
+        "type": "object"
+      },
+      "CommonResponse_UacHelperStatusResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UacHelperStatusResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[UacHelperStatusResponse]",
         "type": "object"
       },
       "CommonResponse_UpdateInstanceConfigResponse_": {
@@ -2618,12 +2800,22 @@
       },
       "ContainerFileUploadItem": {
         "properties": {
+          "backup_path": {
+            "default": "",
+            "title": "Backup Path",
+            "type": "string"
+          },
           "name": {
             "title": "Name",
             "type": "string"
           },
           "path": {
             "title": "Path",
+            "type": "string"
+          },
+          "sha256": {
+            "default": "",
+            "title": "Sha256",
             "type": "string"
           },
           "size": {
@@ -3518,6 +3710,127 @@
         "title": "EvaluateActionRequest",
         "type": "object"
       },
+      "ExecutionArtifact": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "media_type": {
+            "default": "text/plain",
+            "title": "Media Type",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "minimum": 0.0,
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "size"
+        ],
+        "title": "ExecutionArtifact",
+        "type": "object"
+      },
+      "ExecutionErrorCode": {
+        "enum": [
+          "connect_failed",
+          "auth_failed",
+          "host_key_changed",
+          "permission_denied",
+          "policy_denied",
+          "approval_required",
+          "timeout",
+          "canceled",
+          "process_failed",
+          "output_truncated",
+          "tool_missing",
+          "platform_unsupported",
+          "scope_denied"
+        ],
+        "title": "ExecutionErrorCode",
+        "type": "string"
+      },
+      "ExecutionResult": {
+        "properties": {
+          "artifact_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionArtifact"
+            },
+            "title": "Artifact Refs",
+            "type": "array"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "execution_id": {
+            "title": "Execution Id",
+            "type": "string"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "structured": {
+            "additionalProperties": true,
+            "title": "Structured",
+            "type": "object"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "execution_id",
+          "summary",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "ExecutionResult",
+        "type": "object"
+      },
       "FetchProviderModelsRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4344,6 +4657,68 @@
         "title": "ListWorkProjectSessionsResponse",
         "type": "object"
       },
+      "LocalPowerShellActionSchema": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "read_only": {
+            "default": true,
+            "title": "Read Only",
+            "type": "boolean"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "default": "L0"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "enabled"
+        ],
+        "title": "LocalPowerShellActionSchema",
+        "type": "object"
+      },
+      "LocalPowerShellRunRequest": {
+        "properties": {
+          "timeout_seconds": {
+            "default": 30,
+            "exclusiveMinimum": 0.0,
+            "maximum": 120.0,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "LocalPowerShellRunRequest",
+        "type": "object"
+      },
+      "LocalPowerShellRunResponse": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/ExecutionResult"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "LocalPowerShellRunResponse",
+        "type": "object"
+      },
       "ManagedHostImageSchema": {
         "properties": {
           "created_at": {
@@ -4383,6 +4758,44 @@
           "image_name"
         ],
         "title": "ManagedHostImageSchema",
+        "type": "object"
+      },
+      "ManagedHostKeySchema": {
+        "properties": {
+          "algorithm": {
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "fingerprint_sha256": {
+            "title": "Fingerprint Sha256",
+            "type": "string"
+          },
+          "host_id": {
+            "title": "Host Id",
+            "type": "integer"
+          },
+          "public_key": {
+            "title": "Public Key",
+            "type": "string"
+          },
+          "trusted": {
+            "default": false,
+            "title": "Trusted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "host_id",
+          "endpoint",
+          "algorithm",
+          "fingerprint_sha256",
+          "public_key"
+        ],
+        "title": "ManagedHostKeySchema",
         "type": "object"
       },
       "ManagedHostSchema": {
@@ -4793,6 +5206,22 @@
         "title": "QueryKnowledgeVectorsResponse",
         "type": "object"
       },
+      "QueryLocalPowerShellActionsResponse": {
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/LocalPowerShellActionSchema"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "title": "QueryLocalPowerShellActionsResponse",
+        "type": "object"
+      },
       "QueryManagedHostsResponse": {
         "properties": {
           "items": {
@@ -4915,6 +5344,22 @@
           "items"
         ],
         "title": "QuerySystemUsersResponse",
+        "type": "object"
+      },
+      "QueryToolpackToolsResponse": {
+        "properties": {
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolSchema"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tools"
+        ],
+        "title": "QueryToolpackToolsResponse",
         "type": "object"
       },
       "QueryWorkProjectsResponse": {
@@ -5826,6 +6271,14 @@
         "title": "ThinkingDeltaEvent",
         "type": "object"
       },
+      "ToolBackend": {
+        "enum": [
+          "local",
+          "ssh"
+        ],
+        "title": "ToolBackend",
+        "type": "string"
+      },
       "ToolCallEvent": {
         "properties": {
           "agent_name": {
@@ -5879,6 +6332,89 @@
           "name"
         ],
         "title": "ToolCallEvent",
+        "type": "object"
+      },
+      "ToolManifestSchema": {
+        "properties": {
+          "action_type": {
+            "maxLength": 128,
+            "minLength": 3,
+            "title": "Action Type",
+            "type": "string"
+          },
+          "backend": {
+            "$ref": "#/components/schemas/ToolBackend"
+          },
+          "category": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "default_timeout_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Default Timeout Seconds",
+            "type": "integer"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "executable": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Executable",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "title": "Input Schema",
+            "type": "object"
+          },
+          "max_timeout_seconds": {
+            "exclusiveMinimum": 0.0,
+            "title": "Max Timeout Seconds",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "output_schema": {
+            "additionalProperties": true,
+            "title": "Output Schema",
+            "type": "object"
+          },
+          "policy": {
+            "additionalProperties": true,
+            "title": "Policy",
+            "type": "object"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "default": "L1"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "backend",
+          "executable",
+          "category",
+          "action_type",
+          "default_timeout_seconds",
+          "max_timeout_seconds"
+        ],
+        "title": "ToolManifestSchema",
         "type": "object"
       },
       "ToolResultEvent": {
@@ -5974,6 +6510,204 @@
         "title": "ToolResultTypeSchema",
         "type": "string"
       },
+      "ToolRunCancelResponse": {
+        "properties": {
+          "canceled": {
+            "title": "Canceled",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "canceled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "canceled",
+          "status"
+        ],
+        "title": "ToolRunCancelResponse",
+        "type": "object"
+      },
+      "ToolRunRequest": {
+        "properties": {
+          "input": {
+            "additionalProperties": true,
+            "title": "Input",
+            "type": "object"
+          },
+          "sandbox_container_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Sandbox Container Id",
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds"
+          }
+        },
+        "required": [
+          "sandbox_container_id"
+        ],
+        "title": "ToolRunRequest",
+        "type": "object"
+      },
+      "ToolRunSnapshot": {
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sandbox_container_id": {
+            "title": "Sandbox Container Id",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ToolRunStatus"
+          },
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "tool_id",
+          "sandbox_container_id",
+          "status",
+          "started_at"
+        ],
+        "title": "ToolRunSnapshot",
+        "type": "object"
+      },
+      "ToolRunStatus": {
+        "enum": [
+          "running",
+          "completed",
+          "failed",
+          "canceled"
+        ],
+        "title": "ToolRunStatus",
+        "type": "string"
+      },
+      "ToolSchema": {
+        "properties": {
+          "availability_message": {
+            "default": "",
+            "title": "Availability Message",
+            "type": "string"
+          },
+          "available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "backend": {
+            "$ref": "#/components/schemas/ToolBackend"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "install_hint": {
+            "default": "",
+            "title": "Install Hint",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/ToolManifestSchema"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "backend",
+          "category",
+          "available",
+          "manifest"
+        ],
+        "title": "ToolSchema",
+        "type": "object"
+      },
+      "TrustManagedHostKeyRequest": {
+        "properties": {
+          "fingerprint_sha256": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Fingerprint Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fingerprint_sha256"
+        ],
+        "title": "TrustManagedHostKeyRequest",
+        "type": "object"
+      },
       "TurnBoundaryEvent": {
         "properties": {
           "agent_name": {
@@ -6012,6 +6746,27 @@
           "created_at"
         ],
         "title": "TurnBoundaryEvent",
+        "type": "object"
+      },
+      "UacHelperStatusResponse": {
+        "properties": {
+          "accepts_arbitrary_shell": {
+            "default": false,
+            "title": "Accepts Arbitrary Shell",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "default": "UAC Helper is designed but disabled in v1.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "UacHelperStatusResponse",
         "type": "object"
       },
       "UpdateAgentConfigRequest": {
@@ -8914,6 +9669,120 @@
         ]
       }
     },
+    "/api/hosts/{id}/host-key": {
+      "get": {
+        "operationId": "preview_managed_host_key_handler_api_hosts__id__host_key_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ManagedHostKeySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Managed Host Key Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
+    "/api/hosts/{id}/host-key/trust": {
+      "post": {
+        "operationId": "trust_managed_host_key_handler_api_hosts__id__host_key_trust_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrustManagedHostKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ManagedHostKeySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trust Managed Host Key Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
     "/api/hosts/{id}/images": {
       "get": {
         "operationId": "list_managed_host_images_handler_api_hosts__id__images_get",
@@ -9567,6 +10436,140 @@
         "summary": "Get Knowledge Vector Route",
         "tags": [
           "knowledges"
+        ]
+      }
+    },
+    "/api/local-actions/powershell/actions": {
+      "get": {
+        "operationId": "list_powershell_actions_route_api_local_actions_powershell_actions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryLocalPowerShellActionsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Powershell Actions Route",
+        "tags": [
+          "local-actions"
+        ]
+      }
+    },
+    "/api/local-actions/powershell/actions/{action_id}/run": {
+      "post": {
+        "operationId": "run_powershell_action_route_api_local_actions_powershell_actions__action_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalPowerShellRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_LocalPowerShellRunResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Local action not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Powershell Action Route",
+        "tags": [
+          "local-actions"
+        ]
+      }
+    },
+    "/api/local-actions/uac-helper/status": {
+      "get": {
+        "operationId": "uac_helper_status_route_api_local_actions_uac_helper_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_UacHelperStatusResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uac Helper Status Route",
+        "tags": [
+          "local-actions"
         ]
       }
     },
@@ -11796,6 +12799,302 @@
         "summary": "Update System User Handler",
         "tags": [
           "system-users"
+        ]
+      }
+    },
+    "/api/toolpack/artifacts/{artifact_id}": {
+      "get": {
+        "operationId": "download_tool_artifact_route_api_toolpack_artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Toolpack resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Tool Artifact Route",
+        "tags": [
+          "toolpack"
+        ]
+      }
+    },
+    "/api/toolpack/runs/{run_id}": {
+      "get": {
+        "operationId": "get_tool_run_route_api_toolpack_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ToolRunSnapshot_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Toolpack resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Tool Run Route",
+        "tags": [
+          "toolpack"
+        ]
+      }
+    },
+    "/api/toolpack/runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_tool_run_route_api_toolpack_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ToolRunCancelResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Toolpack resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Tool Run Route",
+        "tags": [
+          "toolpack"
+        ]
+      }
+    },
+    "/api/toolpack/tools": {
+      "get": {
+        "operationId": "list_tools_route_api_toolpack_tools_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sandbox_container_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sandbox Container Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryToolpackToolsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tools Route",
+        "tags": [
+          "toolpack"
+        ]
+      }
+    },
+    "/api/toolpack/tools/{tool_id}/runs": {
+      "post": {
+        "operationId": "start_tool_run_route_api_toolpack_tools__tool_id__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_id",
+            "required": true,
+            "schema": {
+              "title": "Tool Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ToolRunSnapshot_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Toolpack resource not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Tool Run Route",
+        "tags": [
+          "toolpack"
         ]
       }
     },

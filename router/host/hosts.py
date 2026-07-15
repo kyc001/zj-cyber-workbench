@@ -6,8 +6,10 @@ from handler.host.hosts import (
     delete_managed_host_image_handler,
     handle_host_shell_stream,
     list_managed_host_images_handler,
+    preview_managed_host_key_handler,
     pull_managed_host_images_handler,
     query_managed_hosts_handler,
+    trust_managed_host_key_handler,
     update_managed_host_handler,
 )
 from middleware.auth import require_admin
@@ -16,12 +18,12 @@ from schema.common.responses import CommonResponse
 from schema.host.hosts import (
     DeleteManagedHostResponse,
     ListManagedHostImagesResponse,
+    ManagedHostKeySchema,
     ManagedHostSchema,
     PullManagedHostImagesResponse,
     QueryManagedHostsResponse,
 )
 from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
-
 
 NOT_FOUND_RESPONSE = not_found_response("Managed host")
 ADMIN_ONLY = [Depends(require_admin)]
@@ -71,6 +73,24 @@ router.add_api_route(
     dependencies=ADMIN_ONLY,
     response_model=CommonResponse[QueryManagedHostsResponse],
     responses=COMMON_ERROR_RESPONSES,
+)
+
+router.add_api_route(
+    "/{id}/host-key",
+    preview_managed_host_key_handler,
+    methods=["GET"],
+    dependencies=ADMIN_ONLY,
+    response_model=CommonResponse[ManagedHostKeySchema],
+    responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/{id}/host-key/trust",
+    trust_managed_host_key_handler,
+    methods=["POST"],
+    dependencies=ADMIN_ONLY,
+    response_model=CommonResponse[ManagedHostKeySchema],
+    responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(

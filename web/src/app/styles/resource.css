@@ -752,6 +752,40 @@
   width: 100%;
 }
 
+.host-key-confirm {
+  display: grid;
+  gap: 10px;
+}
+
+.host-key-confirm dl {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.host-key-confirm dt {
+  color: var(--z-text-muted);
+}
+
+.host-key-confirm dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.host-key-confirm pre {
+  max-height: 140px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--z-border-subtle);
+  border-radius: 8px;
+  background: var(--z-surface-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .host-cert-textarea {
   height: 96px;
 }

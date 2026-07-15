@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Toast, Tooltip } from "@douyinfe/semi-ui";
 import {
   Activity,
   Box,
@@ -172,8 +172,9 @@ export function PlaygroundPage() {
   }, [loadSandboxes]);
 
   useEffect(() => {
+    if (!activeSessionId) return;
     setSandboxContainerId(activeSessionSummary?.selected_sandbox_container_id ?? null);
-  }, [activeSessionSummary?.selected_sandbox_container_id]);
+  }, [activeSessionId, activeSessionSummary?.selected_sandbox_container_id]);
 
   useEffect(() => {
     syncContainerWindows(selectedSandboxContainer);
@@ -453,6 +454,10 @@ export function PlaygroundPage() {
   }, [headerNode, setHeaderActions]);
 
   const handleSend = async (content: AgentInputPart[]) => {
+    if (selectedSandboxContainer && selectedSandboxContainer.status !== SANDBOX_CONTAINER_STATUS.RUNNING) {
+      Toast.warning("请先启动所选执行工作区，再发送给 Agent");
+      return false;
+    }
     try {
       await send(content, activeSessionId, sandboxContainerId);
       return true;

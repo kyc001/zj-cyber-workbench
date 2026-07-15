@@ -80,6 +80,19 @@ class DeleteManagedHostResponse(BaseModel):
     id: int
 
 
+class ManagedHostKeySchema(BaseModel):
+    host_id: int
+    endpoint: str
+    algorithm: str
+    fingerprint_sha256: str
+    public_key: str
+    trusted: bool = False
+
+
+class TrustManagedHostKeyRequest(BaseModel):
+    fingerprint_sha256: str = Field(min_length=1, max_length=128)
+
+
 class QueryManagedHostsResponse(PaginatedResponse[ManagedHostSchema]):
     pass
 

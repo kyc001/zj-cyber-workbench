@@ -366,6 +366,40 @@ export interface paths {
         patch: operations["update_managed_host_handler_api_hosts__id__patch"];
         trace?: never;
     };
+    "/api/hosts/{id}/host-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview Managed Host Key Handler */
+        get: operations["preview_managed_host_key_handler_api_hosts__id__host_key_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hosts/{id}/host-key/trust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trust Managed Host Key Handler */
+        post: operations["trust_managed_host_key_handler_api_hosts__id__host_key_trust_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hosts/{id}/images": {
         parameters: {
             query?: never;
@@ -513,6 +547,57 @@ export interface paths {
         };
         /** Get Knowledge Vector Route */
         get: operations["get_knowledge_vector_route_api_knowledges_vectors__vector_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/local-actions/powershell/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Powershell Actions Route */
+        get: operations["list_powershell_actions_route_api_local_actions_powershell_actions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/local-actions/powershell/actions/{action_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Powershell Action Route */
+        post: operations["run_powershell_action_route_api_local_actions_powershell_actions__action_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/local-actions/uac-helper/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uac Helper Status Route */
+        get: operations["uac_helper_status_route_api_local_actions_uac_helper_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1001,6 +1086,91 @@ export interface paths {
         head?: never;
         /** Update System User Handler */
         patch: operations["update_system_user_handler_api_system_users__id__patch"];
+        trace?: never;
+    };
+    "/api/toolpack/artifacts/{artifact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Tool Artifact Route */
+        get: operations["download_tool_artifact_route_api_toolpack_artifacts__artifact_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/toolpack/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Tool Run Route */
+        get: operations["get_tool_run_route_api_toolpack_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/toolpack/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Tool Run Route */
+        post: operations["cancel_tool_run_route_api_toolpack_runs__run_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/toolpack/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tools Route */
+        get: operations["list_tools_route_api_toolpack_tools_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/toolpack/tools/{tool_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Tool Run Route */
+        post: operations["start_tool_run_route_api_toolpack_tools__tool_id__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/work-projects": {
@@ -2083,6 +2253,34 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[LocalPowerShellRunResponse] */
+        CommonResponse_LocalPowerShellRunResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["LocalPowerShellRunResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[ManagedHostKeySchema] */
+        CommonResponse_ManagedHostKeySchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["ManagedHostKeySchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[ManagedHostSchema] */
         CommonResponse_ManagedHostSchema_: {
             /**
@@ -2167,6 +2365,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QueryLocalPowerShellActionsResponse] */
+        CommonResponse_QueryLocalPowerShellActionsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryLocalPowerShellActionsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QueryManagedHostsResponse] */
         CommonResponse_QueryManagedHostsResponse_: {
             /**
@@ -2217,6 +2429,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["QuerySystemUsersResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryToolpackToolsResponse] */
+        CommonResponse_QueryToolpackToolsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryToolpackToolsResponse"] | null;
             /**
              * Message
              * @default success
@@ -2329,6 +2555,48 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["TestEgressProxyResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[ToolRunCancelResponse] */
+        CommonResponse_ToolRunCancelResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["ToolRunCancelResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[ToolRunSnapshot] */
+        CommonResponse_ToolRunSnapshot_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["ToolRunSnapshot"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[UacHelperStatusResponse] */
+        CommonResponse_UacHelperStatusResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["UacHelperStatusResponse"] | null;
             /**
              * Message
              * @default success
@@ -2479,10 +2747,20 @@ export interface components {
         ContainerFileType: "file" | "directory" | "symlink";
         /** ContainerFileUploadItem */
         ContainerFileUploadItem: {
+            /**
+             * Backup Path
+             * @default
+             */
+            backup_path: string;
             /** Name */
             name: string;
             /** Path */
             path: string;
+            /**
+             * Sha256
+             * @default
+             */
+            sha256: string;
             /** Size */
             size: number;
         };
@@ -2900,6 +3178,58 @@ export interface components {
             environment: components["schemas"]["TargetEnvironment"];
             scope: components["schemas"]["AuthorizationScope"];
         };
+        /** ExecutionArtifact */
+        ExecutionArtifact: {
+            /** Id */
+            id: string;
+            /**
+             * Media Type
+             * @default text/plain
+             */
+            media_type: string;
+            /** Path */
+            path: string;
+            /** Size */
+            size: number;
+        };
+        /**
+         * ExecutionErrorCode
+         * @enum {string}
+         */
+        ExecutionErrorCode: "connect_failed" | "auth_failed" | "host_key_changed" | "permission_denied" | "policy_denied" | "approval_required" | "timeout" | "canceled" | "process_failed" | "output_truncated" | "tool_missing" | "platform_unsupported" | "scope_denied";
+        /** ExecutionResult */
+        ExecutionResult: {
+            /** Artifact Refs */
+            artifact_refs?: components["schemas"]["ExecutionArtifact"][];
+            error_code?: components["schemas"]["ExecutionErrorCode"] | null;
+            /** Execution Id */
+            execution_id: string;
+            /** Exit Code */
+            exit_code?: number | null;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+            /** Ok */
+            ok: boolean;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Structured */
+            structured?: {
+                [key: string]: unknown;
+            };
+            /** Summary */
+            summary: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
         /** FetchProviderModelsRequest */
         FetchProviderModelsRequest: {
             /**
@@ -3246,6 +3576,39 @@ export interface components {
             /** Items */
             items: components["schemas"]["AgentSessionSummarySchema"][];
         };
+        /** LocalPowerShellActionSchema */
+        LocalPowerShellActionSchema: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Read Only
+             * @default true
+             */
+            read_only: boolean;
+            /** @default L0 */
+            risk_level: components["schemas"]["RiskLevel"];
+        };
+        /** LocalPowerShellRunRequest */
+        LocalPowerShellRunRequest: {
+            /**
+             * Timeout Seconds
+             * @default 30
+             */
+            timeout_seconds: number;
+        };
+        /** LocalPowerShellRunResponse */
+        LocalPowerShellRunResponse: {
+            result: components["schemas"]["ExecutionResult"];
+        };
         /** ManagedHostImageSchema */
         ManagedHostImageSchema: {
             /** Created At */
@@ -3268,6 +3631,24 @@ export interface components {
              * @default 0
              */
             image_size: number;
+        };
+        /** ManagedHostKeySchema */
+        ManagedHostKeySchema: {
+            /** Algorithm */
+            algorithm: string;
+            /** Endpoint */
+            endpoint: string;
+            /** Fingerprint Sha256 */
+            fingerprint_sha256: string;
+            /** Host Id */
+            host_id: number;
+            /** Public Key */
+            public_key: string;
+            /**
+             * Trusted
+             * @default false
+             */
+            trusted: boolean;
         };
         /** ManagedHostSchema */
         ManagedHostSchema: {
@@ -3443,6 +3824,11 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** QueryLocalPowerShellActionsResponse */
+        QueryLocalPowerShellActionsResponse: {
+            /** Actions */
+            actions: components["schemas"]["LocalPowerShellActionSchema"][];
+        };
         /** QueryManagedHostsResponse */
         QueryManagedHostsResponse: {
             /** Items */
@@ -3486,6 +3872,11 @@ export interface components {
             size: number;
             /** Total */
             total: number;
+        };
+        /** QueryToolpackToolsResponse */
+        QueryToolpackToolsResponse: {
+            /** Tools */
+            tools: components["schemas"]["ToolSchema"][];
         };
         /** QueryWorkProjectsResponse */
         QueryWorkProjectsResponse: {
@@ -3994,6 +4385,11 @@ export interface components {
              */
             type: "thinking_delta";
         };
+        /**
+         * ToolBackend
+         * @enum {string}
+         */
+        ToolBackend: "local" | "ssh";
         /** ToolCallEvent */
         ToolCallEvent: {
             /**
@@ -4034,6 +4430,43 @@ export interface components {
              * @enum {string}
              */
             type: "tool_call";
+        };
+        /** ToolManifestSchema */
+        ToolManifestSchema: {
+            /** Action Type */
+            action_type: string;
+            backend: components["schemas"]["ToolBackend"];
+            /** Category */
+            category: string;
+            /** Default Timeout Seconds */
+            default_timeout_seconds: number;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Executable */
+            executable: string;
+            /** Id */
+            id: string;
+            /** Input Schema */
+            input_schema?: {
+                [key: string]: unknown;
+            };
+            /** Max Timeout Seconds */
+            max_timeout_seconds: number;
+            /** Name */
+            name: string;
+            /** Output Schema */
+            output_schema?: {
+                [key: string]: unknown;
+            };
+            /** Policy */
+            policy?: {
+                [key: string]: unknown;
+            };
+            /** @default L1 */
+            risk_level: components["schemas"]["RiskLevel"];
         };
         /** ToolResultEvent */
         ToolResultEvent: {
@@ -4100,6 +4533,82 @@ export interface components {
          * @enum {string}
          */
         ToolResultTypeSchema: "skill_detail" | "work_project" | "report";
+        /** ToolRunCancelResponse */
+        ToolRunCancelResponse: {
+            /** Canceled */
+            canceled: boolean;
+            /** Run Id */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "completed" | "failed" | "canceled";
+        };
+        /** ToolRunRequest */
+        ToolRunRequest: {
+            /** Input */
+            input?: {
+                [key: string]: unknown;
+            };
+            /** Sandbox Container Id */
+            sandbox_container_id: number;
+            /** Timeout Seconds */
+            timeout_seconds?: number | null;
+        };
+        /** ToolRunSnapshot */
+        ToolRunSnapshot: {
+            /** Finished At */
+            finished_at?: string | null;
+            result?: components["schemas"]["ExecutionResult"] | null;
+            /** Run Id */
+            run_id: string;
+            /** Sandbox Container Id */
+            sandbox_container_id: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            status: components["schemas"]["ToolRunStatus"];
+            /** Tool Id */
+            tool_id: string;
+        };
+        /**
+         * ToolRunStatus
+         * @enum {string}
+         */
+        ToolRunStatus: "running" | "completed" | "failed" | "canceled";
+        /** ToolSchema */
+        ToolSchema: {
+            /**
+             * Availability Message
+             * @default
+             */
+            availability_message: string;
+            /** Available */
+            available: boolean | null;
+            backend: components["schemas"]["ToolBackend"];
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /**
+             * Install Hint
+             * @default
+             */
+            install_hint: string;
+            manifest: components["schemas"]["ToolManifestSchema"];
+            /** Name */
+            name: string;
+        };
+        /** TrustManagedHostKeyRequest */
+        TrustManagedHostKeyRequest: {
+            /** Fingerprint Sha256 */
+            fingerprint_sha256: string;
+        };
         /** TurnBoundaryEvent */
         TurnBoundaryEvent: {
             /**
@@ -4132,6 +4641,24 @@ export interface components {
              * @enum {string}
              */
             type: "turn_boundary";
+        };
+        /** UacHelperStatusResponse */
+        UacHelperStatusResponse: {
+            /**
+             * Accepts Arbitrary Shell
+             * @default false
+             */
+            accepts_arbitrary_shell: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Reason
+             * @default UAC Helper is designed but disabled in v1.
+             */
+            reason: string;
         };
         /** UpdateAgentConfigRequest */
         UpdateAgentConfigRequest: {
@@ -5818,6 +6345,90 @@ export interface operations {
             };
         };
     };
+    preview_managed_host_key_handler_api_hosts__id__host_key_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ManagedHostKeySchema_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    trust_managed_host_key_handler_api_hosts__id__host_key_trust_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrustManagedHostKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ManagedHostKeySchema_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     list_managed_host_images_handler_api_hosts__id__images_get: {
         parameters: {
             query?: never;
@@ -6243,6 +6854,117 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_powershell_actions_route_api_local_actions_powershell_actions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryLocalPowerShellActionsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    run_powershell_action_route_api_local_actions_powershell_actions__action_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocalPowerShellRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_LocalPowerShellRunResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Local action not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    uac_helper_status_route_api_local_actions_uac_helper_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_UacHelperStatusResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -7896,6 +8618,228 @@ export interface operations {
                 };
             };
             /** @description System user not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    download_tool_artifact_route_api_toolpack_artifacts__artifact_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Toolpack resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_tool_run_route_api_toolpack_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ToolRunSnapshot_"];
+                };
+            };
+            /** @description Toolpack resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    cancel_tool_run_route_api_toolpack_runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ToolRunCancelResponse_"];
+                };
+            };
+            /** @description Toolpack resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_tools_route_api_toolpack_tools_get: {
+        parameters: {
+            query?: {
+                sandbox_container_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryToolpackToolsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    start_tool_run_route_api_toolpack_tools__tool_id__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tool_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToolRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ToolRunSnapshot_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Toolpack resource not found */
             404: {
                 headers: {
                     [name: string]: unknown;

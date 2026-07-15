@@ -2,15 +2,20 @@ import asyncio
 import json
 from http import HTTPStatus
 
-from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
+from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import status as ws_status
 from fastapi.websockets import WebSocketState
 
 from handler import (
     authenticate_local_websocket,
     bounded_int,
-    cancel_ws_task as _cancel_task,
-    close_ws_silently as _close_silently,
     finish_ws_reader_task,
+)
+from handler import (
+    cancel_ws_task as _cancel_task,
+)
+from handler import (
+    close_ws_silently as _close_silently,
 )
 from logger import get_logger
 from schema.common.responses import CommonResponse
@@ -23,6 +28,7 @@ from schema.host.hosts import (
     PullManagedHostImagesRequest,
     PullManagedHostImagesResponse,
     QueryManagedHostsResponse,
+    TrustManagedHostKeyRequest,
     UpdateManagedHostRequest,
 )
 from schema.system_user.users import SystemUserRole
@@ -32,8 +38,10 @@ from service.host.hosts import (
     delete_managed_host,
     delete_managed_host_image,
     list_managed_host_images,
+    preview_managed_host_key,
     pull_managed_host_images,
     query_managed_hosts,
+    trust_managed_host_key,
     update_managed_host,
 )
 from service.host.shell import (
@@ -44,7 +52,6 @@ from service.host.shell import (
     resolve_shell_host,
     write_host_shell,
 )
-
 
 logger = get_logger(__name__)
 
@@ -103,6 +110,30 @@ async def query_managed_hosts_handler(page: int, size: int, keyword: str) -> Com
             [_managed_host_schema(host) for host in hosts.items],
         ),
     ))
+
+
+async def preview_managed_host_key_handler(id: int) -> CommonResponse:
+    try:
+        key = await preview_managed_host_key(id)
+    except Exception as exc:
+        logger.warning("preview host key failed: id=%s error=%s", id, exc)
+        return CommonResponse(code=HTTPStatus.BAD_GATEWAY.value, message="failed to read SSH host key")
+    if key is None:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+    return CommonResponse(data=key)
+
+
+async def trust_managed_host_key_handler(id: int, request: TrustManagedHostKeyRequest) -> CommonResponse:
+    try:
+        key = await trust_managed_host_key(id, request.fingerprint_sha256)
+    except ValueError as exc:
+        return CommonResponse(code=HTTPStatus.CONFLICT.value, message=str(exc))
+    except Exception as exc:
+        logger.warning("trust host key failed: id=%s error=%s", id, exc)
+        return CommonResponse(code=HTTPStatus.BAD_GATEWAY.value, message="failed to trust SSH host key")
+    if key is None:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+    return CommonResponse(data=key, message="SSH host key trusted")
 
 
 async def list_managed_host_images_handler(id: int) -> CommonResponse:
@@ -216,7 +247,10 @@ async def _forward_shell_output(websocket: WebSocket, shell: ShellSession) -> No
         data = await read_host_shell(shell)
         if not data:
             return
-        if websocket.client_state != WebSocketState.CONNECTED or websocket.application_state != WebSocketState.CONNECTED:
+        if (
+            websocket.client_state != WebSocketState.CONNECTED
+            or websocket.application_state != WebSocketState.CONNECTED
+        ):
             return
         await websocket.send_bytes(data)
 

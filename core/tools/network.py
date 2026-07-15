@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import os
 import re
@@ -175,8 +176,8 @@ async def port_probe(
 @function_tool
 async def ssh_command(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    target: str,
-    command: str,
+    target: str = "",
+    command: str = "",
     username: str = "",
     port: int = 22,
     credential_ref: str = "",
@@ -184,27 +185,41 @@ async def ssh_command(
 ) -> str:
     """通过已配置 Host Key 和凭据引用执行远程只读 SSH 命令；不接收明文密码。"""
     try:
-        host, effective_port = _ssh_target_host_port(target, port)
-        normalized_target = f"ssh://{host}:{effective_port}"
+        if not command.strip():
+            return _error("SSH needs command")
+        host, effective_port = _ssh_target_host_port(target, port) if target.strip() else (None, None)
+        resolved_host, resolved_port, resolved_username, resolved_credential, credential_source = (
+            await _resolve_ssh_credential_for_context(
+                ctx.context,
+                target_host=host,
+                target_port=effective_port,
+                username=username,
+                credential_ref=credential_ref,
+            )
+        )
+        normalized_target = f"ssh://{resolved_host}:{resolved_port}"
         await authorize_network_action_runtime(
             ctx.context,
             action_type="ssh.command",
             target=normalized_target,
             risk=RiskLevel.L2,
             reason="在远程主机执行 SSH 命令",
-            details={"command": command, "username": username, "port": effective_port},
+            details={
+                "command": command,
+                "username": resolved_username,
+                "port": resolved_port,
+                "credential_source": credential_source,
+            },
         )
-        if not username or not command.strip():
-            return _error("SSH 需要 username 和 command")
         import asyncssh
 
         from config import WORKSPACE
 
         known_hosts = WORKSPACE / "ssh" / "known_hosts"
-        credential = _load_ssh_credential(credential_ref)
+        credential = resolved_credential
         connection_kwargs: dict[str, object] = {
-            "port": effective_port,
-            "username": credential.get("username") or username,
+            "port": resolved_port,
+            "username": resolved_username,
             "known_hosts": str(known_hosts),
             "connect_timeout": max(1, min(timeout_seconds, 30)),
         }
@@ -212,7 +227,7 @@ async def ssh_command(
             connection_kwargs["password"] = credential["password"]
         if credential.get("private_key"):
             connection_kwargs["client_keys"] = [credential["private_key"]]
-        connection = await asyncssh.connect(host, **connection_kwargs)
+        connection = await asyncssh.connect(resolved_host, **connection_kwargs)
         try:
             result = await asyncio.wait_for(
                 connection.run(command, check=False), timeout=max(1, min(timeout_seconds, 30))
@@ -223,7 +238,7 @@ async def ssh_command(
         return json.dumps(
             {
                 "ok": result.exit_status == 0,
-                "target": normalized_target,
+                "target": f"ssh://{resolved_host}:{resolved_port}",
                 "exit_code": result.exit_status,
                 "stdout": result.stdout[:_MAX_BODY_BYTES],
                 "stderr": result.stderr[:_MAX_BODY_BYTES],
@@ -280,6 +295,69 @@ def _ssh_target_host_port(target: str, port: int) -> tuple[str, int]:
     if not 1 <= int(effective_port) <= 65535:
         raise ValueError("SSH target port is invalid")
     return parsed.hostname, int(effective_port)
+
+
+async def _resolve_ssh_credential_for_context(
+    context: AgentRuntimeContext,
+    *,
+    target_host: str | None,
+    target_port: int | None,
+    username: str,
+    credential_ref: str,
+) -> tuple[str, int, str, dict[str, str], str]:
+    """Resolve SSH identity without accepting plaintext secrets in agent tool arguments."""
+    if credential_ref.strip():
+        if target_host is None or target_port is None:
+            raise ValueError("SSH needs target when using credential_ref")
+        credential = _load_ssh_credential(credential_ref)
+        resolved_username = credential.get("username") or username.strip()
+        if not resolved_username:
+            raise ValueError("SSH needs username or a credential_ref with username")
+        return target_host, target_port, resolved_username, credential, "credential_ref"
+
+    if context.sandbox_container_id is not None:
+        from service.sandbox.remote_runtime import is_local_host, resolve_container_host
+
+        _, managed_host = await resolve_container_host(context.sandbox_container_id)
+        if not is_local_host(managed_host):
+            if (
+                target_host is not None
+                and target_port is not None
+                and not _same_ssh_endpoint(target_host, target_port, managed_host.ip_address, managed_host.ssh_port)
+            ):
+                raise ValueError("SSH target does not match the current SSH Workspace host")
+            if not managed_host.host_account:
+                raise ValueError("Current SSH Workspace host has no account")
+            return (
+                managed_host.ip_address,
+                managed_host.ssh_port,
+                managed_host.host_account,
+                {"password": managed_host.host_password or ""},
+                "managed_host",
+            )
+
+    if target_host is None or target_port is None:
+        raise ValueError("SSH needs target, or select a Workspace bound to an SSH host")
+    resolved_username = username.strip()
+    if not resolved_username:
+        raise ValueError("SSH needs username, or select a Workspace bound to an SSH host")
+    return target_host, target_port, resolved_username, {}, "tool_arguments"
+
+
+def _same_ssh_endpoint(target_host: str, target_port: int, managed_host: str, managed_port: int) -> bool:
+    if int(target_port) != int(managed_port):
+        return False
+    left = target_host.strip().lower()
+    right = managed_host.strip().lower()
+    if left == right:
+        return True
+    aliases = {"localhost": "127.0.0.1"}
+    if aliases.get(left, left) == aliases.get(right, right):
+        return True
+    try:
+        return ipaddress.ip_address(left) == ipaddress.ip_address(right)
+    except ValueError:
+        return False
 
 
 def _host_scope_url(target: str, host: str, port: int | None) -> str:

@@ -1,7 +1,15 @@
-import { Button, Popconfirm } from "@douyinfe/semi-ui";
-import { Pencil, Server, SquareTerminal, Trash2 } from "lucide-react";
+import { Button, Modal, Popconfirm } from "@douyinfe/semi-ui";
+import { Pencil, Server, ShieldCheck, SquareTerminal, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { createManagedHost, deleteManagedHost, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
+import { showApiError, showApiSuccess } from "../../shared/api/feedback";
+import {
+  createManagedHost,
+  deleteManagedHost,
+  previewManagedHostKey,
+  queryManagedHosts,
+  trustManagedHostKey,
+  updateManagedHost,
+} from "../../shared/api/hosts";
 import type { ManagedHost } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
@@ -16,6 +24,7 @@ import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { HostFormModal } from "./HostFormModal";
 
 type ModalState = { mode: "create" } | { mode: "edit"; host: ManagedHost } | null;
+const DEFAULT_LOCAL_HOST_ID = 1;
 
 export function HostsPage() {
   const {
@@ -23,6 +32,7 @@ export function HostsPage() {
     setKeyword, search, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<ManagedHost>({ query: queryManagedHosts });
   const [modal, setModal] = useState<ModalState>(null);
+  const [trustingHostId, setTrustingHostId] = useState<number | null>(null);
   const { openHostShell } = useContainerShell();
   const { run: deleteHost, busyId: deletingHostId } = useResourceAction<ManagedHost>(
     (host) => deleteManagedHost(host.id),
@@ -43,6 +53,47 @@ export function HostsPage() {
       await loadHosts();
     },
   });
+
+  const trustHostKey = async (host: ManagedHost) => {
+    setTrustingHostId(host.id);
+    try {
+      const response = await previewManagedHostKey(host.id);
+      const key = response.data;
+      if (!key) return;
+      Modal.confirm({
+        title: "信任 SSH Host Key",
+        okText: key.trusted ? "重新信任当前指纹" : "信任当前指纹",
+        cancelText: UI_TEXT.cancel,
+        content: (
+          <div className="host-key-confirm">
+            <p>请确认这是目标主机当前 SSH 指纹。确认后会写入本机 known_hosts。</p>
+            <dl>
+              <dt>Endpoint</dt>
+              <dd>{key.endpoint}</dd>
+              <dt>算法</dt>
+              <dd>{key.algorithm}</dd>
+              <dt>SHA256 指纹</dt>
+              <dd>{key.fingerprint_sha256}</dd>
+            </dl>
+            <pre>{key.public_key}</pre>
+          </div>
+        ),
+        onOk: async () => {
+          try {
+            const trusted = await trustManagedHostKey(host.id, key.fingerprint_sha256);
+            showApiSuccess(trusted);
+          } catch (error) {
+            showApiError(error);
+            throw error;
+          }
+        },
+      });
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setTrustingHostId(null);
+    }
+  };
 
   const summary = useMemo(
     () => hosts.reduce(
@@ -76,6 +127,12 @@ export function HostsPage() {
         <RowActions>
           <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
             aria-label={`Connect shell for ${host.ip_address}`} onClick={() => openHostShell(host)}
+          />
+          <Button icon={<ShieldCheck size={15} />} theme="borderless" type="tertiary"
+            disabled={host.id === DEFAULT_LOCAL_HOST_ID}
+            loading={trustingHostId === host.id}
+            aria-label={`Trust host key for ${host.ip_address}`}
+            onClick={() => void trustHostKey(host)}
           />
           <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
             aria-label={`Edit ${host.ip_address}`} onClick={() => setModal({ mode: "edit", host })}

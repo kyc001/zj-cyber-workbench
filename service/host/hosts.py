@@ -4,15 +4,16 @@ import getpass
 from dataclasses import dataclass
 from datetime import datetime
 
+import asyncssh
 from sqlalchemy import String, cast, or_
 from sqlmodel import select
 
 from database import get_async_session
 from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
-from schema.host.hosts import ManagedHostImageSchema, PullManagedHostImageResultSchema
+from schema.host.hosts import ManagedHostImageSchema, ManagedHostKeySchema, PullManagedHostImageResultSchema
 from service.common.pagination import Page, paginate_statement
-
+from service.host.connection import known_hosts_path
 
 DEFAULT_LOCAL_HOST_ID = 1
 
@@ -114,6 +115,26 @@ async def query_managed_host_by_id(id: int) -> ManagedHost | None:
         return await session.get(ManagedHost, id)
 
 
+async def preview_managed_host_key(id: int) -> ManagedHostKeySchema | None:
+    host = await query_managed_host_by_id(id)
+    if host is None:
+        return None
+    key = await _fetch_host_key(host)
+    return _managed_host_key_schema(host, key)
+
+
+async def trust_managed_host_key(id: int, fingerprint_sha256: str) -> ManagedHostKeySchema | None:
+    host = await query_managed_host_by_id(id)
+    if host is None:
+        return None
+    key = await _fetch_host_key(host)
+    fingerprint = key.get_fingerprint("sha256")
+    if fingerprint != fingerprint_sha256.strip():
+        raise ValueError("host key fingerprint changed; refresh and verify again")
+    _write_known_host_key(host, key)
+    return _managed_host_key_schema(host, key, trusted=True)
+
+
 async def ensure_local_managed_host() -> ManagedHost:
     username = _detect_local_username()
     async with get_async_session() as session:
@@ -153,10 +174,64 @@ async def pull_managed_host_images(id: int, image_names: list[str]) -> list[Pull
     host = await query_managed_host_by_id(id)
     if host is None:
         return None
-    return [PullManagedHostImageResultSchema(image_name=name, success=False, message="Docker is disabled; use a local tool workspace") for name in image_names]
+    return [
+        PullManagedHostImageResultSchema(
+            image_name=name,
+            success=False,
+            message="Docker is disabled; use a local tool workspace",
+        )
+        for name in image_names
+    ]
 
 
 async def delete_managed_host_image(id: int, image_id: str, force: bool = False) -> str | None:
     if await query_managed_host_by_id(id) is None:
         return "managed host not found"
     return "Docker image management is disabled in portable mode"
+
+
+async def _fetch_host_key(host: ManagedHost) -> asyncssh.SSHKey:
+    key = await asyncssh.get_server_host_key(host.ip_address, port=host.ssh_port)
+    if key is None:
+        raise RuntimeError("SSH server did not present a host key")
+    return key
+
+
+def _managed_host_key_schema(
+    host: ManagedHost,
+    key: asyncssh.SSHKey,
+    trusted: bool | None = None,
+) -> ManagedHostKeySchema:
+    public_key = key.export_public_key("openssh").decode("ascii")
+    if trusted is None:
+        trusted = _known_hosts_contains(_known_host_marker(host), public_key)
+    return ManagedHostKeySchema(
+        host_id=host.id or 0,
+        endpoint=_known_host_marker(host),
+        algorithm=key.get_algorithm(),
+        fingerprint_sha256=key.get_fingerprint("sha256"),
+        public_key=public_key,
+        trusted=trusted,
+    )
+
+
+def _write_known_host_key(host: ManagedHost, key: asyncssh.SSHKey) -> None:
+    marker = _known_host_marker(host)
+    public_key = key.export_public_key("openssh").decode("ascii")
+    path = known_hosts_path()
+    lines = path.read_text(encoding="utf-8").splitlines()
+    kept = [line for line in lines if not line.startswith(f"{marker} ")]
+    kept.append(f"{marker} {public_key}")
+    path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
+def _known_hosts_contains(marker: str, public_key: str) -> bool:
+    path = known_hosts_path()
+    expected = f"{marker} {public_key}"
+    return expected in path.read_text(encoding="utf-8").splitlines()
+
+
+def _known_host_marker(host: ManagedHost) -> str:
+    if host.ssh_port == 22:
+        return host.ip_address
+    return f"[{host.ip_address}]:{host.ssh_port}"
