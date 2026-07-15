@@ -1,4 +1,5 @@
 import asyncio
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -101,6 +102,40 @@ class RuntimePermissionTests(unittest.IsolatedAsyncioTestCase):
             risk_level=RiskLevel.L2,
         )
         self.assertEqual([], await runtime_permissions.list_pending(requester_id=1))
+
+    async def test_execution_audit_uses_runtime_permission_source(self) -> None:
+        context = self.context()
+        target = "https://example.test"
+        first = asyncio.create_task(
+            authorize_network_action_runtime(
+                context,
+                action_type="security.web.scan",
+                target=target,
+                risk=RiskLevel.L2,
+            )
+        )
+        await asyncio.sleep(0)
+        request = (await runtime_permissions.list_pending(requester_id=1))[0]
+        await runtime_permissions.decide(
+            request.id,
+            requester_id=1,
+            decision=RuntimePermissionDecision.ALWAYS_ALLOW,
+        )
+        with patch("core.execution_guard._AUDIT_PATH", runtime_permissions._AUDIT_PATH):
+            await first
+            await authorize_network_action_runtime(
+                context,
+                action_type="security.web.scan",
+                target=target,
+                risk=RiskLevel.L2,
+            )
+
+        entries = [
+            json.loads(line)
+            for line in runtime_permissions._AUDIT_PATH.read_text(encoding="utf-8").splitlines()
+        ]
+        execution_entries = [entry for entry in entries if "reason_codes" in entry]
+        self.assertEqual(["always_allow"], execution_entries[-1]["reason_codes"])
 
     async def test_full_access_neither_prompts_nor_audits(self) -> None:
         get_config().permissions.mode = PermissionMode.FULL_ACCESS

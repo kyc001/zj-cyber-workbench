@@ -39,13 +39,13 @@ async def require_permission(
     reason: str,
     risk_level: RiskLevel,
     details: dict[str, object] | None = None,
-) -> None:
+) -> str | None:
     settings = get_config().permissions
     if settings.mode == PermissionMode.FULL_ACCESS:
         return
     if _rule_matches(action_type, target):
         _audit(context, action_type, target, "allow", "always_allow")
-        return
+        return RuntimePermissionDecision.ALWAYS_ALLOW.value
 
     request = RuntimePermissionRequest(
         session_id=context.session_id,
@@ -78,6 +78,7 @@ async def require_permission(
         _audit(context, action_type, target, "deny", "user_rejected")
         raise PermissionError("用户拒绝了该操作")
     _audit(context, action_type, target, "allow", pending.decision.value)
+    return pending.decision.value
 
 
 async def list_pending(*, requester_id: int) -> list[RuntimePermissionRequest]:

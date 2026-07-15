@@ -415,9 +415,15 @@ function defaultInputs(tool: ToolSchema): ToolInputValues {
 
 function defaultValueForField(toolId: string, name: string, property: JsonSchemaProperty) {
   if (property.default !== undefined && typeof property.default !== "object") return property.default as string | number | boolean;
-  if (toolId === "local.httpx" && name === "target") return "http://127.0.0.1:8765";
+  if (toolId === "local.webcheck" && name === "url") return "http://127.0.0.1:8000/health";
+  if (toolId === "local.webcheck" && name === "method") return "GET";
+  if (toolId === "local.tls.inspect" && name === "host") return "example.com";
+  if (toolId === "local.tls.inspect" && name === "port") return 443;
+  if (toolId === "local.port.scan" && name === "host") return "127.0.0.1";
+  if (toolId === "local.port.scan" && name === "ports") return "8000,2222";
+  if (toolId === "local.httpx" && name === "target") return "http://127.0.0.1:8000/health";
   if (toolId === "local.dnsx" && name === "domain") return "example.com";
-  if (toolId === "local.ffuf" && name === "url") return "http://127.0.0.1:8765/FUZZ";
+  if (toolId === "local.ffuf" && name === "url") return "http://127.0.0.1:8000/FUZZ";
   if (toolId === "local.ffuf" && name === "wordlist") return "wordlist.txt";
   if (toolId === "ssh.nmap" && name === "target") return "127.0.0.1";
   if (toolId === "ssh.sqlmap" && name === "target") return "http://192.168.192.1:8877/?id=1";

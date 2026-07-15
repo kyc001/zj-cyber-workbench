@@ -203,7 +203,7 @@ Record failures with:
 Environment:
 
 - Windows development checkout: `D:\zj-cyber-workbench`.
-- Sidecar test API: `http://127.0.0.1:8765`.
+- Sidecar test API: `http://127.0.0.1:8000`.
 - Local workspace id: `1`.
 - WSL SSH workspace id: `2`.
 - WSL SSH host: `192.168.203.164:2222`, account `zj_sandbox`.
@@ -217,9 +217,9 @@ Results:
 - Explicit host key pinning: passed; entry stored in `.zj/ssh/known_hosts` as `[192.168.203.164]:2222`.
 - Host key changed simulation: passed; Toolpack returned `error_code=host_key_changed`.
 - `GET /api/toolpack/tools?sandbox_container_id=1`: passed; `local.httpx`, `local.dnsx`, and `local.ffuf` reported `available=true`.
-- `local.httpx`: passed against `http://127.0.0.1:8765`, `ok=true`, `exit_code=0`, parsed records returned.
+- `local.httpx`: passed against `http://127.0.0.1:8000/health`, `ok=true`, `exit_code=0`, parsed records returned.
 - `local.dnsx`: passed after switching executor input to stdin/list mode, `ok=true`, `exit_code=0`, parsed records returned.
-- `local.ffuf`: passed against `http://127.0.0.1:8765/FUZZ`, `ok=true`, `exit_code=0`, parsed records returned.
+- `local.ffuf`: passed against `http://127.0.0.1:8000/FUZZ`, `ok=true`, `exit_code=0`, parsed records returned.
 - `local.ffuf` without `FUZZ`: passed; returned `error_code=policy_denied`.
 - `ssh.nmap`: passed against `127.0.0.1` inside WSL SSH workspace, `ok=true`, `exit_code=0`, parsed records returned.
 - `ssh.sqlmap`: passed against temporary lab URL `http://192.168.192.1:8877/?id=1`, `ok=true`, `exit_code=0`, parsed records returned.

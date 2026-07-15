@@ -95,7 +95,7 @@ async def authorize_network_action_runtime(
     if needs_user_decision:
         from service.runtime_permissions import require_permission
 
-        await require_permission(
+        grant_source = await require_permission(
             context,
             action_type=action_type,
             target=normalized,
@@ -105,7 +105,7 @@ async def authorize_network_action_runtime(
         )
         if get_config().permissions.mode == PermissionMode.FULL_ACCESS:
             return
-        _record(context, action_type, normalized, "allow", ["user_approved"])
+        _record(context, action_type, normalized, "allow", [grant_source or "runtime_permission"])
         return
     _record(context, action_type, normalized, "allow", ["scope_and_policy_satisfied"])
 
@@ -124,7 +124,7 @@ async def authorize_local_action_runtime(
     if risk in {RiskLevel.L2, RiskLevel.L3}:
         from service.runtime_permissions import require_permission
 
-        await require_permission(
+        grant_source = await require_permission(
             context,
             action_type=action_type,
             target=target,
@@ -134,7 +134,7 @@ async def authorize_local_action_runtime(
         )
         if get_config().permissions.mode == PermissionMode.FULL_ACCESS:
             return
-        _record(context, action_type, target, "allow", ["user_approved"])
+        _record(context, action_type, target, "allow", [grant_source or "runtime_permission"])
         return
     authorize_local_diagnostic(context, action_type=action_type)
 

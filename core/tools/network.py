@@ -184,13 +184,15 @@ async def ssh_command(
 ) -> str:
     """通过已配置 Host Key 和凭据引用执行远程只读 SSH 命令；不接收明文密码。"""
     try:
+        host, effective_port = _ssh_target_host_port(target, port)
+        normalized_target = f"ssh://{host}:{effective_port}"
         await authorize_network_action_runtime(
             ctx.context,
             action_type="ssh.command",
-            target=f"ssh://{target}:{port}",
+            target=normalized_target,
             risk=RiskLevel.L2,
             reason="在远程主机执行 SSH 命令",
-            details={"command": command, "username": username, "port": port},
+            details={"command": command, "username": username, "port": effective_port},
         )
         if not username or not command.strip():
             return _error("SSH 需要 username 和 command")
@@ -201,7 +203,7 @@ async def ssh_command(
         known_hosts = WORKSPACE / "ssh" / "known_hosts"
         credential = _load_ssh_credential(credential_ref)
         connection_kwargs: dict[str, object] = {
-            "port": port,
+            "port": effective_port,
             "username": credential.get("username") or username,
             "known_hosts": str(known_hosts),
             "connect_timeout": max(1, min(timeout_seconds, 30)),
@@ -210,7 +212,7 @@ async def ssh_command(
             connection_kwargs["password"] = credential["password"]
         if credential.get("private_key"):
             connection_kwargs["client_keys"] = [credential["private_key"]]
-        connection = await asyncssh.connect(target, **connection_kwargs)
+        connection = await asyncssh.connect(host, **connection_kwargs)
         try:
             result = await asyncio.wait_for(
                 connection.run(command, check=False), timeout=max(1, min(timeout_seconds, 30))
@@ -221,7 +223,7 @@ async def ssh_command(
         return json.dumps(
             {
                 "ok": result.exit_status == 0,
-                "target": target,
+                "target": normalized_target,
                 "exit_code": result.exit_status,
                 "stdout": result.stdout[:_MAX_BODY_BYTES],
                 "stderr": result.stderr[:_MAX_BODY_BYTES],
@@ -266,6 +268,18 @@ def _target_host_port(target: str) -> tuple[str, int | None]:
     if not parsed.hostname:
         raise ValueError("目标主机无效")
     return parsed.hostname, parsed.port
+
+
+def _ssh_target_host_port(target: str, port: int) -> tuple[str, int]:
+    parsed = urlsplit(target if "://" in target else f"ssh://{target}")
+    if parsed.scheme and parsed.scheme != "ssh":
+        raise ValueError("SSH target scheme must be ssh")
+    if not parsed.hostname:
+        raise ValueError("SSH target host is invalid")
+    effective_port = parsed.port or port
+    if not 1 <= int(effective_port) <= 65535:
+        raise ValueError("SSH target port is invalid")
+    return parsed.hostname, int(effective_port)
 
 
 def _host_scope_url(target: str, host: str, port: int | None) -> str:

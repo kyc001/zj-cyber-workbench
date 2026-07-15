@@ -9,6 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import asyncssh
@@ -92,7 +93,232 @@ def _base_output_schema() -> dict[str, Any]:
     }
 
 
+_WEB_CHECK_SCRIPT = r"""
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+url, method, timeout_text = sys.argv[1], sys.argv[2], sys.argv[3]
+timeout = max(1.0, min(float(timeout_text), 30.0))
+started = time.perf_counter()
+request = urllib.request.Request(url, method=method, headers={"User-Agent": "ZJ-Toolpack/1.0"})
+try:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        body = b"" if method == "HEAD" else response.read(4096)
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        headers = {key.lower(): value for key, value in response.headers.items()}
+        print(json.dumps({
+            "url": url,
+            "method": method,
+            "ok": True,
+            "status_code": response.status,
+            "reason": response.reason,
+            "elapsed_ms": elapsed_ms,
+            "content_type": headers.get("content-type", ""),
+            "content_length": headers.get("content-length", ""),
+            "server": headers.get("server", ""),
+            "location": headers.get("location", ""),
+            "body_preview_bytes": len(body),
+        }, ensure_ascii=False))
+except urllib.error.HTTPError as exc:
+    body = b"" if method == "HEAD" else exc.read(4096)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    headers = {key.lower(): value for key, value in exc.headers.items()}
+    print(json.dumps({
+        "url": url,
+        "method": method,
+        "ok": False,
+        "status_code": exc.code,
+        "reason": exc.reason,
+        "elapsed_ms": elapsed_ms,
+        "content_type": headers.get("content-type", ""),
+        "content_length": headers.get("content-length", ""),
+        "server": headers.get("server", ""),
+        "location": headers.get("location", ""),
+        "body_preview_bytes": len(body),
+    }, ensure_ascii=False))
+except Exception as exc:
+    print(json.dumps({"url": url, "method": method, "ok": False, "error": str(exc)}, ensure_ascii=False))
+    raise SystemExit(1)
+""".strip()
+
+
+_TLS_INSPECT_SCRIPT = r"""
+import json
+import socket
+import ssl
+import sys
+
+host, port_text, server_name, timeout_text = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+port = int(port_text)
+timeout = max(1.0, min(float(timeout_text), 30.0))
+context = ssl.create_default_context()
+try:
+    with socket.create_connection((host, port), timeout=timeout) as sock:
+        with context.wrap_socket(sock, server_hostname=server_name or host) as tls:
+            cert = tls.getpeercert() or {}
+            sans = [value for kind, value in cert.get("subjectAltName", []) if kind.lower() == "dns"]
+            print(json.dumps({
+                "host": host,
+                "port": port,
+                "server_name": server_name or host,
+                "ok": True,
+                "tls_version": tls.version(),
+                "cipher": tls.cipher()[0] if tls.cipher() else "",
+                "issuer": cert.get("issuer", []),
+                "subject": cert.get("subject", []),
+                "not_before": cert.get("notBefore", ""),
+                "not_after": cert.get("notAfter", ""),
+                "dns_names": sans,
+            }, ensure_ascii=False))
+except Exception as exc:
+    print(json.dumps({
+        "host": host,
+        "port": port,
+        "server_name": server_name or host,
+        "ok": False,
+        "error": str(exc),
+    }, ensure_ascii=False))
+    raise SystemExit(1)
+""".strip()
+
+
+_PORT_SCAN_SCRIPT = r"""
+import json
+import socket
+import sys
+import time
+
+host, ports_text, timeout_text = sys.argv[1], sys.argv[2], sys.argv[3]
+timeout = max(0.1, min(float(timeout_text), 5.0))
+records = []
+for item in ports_text.split(","):
+    port = int(item)
+    started = time.perf_counter()
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            records.append({"port": port, "open": True, "elapsed_ms": int((time.perf_counter() - started) * 1000)})
+    except Exception as exc:
+        records.append({
+            "port": port,
+            "open": False,
+            "elapsed_ms": int((time.perf_counter() - started) * 1000),
+            "error": type(exc).__name__,
+        })
+print(json.dumps({"host": host, "ports": records}, ensure_ascii=False))
+""".strip()
+
+
 _TOOLS: dict[str, _ToolDefinition] = {
+    "local.webcheck": _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id="local.webcheck",
+            name="webcheck",
+            description="Run a bounded HTTP health check from the local workspace.",
+            backend=ToolBackend.LOCAL,
+            executable="python",
+            category="ops-http",
+            action_type="web.http.health",
+            risk_level=RiskLevel.L1,
+            default_timeout_seconds=30,
+            max_timeout_seconds=60,
+            input_schema={
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                    "url": {"type": "string", "minLength": 1, "maxLength": 2048},
+                    "method": {"type": "string", "enum": ["GET", "HEAD"]},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                },
+                "additionalProperties": False,
+            },
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True},
+        ),
+        install_hint="Python runtime is required for built-in local operations tools.",
+        build_args=lambda payload: [
+            "python",
+            "-c",
+            _WEB_CHECK_SCRIPT,
+            _required_url(payload, "url"),
+            _optional_enum(payload, "method", {"GET", "HEAD"}, "GET"),
+            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+        ],
+    ),
+    "local.tls.inspect": _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id="local.tls.inspect",
+            name="tls.inspect",
+            description="Inspect a remote TLS certificate from the local workspace.",
+            backend=ToolBackend.LOCAL,
+            executable="python",
+            category="ops-tls",
+            action_type="web.tls.inspect",
+            risk_level=RiskLevel.L1,
+            default_timeout_seconds=30,
+            max_timeout_seconds=60,
+            input_schema={
+                "type": "object",
+                "required": ["host"],
+                "properties": {
+                    "host": {"type": "string", "minLength": 1, "maxLength": 255},
+                    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                    "server_name": {"type": "string", "minLength": 1, "maxLength": 255},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                },
+                "additionalProperties": False,
+            },
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True},
+        ),
+        install_hint="Python runtime is required for built-in local operations tools.",
+        build_args=lambda payload: [
+            "python",
+            "-c",
+            _TLS_INSPECT_SCRIPT,
+            _required_host(payload, "host"),
+            str(_optional_int(payload, "port", 443, minimum=1, maximum=65535)),
+            str(payload.get("server_name") or ""),
+            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+        ],
+    ),
+    "local.port.scan": _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id="local.port.scan",
+            name="port.scan",
+            description="Probe a small bounded set of TCP ports from the local workspace.",
+            backend=ToolBackend.LOCAL,
+            executable="python",
+            category="ops-network",
+            action_type="network.port.probe",
+            risk_level=RiskLevel.L1,
+            default_timeout_seconds=30,
+            max_timeout_seconds=60,
+            input_schema={
+                "type": "object",
+                "required": ["host", "ports"],
+                "properties": {
+                    "host": {"type": "string", "minLength": 1, "maxLength": 255},
+                    "ports": {"type": "string", "minLength": 1, "maxLength": 256},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 5},
+                },
+                "additionalProperties": False,
+            },
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True, "max_ports": 32},
+        ),
+        install_hint="Python runtime is required for built-in local operations tools.",
+        build_args=lambda payload: [
+            "python",
+            "-c",
+            _PORT_SCAN_SCRIPT,
+            _required_host(payload, "host"),
+            ",".join(str(port) for port in _required_ports(payload, "ports", max_ports=32)),
+            str(_optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)),
+        ],
+    ),
     "local.httpx": _ToolDefinition(
         manifest=ToolManifestSchema(
             id="local.httpx",
@@ -388,10 +614,26 @@ async def _tool_schema(
     available: bool | None = None
     message = ""
     if definition.manifest.backend == ToolBackend.LOCAL:
-        available = _local_tool_path(definition.manifest.executable) is not None
-        message = "available" if available else "missing from portable-tools and PATH"
+        if sandbox_container_id is not None:
+            _, host = await resolve_container_host(sandbox_container_id)
+            if host.id != DEFAULT_LOCAL_HOST_ID:
+                available = False
+                message = "local tools require a local workspace"
+            else:
+                available = _local_tool_path(definition.manifest.executable) is not None
+                message = "available" if available else "missing from portable-tools and PATH"
+        else:
+            available = _local_tool_path(definition.manifest.executable) is not None
+            message = "available" if available else "missing from portable-tools and PATH"
     elif sandbox_container_id is None:
         message = "availability requires an SSH workspace"
+    else:
+        _, host = await resolve_container_host(sandbox_container_id)
+        if host.id == DEFAULT_LOCAL_HOST_ID:
+            available = False
+            message = "Linux-heavy tools require an SSH workspace"
+        else:
+            message = "availability will be checked in the SSH workspace at run time"
     return ToolSchema(
         id=definition.manifest.id,
         name=definition.manifest.name,
@@ -439,6 +681,18 @@ def _validate_policy(definition: _ToolDefinition, payload: dict[str, Any]) -> No
     schema = definition.manifest.input_schema
     for field in schema.get("required", []):
         _required_text(payload, str(field))
+    if definition.manifest.id == "local.webcheck":
+        _required_url(payload, "url")
+        _optional_enum(payload, "method", {"GET", "HEAD"}, "GET")
+        _optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)
+    if definition.manifest.id == "local.tls.inspect":
+        _required_host(payload, "host")
+        _optional_int(payload, "port", 443, minimum=1, maximum=65535)
+        _optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)
+    if definition.manifest.id == "local.port.scan":
+        _required_host(payload, "host")
+        _required_ports(payload, "ports", max_ports=int(definition.manifest.policy.get("max_ports", 32)))
+        _optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)
     max_rps = int(definition.manifest.policy.get("max_rps", 50))
     max_concurrency = int(definition.manifest.policy.get("max_concurrency", 20))
     if int(payload.get("rps") or 1) > max_rps:
@@ -459,6 +713,62 @@ def _required_text(payload: dict[str, Any], field: str) -> str:
     if len(value) > 4096 or any(ord(char) < 32 for char in value):
         raise ValueError(f"{field} is invalid")
     return value
+
+
+def _required_url(payload: dict[str, Any], field: str) -> str:
+    value = _required_text(payload, field)
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError(f"{field} must be an http or https URL")
+    return value
+
+
+def _required_host(payload: dict[str, Any], field: str) -> str:
+    value = _required_text(payload, field)
+    if "://" in value or "/" in value or "\\" in value or any(char.isspace() for char in value):
+        raise ValueError(f"{field} must be a host name or IP address")
+    return value
+
+
+def _optional_enum(payload: dict[str, Any], field: str, allowed: set[str], default: str) -> str:
+    value = str(payload.get(field) or default).upper()
+    if value not in allowed:
+        raise ValueError(f"{field} must be one of {', '.join(sorted(allowed))}")
+    return value
+
+
+def _optional_int(payload: dict[str, Any], field: str, default: int, *, minimum: int, maximum: int) -> int:
+    raw_value = payload.get(field, default)
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} must be an integer") from exc
+    if value < minimum or value > maximum:
+        raise PermissionError(f"{field} must be between {minimum} and {maximum}")
+    return value
+
+
+def _required_ports(payload: dict[str, Any], field: str, *, max_ports: int) -> list[int]:
+    raw_value = _required_text(payload, field)
+    ports: list[int] = []
+    for part in raw_value.split(","):
+        item = part.strip()
+        if not item:
+            continue
+        if "-" in item:
+            start_text, end_text = item.split("-", 1)
+            start, end = int(start_text), int(end_text)
+            if start > end:
+                raise ValueError(f"{field} range is invalid")
+            ports.extend(range(start, end + 1))
+        else:
+            ports.append(int(item))
+    normalized = sorted(set(ports))
+    if not normalized or any(port < 1 or port > 65535 for port in normalized):
+        raise ValueError(f"{field} contains an invalid TCP port")
+    if len(normalized) > max_ports:
+        raise PermissionError(f"port count exceeds policy limit {max_ports}")
+    return normalized
 
 
 def _optional_rate(payload: dict[str, Any]) -> list[str]:
