@@ -1,0 +1,110 @@
+{
+    "system": {
+        "listen_addr": "127.0.0.1",
+        "listen_port": 8000,
+        "encrypt_key": "replace-with-at-least-32-random-characters"
+    },
+    "database": {
+        "url": "",
+        "filename": "zj.sqlite3",
+        "busy_timeout_ms": 5000,
+        "pool_pre_ping": true
+    },
+    "agent_runtime": {
+        "main_max_turns": 1000,
+        "subordinate_max_turns": 1000,
+        "model_stream_idle_timeout_seconds": 300,
+        "report_retention_seconds": 259200,
+        "context_compression_enabled": true,
+        "context_compression_trigger_ratio": 0.95,
+        "context_compression_hard_stop_ratio": 0.98,
+        "context_compression_target_ratio": 0.20,
+        "context_budget_model_call_ratio": 0.80,
+        "context_compression_preserve_recent_ratio": 0.25,
+        "context_compression_preserve_recent_items": 20,
+        "context_compression_min_items": 12,
+        "context_compression_summary_max_tokens": 8000
+    },
+    "agent_pool": {
+        "max_size": 256,
+        "ttl_seconds": 1800,
+        "sweep_interval_seconds": 60
+    },
+    "permissions": {
+        "mode": "normal",
+        "approval_timeout_seconds": 300
+    },
+    "lightrag": {
+        "embedding_api": "",
+        "embedding_key": "",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dim": 1536,
+        "llm_api": "",
+        "llm_key": "",
+        "llm_model": "gpt-5.6-sol",
+        "graph_matches": 5,
+        "chunk_matches": 10
+    },
+    "agents": {
+        "cso": {
+            "code": "cso",
+            "name": "真君",
+            "description": "首席安全协调 Agent，负责理解目标、编排专家、汇总结论与交付报告",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-sol",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cae": {
+            "code": "cae",
+            "name": "V3ra",
+            "description": "代码审计 Agent，负责源码、依赖、配置与安全编码检查",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-sol",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cce": {
+            "code": "cce",
+            "name": "Nu1L",
+            "description": "密码与协议 Agent，负责密码学、协议与密钥管理分析",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-sol",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cie": {
+            "code": "cie",
+            "name": "L1ly",
+            "description": "情报侦察 Agent，负责授权范围内的资产发现与信息收集",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-sol",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cpe": {
+            "code": "cpe",
+            "name": "Fr4nk",
+            "description": "安全测试 Agent，负责授权渗透测试与漏洞验证",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-sol",
+            "use_responses": false,
+            "context_window": 1000000
+        },
+        "cre": {
+            "code": "cre",
+            "name": "J4m3",
+            "description": "逆向分析 Agent，负责二进制、固件与文件分析",
+            "base_url": "",
+            "api_key": "",
+            "model": "gpt-5.6-sol",
+            "use_responses": false,
+            "context_window": 1000000
+        }
+    }
+}

@@ -1,0 +1,292 @@
+from __future__ import annotations
+
+import base64
+import hashlib
+import io
+import mimetypes
+import posixpath
+import shlex
+import stat
+import zipfile
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from datetime import datetime
+from uuid import uuid4
+
+import asyncssh
+
+from model.host.hosts import ManagedHost
+from schema.sandbox.containers import ContainerFileInfo, ContainerFileType, ContainerFileUploadItem
+from service.host.connection import connect_managed_host
+from service.sandbox.remote_runtime import normalize_remote_path, remote_sftp_root
+
+
+@asynccontextmanager
+async def _sftp_session(host: ManagedHost, container_id: int):
+    connection = await connect_managed_host(host)
+    try:
+        sftp = await connection.start_sftp_client()
+        root = await remote_sftp_root(sftp, container_id)
+        yield connection, sftp, root
+    finally:
+        connection.close()
+        await connection.wait_closed()
+
+
+def _path(root: str, raw_path: str) -> str:
+    relative = normalize_remote_path(raw_path)
+    return posixpath.join(root, relative) if relative else root
+
+
+def _display(root: str, path: str) -> str:
+    relative = posixpath.relpath(path, root)
+    return "/" if relative == "." else f"/{relative}"
+
+
+def _is_within(root: str, path: str) -> bool:
+    return path == root or path.startswith(root.rstrip("/") + "/")
+
+
+async def _real_existing_path(sftp, root: str, path: str) -> str:
+    real_root = await sftp.realpath(root)
+    real_path = await sftp.realpath(path)
+    if not _is_within(real_root, real_path):
+        raise PermissionError("path escapes the portable workspace")
+    return real_path
+
+
+async def _ensure_parent_within(sftp, root: str, path: str) -> None:
+    real_root = await sftp.realpath(root)
+    parent = posixpath.dirname(path)
+    await sftp.makedirs(parent, exist_ok=True)
+    real_parent = await sftp.realpath(parent)
+    if not _is_within(real_root, real_parent):
+        raise PermissionError("path escapes the portable workspace")
+
+
+def _info(root: str, name: str, path: str, attrs) -> ContainerFileInfo:
+    permissions = attrs.permissions or 0
+    if stat.S_ISLNK(permissions):
+        kind = ContainerFileType.SYMLINK
+    elif stat.S_ISDIR(permissions):
+        kind = ContainerFileType.DIRECTORY
+    else:
+        kind = ContainerFileType.FILE
+    return ContainerFileInfo(
+        name=name,
+        type=kind,
+        size=int(attrs.size or 0) if kind == ContainerFileType.FILE else 0,
+        modified_at=int(attrs.mtime or 0),
+        owner=str(attrs.uid or ""),
+        group=str(attrs.gid or ""),
+        permissions=stat.filemode(permissions) if permissions else "",
+        path=_display(root, path),
+    )
+
+
+async def list_files(host: ManagedHost, container_id: int, raw_path: str) -> list[ContainerFileInfo]:
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        directory = await _real_existing_path(sftp, root, _path(root, raw_path))
+        entries = [entry async for entry in sftp.scandir(directory)]
+        entries.sort(key=lambda item: item.filename.lower())
+        return [
+            _info(root, entry.filename, posixpath.join(directory, entry.filename), entry.attrs)
+            for entry in entries
+        ]
+
+
+async def file_info(host: ManagedHost, container_id: int, raw_path: str) -> ContainerFileInfo | None:
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        path = _path(root, raw_path)
+        try:
+            attrs = await sftp.lstat(path)
+        except asyncssh.SFTPNoSuchFile:
+            return None
+        return _info(root, posixpath.basename(path) or "/", path, attrs)
+
+
+async def read_file(host: ManagedHost, container_id: int, raw_path: str, max_bytes: int, base64_mode: bool) -> str:
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        path = await _real_existing_path(sftp, root, _path(root, raw_path))
+        async with sftp.open(path, "rb") as stream:
+            data = await stream.read(max_bytes)
+        return base64.b64encode(data).decode("ascii") if base64_mode else data.decode(errors="replace")
+
+
+async def upload_files(
+    host: ManagedHost,
+    container_id: int,
+    raw_path: str,
+    sources,
+    overwrite: bool,
+) -> list[ContainerFileUploadItem]:
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        directory = _path(root, raw_path)
+        await sftp.makedirs(directory, exist_ok=True)
+        uploaded: list[ContainerFileUploadItem] = []
+        try:
+            for source in sources:
+                name = source.filename.replace("\\", "/").rsplit("/", 1)[-1]
+                if not name or name in {".", ".."}:
+                    raise ValueError("file name is required")
+                target = posixpath.join(directory, name)
+                await _ensure_parent_within(sftp, root, target)
+                if not overwrite:
+                    try:
+                        await sftp.lstat(target)
+                    except asyncssh.SFTPNoSuchFile:
+                        pass
+                    else:
+                        raise FileExistsError(name)
+                data = source.stream.read()
+                backup = await _replace_file_atomic(sftp, root, target, data)
+                uploaded.append(ContainerFileUploadItem(
+                    name=name,
+                    path=_display(root, target),
+                    size=len(data),
+                    sha256=hashlib.sha256(data).hexdigest(),
+                    backup_path=_display(root, backup) if backup else "",
+                ))
+        finally:
+            for source in sources:
+                source.stream.close()
+        return uploaded
+
+
+async def download_paths(host: ManagedHost, container_id: int, raw_paths: list[str]):
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        paths = [await _real_existing_path(sftp, root, _path(root, raw_path)) for raw_path in raw_paths]
+        payload = io.BytesIO()
+        if len(paths) == 1 and stat.S_ISREG((await sftp.lstat(paths[0])).permissions or 0):
+            async with sftp.open(paths[0], "rb") as stream:
+                payload.write(await stream.read())
+            filename = posixpath.basename(paths[0])
+            media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        else:
+            with zipfile.ZipFile(payload, "w", zipfile.ZIP_DEFLATED) as archive:
+                for path in paths:
+                    await _append_to_zip(sftp, archive, path, posixpath.dirname(path))
+            filename = "workspace-download.zip"
+            media_type = "application/zip"
+    content = payload.getvalue()
+
+    async def chunks() -> AsyncIterator[bytes]:
+        for offset in range(0, len(content), 64 * 1024):
+            yield content[offset:offset + 64 * 1024]
+
+    return filename, media_type, chunks()
+
+
+async def _append_to_zip(sftp, archive: zipfile.ZipFile, path: str, base: str) -> None:
+    attrs = await sftp.lstat(path)
+    if stat.S_ISDIR(attrs.permissions or 0):
+        async for entry in sftp.scandir(path):
+            await _append_to_zip(sftp, archive, posixpath.join(path, entry.filename), base)
+        return
+    if stat.S_ISREG(attrs.permissions or 0):
+        async with sftp.open(path, "rb") as stream:
+            archive.writestr(posixpath.relpath(path, base), await stream.read())
+
+
+async def write_file(host: ManagedHost, container_id: int, raw_path: str, content: str) -> None:
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        target = _path(root, raw_path)
+        await _ensure_parent_within(sftp, root, target)
+        await _replace_file_atomic(sftp, root, target, content.encode("utf-8"))
+
+
+async def copy_files(host: ManagedHost, container_id: int, sources: list[str], destination: str) -> None:
+    await _run_file_command(host, container_id, "cp -a", sources, destination)
+
+
+async def move_files(host: ManagedHost, container_id: int, sources: list[str], destination: str) -> None:
+    await _run_file_command(host, container_id, "mv", sources, destination)
+
+
+async def _run_file_command(
+    host: ManagedHost,
+    container_id: int,
+    operation: str,
+    sources: list[str],
+    destination: str,
+) -> None:
+    async with _sftp_session(host, container_id) as (connection, _, root):
+        target = _path(root, destination)
+        await _ensure_parent_within(_, root, posixpath.join(target, ".zj-target-check"))
+        source_paths = [_path(root, source) for source in sources]
+        for source_path in source_paths:
+            await _real_existing_path(_, root, source_path)
+        quoted_sources = " ".join(shlex.quote(path) for path in source_paths)
+        command = f"mkdir -p -- {shlex.quote(target)} && {operation} -- {quoted_sources} {shlex.quote(target)}/"
+        result = await connection.run(command, check=False)
+        if result.exit_status != 0:
+            raise RuntimeError(result.stderr.strip() or "remote file operation failed")
+
+
+async def delete_files(host: ManagedHost, container_id: int, raw_paths: list[str]) -> None:
+    async with _sftp_session(host, container_id) as (connection, _, root):
+        paths = [_path(root, raw_path) for raw_path in raw_paths]
+        if any(path == root for path in paths):
+            raise PermissionError("workspace root cannot be deleted")
+        for path in paths:
+            await _real_existing_path(_, root, path)
+        result = await connection.run(
+            "rm -rf -- " + " ".join(shlex.quote(path) for path in paths),
+            check=False,
+        )
+        if result.exit_status != 0:
+            raise RuntimeError(result.stderr.strip() or "remote delete failed")
+
+
+async def make_directory(host: ManagedHost, container_id: int, raw_path: str) -> None:
+    async with _sftp_session(host, container_id) as (_, sftp, root):
+        target = _path(root, raw_path)
+        await _ensure_parent_within(sftp, root, target)
+        await sftp.makedirs(target, exist_ok=True)
+
+
+async def _backup_existing_file(sftp, root: str, target: str) -> str | None:
+    try:
+        attrs = await sftp.lstat(target)
+    except asyncssh.SFTPNoSuchFile:
+        return None
+    permissions = attrs.permissions or 0
+    if stat.S_ISLNK(permissions):
+        raise PermissionError("refusing to overwrite a symbolic link")
+    if not stat.S_ISREG(permissions):
+        raise IsADirectoryError(target)
+    backup_dir = posixpath.join(root, ".zj-backups")
+    await sftp.makedirs(backup_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup = posixpath.join(backup_dir, f"{timestamp}-{uuid4().hex[:8]}-{posixpath.basename(target)}")
+    await sftp.rename(target, backup)
+    return backup
+
+
+async def _write_bytes_atomic(sftp, target: str, data: bytes) -> None:
+    directory = posixpath.dirname(target)
+    await sftp.makedirs(directory, exist_ok=True)
+    temp_path = posixpath.join(directory, f".zj-upload-{uuid4().hex}.tmp")
+    try:
+        async with sftp.open(temp_path, "wb") as stream:
+            await stream.write(data)
+        await sftp.rename(temp_path, target)
+    finally:
+        try:
+            await sftp.remove(temp_path)
+        except asyncssh.SFTPNoSuchFile:
+            pass
+
+
+async def _replace_file_atomic(sftp, root: str, target: str, data: bytes) -> str | None:
+    backup = await _backup_existing_file(sftp, root, target)
+    try:
+        await _write_bytes_atomic(sftp, target, data)
+    except Exception:
+        if backup is not None:
+            try:
+                await sftp.rename(backup, target)
+            except Exception:
+                pass
+        raise
+    return backup

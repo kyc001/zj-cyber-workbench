@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "core-incident-loop",
+      "description": "Cold start through report export and persistence check using Mock Model.",
+      "steps": [
+        "cold_start_with_temp_data_dir",
+        "configure_mock_model",
+        "create_project_scope",
+        "select_workspace",
+        "ops_lead_plan",
+        "diagnostic_read_only_checks",
+        "remediation_changeset",
+        "policy_evaluate",
+        "approval_required",
+        "execute_approved_action",
+        "verification_independent_check",
+        "export_report",
+        "restart_and_verify_persistence"
+      ],
+      "must_emit_timeline": [
+        "user_message",
+        "tool_call",
+        "tool_result",
+        "text_complete"
+      ],
+      "must_block": [
+        "unapproved_write",
+        "out_of_scope_target",
+        "external_content_rule_override",
+        "missing_report_reference"
+      ],
+      "required_artifacts": [
+        "markdown_report",
+        "report_reference_index"
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,56 @@
+# Local reference checkout; the migrated source lives at the repository root.
+/Z3r0/
+
+# IDE and agent-local state
+.codex
+.claude
+.cursor
+.trellis
+.codegraph
+.agents
+AGENTS.md
+!.z3r0/agents/**/AGENTS.md
+.vscode/*.log
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Node and desktop builds
+node_modules/
+web/node_modules/
+web/dist/
+web/dist-app/
+web/dist-landing/
+desktop/node_modules/
+desktop/dist/
+desktop/release/
+
+# Runtime data and secrets
+*.log
+.z3r0/app.log.*
+.z3r0/tiktoken_cache/
+.z3r0/config.json
+.zj/
+data/
+artifacts/
+backups/
+.lightrag/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
