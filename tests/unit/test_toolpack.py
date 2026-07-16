@@ -50,17 +50,43 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         ids = {item.id for item in response.tools}
         self.assertEqual(
             {
+                "local.archive.inspect",
+                "local.curl",
+                "local.disk.usage",
+                "local.dns.trace",
                 "local.webcheck",
                 "local.tls.inspect",
                 "local.port.scan",
                 "local.dns.lookup",
+                "local.env.check",
+                "local.file.hash",
+                "local.http.probe",
+                "local.log.grep",
+                "local.log.tail",
+                "local.net.connections",
                 "local.ping",
+                "local.port.quickcheck",
+                "local.process.list",
+                "local.system.info",
                 "local.http.headers",
                 "local.httpx",
                 "local.dnsx",
                 "local.ffuf",
+                "ssh.archive.inspect",
+                "ssh.curl",
+                "ssh.disk.usage",
+                "ssh.dns.trace",
+                "ssh.env.check",
+                "ssh.file.hash",
+                "ssh.http.probe",
+                "ssh.log.grep",
+                "ssh.log.tail",
+                "ssh.net.connections",
                 "ssh.nmap",
+                "ssh.port.quickcheck",
+                "ssh.process.list",
                 "ssh.sqlmap",
+                "ssh.system.info",
             },
             ids,
         )
@@ -188,6 +214,30 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ToolRunStatus.COMPLETED, finished.status)
         self.assertIsNotNone(finished.result)
         self.assertEqual("http://example.test/", finished.result.structured["records"][0]["url"])
+        command = execute.await_args.args[1]
+        self.assertIn("python", command)
+
+    async def test_system_info_tool_run_uses_builtin_python_script(self) -> None:
+        command_result = SandboxContainerCommandResult(
+            output='{"hostname":"desktop","system":"Windows","records":[]}\n',
+            exit_code=0,
+        )
+        execute = AsyncMock(return_value=command_result)
+        with (
+            self.local_workspace_patches(),
+            patch.object(toolpack, "_local_tool_path", return_value="/tmp/python"),
+            patch.object(toolpack, "execute_sandbox_container_command", execute),
+        ):
+            snapshot = await toolpack.start_tool_run(
+                "local.system.info",
+                ToolRunRequest(sandbox_container_id=1, input={}),
+                self.user(),
+            )
+            finished = await self.wait_for_terminal(snapshot.run_id)
+
+        self.assertEqual(ToolRunStatus.COMPLETED, finished.status)
+        self.assertIsNotNone(finished.result)
+        self.assertEqual("desktop", finished.result.structured["records"][0]["hostname"])
         command = execute.await_args.args[1]
         self.assertIn("python", command)
 

@@ -1,4 +1,4 @@
-import { Button, Input, InputNumber, Select, Spin, Tag, TextArea, Toast } from "@douyinfe/semi-ui";
+import { Button, Checkbox, Input, InputNumber, Select, Spin, Tag, TextArea, Toast } from "@douyinfe/semi-ui";
 import { Activity, Boxes, Download, Globe2, PackageSearch, Play, Radar, ShieldCheck, Square, Wrench } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
@@ -43,6 +43,136 @@ const TOOL_GROUPS: { id: ToolGroupId; label: string; icon: typeof Boxes }[] = [
 ];
 
 const TOOL_META: Record<string, ToolMeta> = {
+  "local.system.info": {
+    title: "系统信息",
+    group: "ops-basic",
+    description: "查看主机名、用户、系统版本、CPU、磁盘和运行时信息。",
+  },
+  "local.disk.usage": {
+    title: "磁盘占用",
+    group: "ops-basic",
+    description: "统计指定路径的磁盘占用和体积最大的文件/目录。",
+  },
+  "local.process.list": {
+    title: "进程列表",
+    group: "ops-basic",
+    description: "查看运行中进程，可按关键词过滤。",
+  },
+  "local.net.connections": {
+    title: "网络连接",
+    group: "network",
+    description: "查看 TCP/UDP 连接或监听行，支持按状态关键词过滤。",
+  },
+  "local.env.check": {
+    title: "环境检查",
+    group: "ops-basic",
+    description: "检查 PATH 和常用命令是否可用。",
+  },
+  "local.curl": {
+    title: "受限 curl",
+    group: "web",
+    description: "执行受限 HTTP 请求，查看状态码、响应头和正文预览。",
+  },
+  "local.http.probe": {
+    title: "HTTP 批量探测",
+    group: "web",
+    description: "批量检查 URL 状态码、耗时和基础响应信息。",
+  },
+  "local.dns.trace": {
+    title: "DNS 追踪",
+    group: "network",
+    description: "查询 DNS 记录，并在可用时附带 nslookup 输出。",
+  },
+  "local.port.quickcheck": {
+    title: "常用端口快检",
+    group: "network",
+    description: "按 common/web/db 模板快速检查常用端口。",
+  },
+  "local.log.tail": {
+    title: "日志尾部",
+    group: "ops-basic",
+    description: "读取文本日志最后 N 行。",
+  },
+  "local.log.grep": {
+    title: "日志搜索",
+    group: "ops-basic",
+    description: "在文本日志里搜索关键词或正则表达式。",
+  },
+  "local.file.hash": {
+    title: "文件哈希",
+    group: "ops-basic",
+    description: "计算文件 SHA256 / SHA1 / MD5。",
+  },
+  "local.archive.inspect": {
+    title: "压缩包查看",
+    group: "ops-basic",
+    description: "列出 zip/tar 压缩包内容，不解压文件。",
+  },
+  "ssh.system.info": {
+    title: "SSH 系统信息",
+    group: "ssh",
+    description: "在 SSH Workspace 上查看主机系统、磁盘和运行时信息。",
+  },
+  "ssh.disk.usage": {
+    title: "SSH 磁盘占用",
+    group: "ssh",
+    description: "在 SSH Workspace 上统计指定路径占用。",
+  },
+  "ssh.process.list": {
+    title: "SSH 进程列表",
+    group: "ssh",
+    description: "在 SSH Workspace 上查看进程并按关键词过滤。",
+  },
+  "ssh.net.connections": {
+    title: "SSH 网络连接",
+    group: "ssh",
+    description: "在 SSH Workspace 上查看 TCP/UDP 连接或监听状态。",
+  },
+  "ssh.env.check": {
+    title: "SSH 环境检查",
+    group: "ssh",
+    description: "检查 SSH Workspace 上常用命令是否可用。",
+  },
+  "ssh.curl": {
+    title: "SSH 受限 curl",
+    group: "ssh",
+    description: "从 SSH Workspace 发起受限 HTTP 请求。",
+  },
+  "ssh.http.probe": {
+    title: "SSH HTTP 批量探测",
+    group: "ssh",
+    description: "从 SSH Workspace 批量检查 URL 状态。",
+  },
+  "ssh.dns.trace": {
+    title: "SSH DNS 追踪",
+    group: "ssh",
+    description: "从 SSH Workspace 查询 DNS 记录。",
+  },
+  "ssh.port.quickcheck": {
+    title: "SSH 常用端口快检",
+    group: "ssh",
+    description: "从 SSH Workspace 按模板检查常用端口。",
+  },
+  "ssh.log.tail": {
+    title: "SSH 日志尾部",
+    group: "ssh",
+    description: "读取 SSH Workspace 可访问日志的最后 N 行。",
+  },
+  "ssh.log.grep": {
+    title: "SSH 日志搜索",
+    group: "ssh",
+    description: "搜索 SSH Workspace 可访问的文本日志。",
+  },
+  "ssh.file.hash": {
+    title: "SSH 文件哈希",
+    group: "ssh",
+    description: "计算 SSH Workspace 上文件的哈希值。",
+  },
+  "ssh.archive.inspect": {
+    title: "SSH 压缩包查看",
+    group: "ssh",
+    description: "查看 SSH Workspace 上 zip/tar 压缩包内容。",
+  },
   "local.webcheck": {
     title: "HTTP 健康检查",
     group: "ops-basic",
@@ -114,6 +244,23 @@ const FIELD_LABELS: Record<string, string> = {
   wordlist: "字典文件",
   rps: "每秒请求",
   concurrency: "并发",
+  path: "路径",
+  max_depth: "最大深度",
+  top_n: "显示数量",
+  keyword: "关键词",
+  limit: "数量限制",
+  state: "连接状态",
+  tools: "工具列表",
+  urls: "URL 列表",
+  body: "请求体",
+  record_type: "记录类型",
+  profile: "端口模板",
+  lines: "行数",
+  pattern: "搜索模式",
+  ignore_case: "忽略大小写",
+  max_matches: "最大匹配数",
+  algorithm: "算法",
+  max_entries: "最大条目数",
 };
 
 const RUN_STATUS_COLOR: Record<ToolRunSnapshot["status"], "blue" | "green" | "red" | "grey" | "orange"> = {
@@ -475,6 +622,14 @@ function renderInputField(
   }
 
   const type = Array.isArray(property.type) ? property.type[0] : property.type;
+  if (type === "boolean") {
+    return (
+      <Checkbox checked={Boolean(value)} onChange={(event) => onChange(name, Boolean(event.target.checked))}>
+        {Boolean(value) ? "是" : "否"}
+      </Checkbox>
+    );
+  }
+
   if (type === "integer" || type === "number") {
     return (
       <InputNumber
@@ -591,6 +746,27 @@ function defaultInputs(tool: ToolSchema): ToolInputValues {
 
 function defaultValueForField(toolId: string, name: string, property: JsonSchemaProperty) {
   if (property.default !== undefined && typeof property.default !== "object") return property.default as string | number | boolean;
+  if (name === "path") {
+    if (toolId.endsWith(".log.tail") || toolId.endsWith(".log.grep")) return "toolpack-smoke.log";
+    if (toolId.endsWith(".archive.inspect")) return "toolpack-smoke.zip";
+    return ".";
+  }
+  if (name === "max_depth") return 1;
+  if (name === "top_n") return 20;
+  if (name === "keyword") return "";
+  if (name === "limit") return 50;
+  if (name === "state") return "";
+  if (name === "tools") return "python,python3,node,pnpm,git,curl,nmap,sqlmap,httpx,dnsx,ffuf";
+  if (name === "urls") return "http://127.0.0.1:8000/health";
+  if (name === "body") return "";
+  if (name === "record_type") return "A";
+  if (name === "profile") return "common";
+  if (name === "lines") return 100;
+  if (name === "pattern") return "error|warn|failed";
+  if (name === "ignore_case") return true;
+  if (name === "max_matches") return 50;
+  if (name === "algorithm") return "sha256";
+  if (name === "max_entries") return 100;
   if (toolId === "local.webcheck" && name === "url") return "http://127.0.0.1:8000/health";
   if (toolId === "local.webcheck" && name === "method") return "GET";
   if (toolId === "local.http.headers" && name === "url") return "http://127.0.0.1:8000/health";
@@ -607,6 +783,11 @@ function defaultValueForField(toolId: string, name: string, property: JsonSchema
   if (toolId === "local.ffuf" && name === "wordlist") return "wordlist.txt";
   if (toolId === "ssh.nmap" && name === "target") return "127.0.0.1";
   if (toolId === "ssh.sqlmap" && name === "target") return "http://192.168.192.1:8877/?id=1";
+  if (toolId.endsWith(".curl") && name === "url") return "http://127.0.0.1:8000/health";
+  if (toolId.endsWith(".curl") && name === "method") return "GET";
+  if (toolId.endsWith(".http.probe") && name === "method") return "HEAD";
+  if (toolId.endsWith(".dns.trace") && name === "host") return "example.com";
+  if (toolId.endsWith(".port.quickcheck") && name === "host") return "127.0.0.1";
   const type = Array.isArray(property.type) ? property.type[0] : property.type;
   if (type === "integer" || type === "number") return property.minimum ?? 1;
   return "";
@@ -635,6 +816,9 @@ function fieldLabel(name: string) {
 
 function fieldPlaceholder(toolId: string, name: string) {
   if (toolId === "local.port.scan" && name === "ports") return "80,443,8000-8010";
+  if (name === "urls") return "每行一个 URL，最多 20 个";
+  if (name === "path") return "相对路径或绝对路径";
+  if (name === "pattern") return "error|warn|failed";
   if (name === "url") return "https://example.com";
   if (name === "host") return "example.com";
   return "";

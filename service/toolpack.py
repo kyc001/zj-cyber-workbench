@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import shlex
@@ -314,6 +315,808 @@ except Exception as exc:
     print(json.dumps({"url": url, "ok": False, "error": str(exc)}, ensure_ascii=False))
     raise SystemExit(1)
 """.strip()
+
+
+_SYSTEM_INFO_SCRIPT = r"""
+import json
+import os
+import platform
+import shutil
+import socket
+
+
+def memory_info():
+    if os.name == "posix" and os.path.exists("/proc/meminfo"):
+        data = {}
+        with open("/proc/meminfo", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                key, _, value = line.partition(":")
+                if key in {"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"}:
+                    data[key] = value.strip()
+        return data
+    return {}
+
+
+usage = shutil.disk_usage(os.getcwd())
+print(json.dumps({
+    "hostname": socket.gethostname(),
+    "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+    "platform": platform.platform(),
+    "system": platform.system(),
+    "release": platform.release(),
+    "machine": platform.machine(),
+    "python": platform.python_version(),
+    "cpu_count": os.cpu_count(),
+    "cwd": os.getcwd(),
+    "disk": {"total": usage.total, "used": usage.used, "free": usage.free},
+    "memory": memory_info(),
+}, ensure_ascii=False))
+""".strip()
+
+
+_DISK_USAGE_SCRIPT = r"""
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]).expanduser()
+max_depth = max(0, min(int(sys.argv[2]), 4))
+top_n = max(1, min(int(sys.argv[3]), 50))
+root = path.resolve()
+usage = shutil.disk_usage(root if root.is_dir() else root.parent)
+entries = []
+
+
+def size_of(entry):
+    if entry.is_file() or entry.is_symlink():
+        try:
+            return entry.stat().st_size
+        except OSError:
+            return 0
+    total = 0
+    base_depth = len(entry.parts)
+    for current, dirs, files in os.walk(entry, onerror=lambda _: None):
+        depth = len(Path(current).parts) - base_depth
+        if depth >= max_depth:
+            dirs[:] = []
+        for name in files:
+            try:
+                total += (Path(current) / name).stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+if root.is_dir():
+    for child in root.iterdir():
+        entries.append({"path": str(child), "type": "dir" if child.is_dir() else "file", "size": size_of(child)})
+else:
+    entries.append({"path": str(root), "type": "file", "size": size_of(root)})
+entries.sort(key=lambda item: item["size"], reverse=True)
+print(json.dumps({
+    "path": str(root),
+    "disk": {"total": usage.total, "used": usage.used, "free": usage.free},
+    "entries": entries[:top_n],
+}, ensure_ascii=False))
+""".strip()
+
+
+_PROCESS_LIST_SCRIPT = r"""
+import csv
+import io
+import json
+import os
+import platform
+import subprocess
+import sys
+
+keyword = "" if len(sys.argv) < 2 or sys.argv[1] == "__all__" else sys.argv[1].lower()
+limit = max(1, min(int(sys.argv[2] if len(sys.argv) > 2 else "50"), 200))
+records = []
+if platform.system().lower().startswith("win"):
+    completed = subprocess.run(["tasklist", "/fo", "csv", "/nh"], capture_output=True, text=True, errors="replace")
+    for row in csv.reader(io.StringIO(completed.stdout)):
+        if len(row) < 5:
+            continue
+        record = {"image": row[0], "pid": row[1], "session": row[2], "memory": row[4]}
+        if not keyword or keyword in json.dumps(record, ensure_ascii=False).lower():
+            records.append(record)
+else:
+    command = ["ps", "-eo", "pid,ppid,user,comm,%cpu,%mem", "--no-headers"]
+    completed = subprocess.run(command, capture_output=True, text=True, errors="replace")
+    for line in completed.stdout.splitlines():
+        parts = line.split(None, 5)
+        if len(parts) < 6:
+            continue
+        record = {
+            "pid": parts[0],
+            "ppid": parts[1],
+            "user": parts[2],
+            "command": parts[3],
+            "cpu": parts[4],
+            "mem": parts[5],
+        }
+        if not keyword or keyword in line.lower():
+            records.append(record)
+print(json.dumps({"keyword": keyword, "count": len(records[:limit]), "records": records[:limit]}, ensure_ascii=False))
+""".strip()
+
+
+_NET_CONNECTIONS_SCRIPT = r"""
+import json
+import platform
+import shutil
+import subprocess
+import sys
+
+state_filter = "" if len(sys.argv) < 2 or sys.argv[1].lower() in {"", "all", "__all__"} else sys.argv[1].lower()
+limit = max(1, min(int(sys.argv[2] if len(sys.argv) > 2 else "100"), 300))
+records = []
+if platform.system().lower().startswith("win"):
+    command = ["netstat", "-ano"]
+elif shutil.which("ss"):
+    command = ["ss", "-tunlp"]
+else:
+    command = ["netstat", "-tunlp"]
+completed = subprocess.run(command, capture_output=True, text=True, errors="replace")
+for line in completed.stdout.splitlines():
+    lowered = line.lower()
+    if state_filter and state_filter not in lowered:
+        continue
+    if any(token in lowered for token in ("tcp", "udp")):
+        records.append({"line": line})
+print(json.dumps({
+    "command": " ".join(command),
+    "state_filter": state_filter,
+    "count": len(records[:limit]),
+    "records": records[:limit],
+}, ensure_ascii=False))
+""".strip()
+
+
+_ENV_CHECK_SCRIPT = r"""
+import json
+import os
+import shutil
+import sys
+
+tools = [item.strip() for item in sys.argv[1].split(",") if item.strip()]
+records = [
+    {"tool": tool, "path": shutil.which(tool) or "", "available": shutil.which(tool) is not None}
+    for tool in tools
+]
+print(json.dumps({
+    "path_entries": os.environ.get("PATH", "").split(os.pathsep),
+    "records": records,
+}, ensure_ascii=False))
+""".strip()
+
+
+_CURL_SCRIPT = r"""
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+url, method, timeout_text = sys.argv[1], sys.argv[2], sys.argv[3]
+body = sys.argv[4] if len(sys.argv) > 4 else ""
+timeout = max(1.0, min(float(timeout_text), 30.0))
+method = method.upper()
+data = body.encode("utf-8") if method in {"POST", "PUT", "PATCH"} and body else None
+started = time.perf_counter()
+request = urllib.request.Request(url, method=method, data=data, headers={"User-Agent": "ZJ-Toolpack/1.0"})
+try:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        content = b"" if method == "HEAD" else response.read(8192)
+        headers = {
+            k.lower(): v
+            for k, v in response.headers.items()
+            if k.lower() not in {"set-cookie", "authorization"}
+        }
+        print(json.dumps({
+            "url": url,
+            "method": method,
+            "ok": True,
+            "status_code": response.status,
+            "reason": response.reason,
+            "elapsed_ms": int((time.perf_counter() - started) * 1000),
+            "headers": headers,
+            "body_preview": content.decode("utf-8", errors="replace"),
+        }, ensure_ascii=False))
+except urllib.error.HTTPError as exc:
+    content = b"" if method == "HEAD" else exc.read(8192)
+    headers = {k.lower(): v for k, v in exc.headers.items() if k.lower() not in {"set-cookie", "authorization"}}
+    print(json.dumps({
+        "url": url,
+        "method": method,
+        "ok": False,
+        "status_code": exc.code,
+        "reason": exc.reason,
+        "elapsed_ms": int((time.perf_counter() - started) * 1000),
+        "headers": headers,
+        "body_preview": content.decode("utf-8", errors="replace"),
+    }, ensure_ascii=False))
+except Exception as exc:
+    print(json.dumps({"url": url, "method": method, "ok": False, "error": str(exc)}, ensure_ascii=False))
+    raise SystemExit(1)
+""".strip()
+
+
+_HTTP_PROBE_SCRIPT = r"""
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+targets = [item.strip() for item in sys.argv[1].replace("\n", ",").split(",") if item.strip()]
+method, timeout_text = sys.argv[2], sys.argv[3]
+timeout = max(1.0, min(float(timeout_text), 30.0))
+records = []
+for url in targets[:20]:
+    started = time.perf_counter()
+    request = urllib.request.Request(url, method=method, headers={"User-Agent": "ZJ-Toolpack/1.0"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = b"" if method == "HEAD" else response.read(4096)
+            records.append({
+                "url": url,
+                "ok": True,
+                "status_code": response.status,
+                "elapsed_ms": int((time.perf_counter() - started) * 1000),
+                "server": response.headers.get("server", ""),
+                "content_type": response.headers.get("content-type", ""),
+                "body_preview_bytes": len(body),
+            })
+    except urllib.error.HTTPError as exc:
+        records.append({
+            "url": url,
+            "ok": False,
+            "status_code": exc.code,
+            "elapsed_ms": int((time.perf_counter() - started) * 1000),
+            "server": exc.headers.get("server", ""),
+            "content_type": exc.headers.get("content-type", ""),
+        })
+    except Exception as exc:
+        records.append({"url": url, "ok": False, "error": str(exc)})
+print(json.dumps({"count": len(records), "records": records}, ensure_ascii=False))
+""".strip()
+
+
+_DNS_TRACE_SCRIPT = r"""
+import json
+import shutil
+import socket
+import subprocess
+import sys
+
+host, record_type, timeout_text = sys.argv[1], sys.argv[2].upper(), sys.argv[3]
+socket.setdefaulttimeout(max(1.0, min(float(timeout_text), 10.0)))
+records = []
+try:
+    if record_type in {"A", "AAAA", "ANY"}:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+        seen = set()
+        for family, _, _, canonname, sockaddr in infos:
+            rrtype = "A" if family == socket.AF_INET else "AAAA" if family == socket.AF_INET6 else str(family)
+            if record_type != "ANY" and rrtype != record_type:
+                continue
+            key = (rrtype, sockaddr[0])
+            if key not in seen:
+                seen.add(key)
+                records.append({"type": rrtype, "value": sockaddr[0], "canonname": canonname})
+except Exception as exc:
+    records.append({"type": record_type, "error": str(exc)})
+raw_output = ""
+if shutil.which("nslookup"):
+    completed = subprocess.run(
+        ["nslookup", "-type=" + record_type, host],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        timeout=10,
+    )
+    raw_output = completed.stdout[-8192:] + completed.stderr[-2048:]
+print(json.dumps({
+    "host": host,
+    "record_type": record_type,
+    "records": records,
+    "raw_output": raw_output,
+}, ensure_ascii=False))
+""".strip()
+
+
+_PORT_QUICKCHECK_SCRIPT = r"""
+import json
+import socket
+import sys
+import time
+
+host, profile, timeout_text = sys.argv[1], sys.argv[2], sys.argv[3]
+profiles = {
+    "common": [22, 80, 443, 3389, 5432, 3306, 6379, 8000, 8080, 8443],
+    "web": [80, 443, 8000, 8080, 8443],
+    "db": [1433, 1521, 3306, 5432, 6379, 9200],
+}
+ports = profiles.get(profile, profiles["common"])
+timeout = max(0.1, min(float(timeout_text), 5.0))
+records = []
+for port in ports:
+    started = time.perf_counter()
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            records.append({"port": port, "open": True, "elapsed_ms": int((time.perf_counter() - started) * 1000)})
+    except Exception as exc:
+        records.append({"port": port, "open": False, "error": type(exc).__name__})
+print(json.dumps({"host": host, "profile": profile, "records": records}, ensure_ascii=False))
+""".strip()
+
+
+_LOG_TAIL_SCRIPT = r"""
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]).expanduser()
+lines = max(1, min(int(sys.argv[2]), 500))
+content = path.read_text(encoding="utf-8", errors="replace").splitlines()
+selected = content[-lines:]
+print(json.dumps({
+    "path": str(path.resolve()),
+    "lines": len(selected),
+    "content": "\n".join(selected),
+}, ensure_ascii=False))
+""".strip()
+
+
+_LOG_GREP_SCRIPT = r"""
+import json
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]).expanduser()
+pattern, ignore_case_text, max_matches_text = sys.argv[2], sys.argv[3], sys.argv[4]
+flags = re.IGNORECASE if ignore_case_text == "true" else 0
+regex = re.compile(pattern, flags)
+max_matches = max(1, min(int(max_matches_text), 200))
+matches = []
+with path.open(encoding="utf-8", errors="replace") as handle:
+    for number, line in enumerate(handle, 1):
+        if regex.search(line):
+            matches.append({"line_number": number, "line": line.rstrip("\n")})
+            if len(matches) >= max_matches:
+                break
+print(json.dumps({"path": str(path.resolve()), "pattern": pattern, "matches": matches}, ensure_ascii=False))
+""".strip()
+
+
+_FILE_HASH_SCRIPT = r"""
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]).expanduser()
+algorithm = sys.argv[2].lower()
+if algorithm not in {"sha256", "sha1", "md5"}:
+    raise SystemExit("unsupported hash algorithm")
+hasher = hashlib.new(algorithm)
+size = 0
+with path.open("rb") as handle:
+    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+        size += len(chunk)
+        hasher.update(chunk)
+print(json.dumps({
+    "path": str(path.resolve()),
+    "algorithm": algorithm,
+    "size": size,
+    "digest": hasher.hexdigest(),
+}, ensure_ascii=False))
+""".strip()
+
+
+_ARCHIVE_INSPECT_SCRIPT = r"""
+import json
+import sys
+import tarfile
+import zipfile
+from pathlib import Path
+
+path = Path(sys.argv[1]).expanduser()
+max_entries = max(1, min(int(sys.argv[2]), 500))
+entries = []
+archive_type = ""
+if zipfile.is_zipfile(path):
+    archive_type = "zip"
+    with zipfile.ZipFile(path) as archive:
+        for item in archive.infolist()[:max_entries]:
+            entries.append({"name": item.filename, "size": item.file_size, "compressed_size": item.compress_size})
+elif tarfile.is_tarfile(path):
+    archive_type = "tar"
+    with tarfile.open(path) as archive:
+        for item in archive.getmembers()[:max_entries]:
+            item_type = item.type.decode(errors="replace") if isinstance(item.type, bytes) else str(item.type)
+            entries.append({"name": item.name, "size": item.size, "type": item_type})
+else:
+    raise SystemExit("unsupported archive format")
+print(json.dumps({"path": str(path.resolve()), "archive_type": archive_type, "entries": entries}, ensure_ascii=False))
+""".strip()
+
+
+def _builtin_python_tool(
+    *,
+    tool_id: str,
+    name: str,
+    description: str,
+    backend: ToolBackend,
+    category: str,
+    action_type: str,
+    input_schema: dict[str, Any],
+    script: str,
+    script_args: Callable[[dict[str, Any]], list[str]],
+    default_timeout_seconds: int = 30,
+    max_timeout_seconds: int = 60,
+    risk_level: RiskLevel = RiskLevel.L1,
+) -> _ToolDefinition:
+    executable = "python" if backend == ToolBackend.LOCAL else "python3"
+    encoded_script = base64.b64encode(script.encode("utf-8")).decode("ascii")
+    bootstrap = (
+        "import base64,sys; "
+        "code=sys.argv[1]; "
+        "sys.argv=[sys.argv[0]]+sys.argv[2:]; "
+        "exec(base64.b64decode(code).decode())"
+    )
+    return _ToolDefinition(
+        manifest=ToolManifestSchema(
+            id=tool_id,
+            name=name,
+            description=description,
+            backend=backend,
+            executable=executable,
+            category=category,
+            action_type=action_type,
+            risk_level=risk_level,
+            default_timeout_seconds=default_timeout_seconds,
+            max_timeout_seconds=max_timeout_seconds,
+            input_schema=input_schema,
+            output_schema=_base_output_schema(),
+            policy={"requires_scope": True},
+        ),
+        install_hint=f"{executable} runtime is required for built-in operations tools.",
+        build_args=lambda payload: [executable, "-c", bootstrap, encoded_script, *script_args(payload)],
+    )
+
+
+def _paired_python_tools(
+    *,
+    suffix: str,
+    name: str,
+    description: str,
+    category: str,
+    action_type: str,
+    input_schema: dict[str, Any],
+    script: str,
+    script_args: Callable[[dict[str, Any]], list[str]],
+    default_timeout_seconds: int = 30,
+    max_timeout_seconds: int = 60,
+    risk_level: RiskLevel = RiskLevel.L1,
+) -> dict[str, _ToolDefinition]:
+    return {
+        f"local.{suffix}": _builtin_python_tool(
+            tool_id=f"local.{suffix}",
+            name=name,
+            description=description.replace("workspace", "local workspace"),
+            backend=ToolBackend.LOCAL,
+            category=category,
+            action_type=action_type,
+            input_schema=input_schema,
+            script=script,
+            script_args=script_args,
+            default_timeout_seconds=default_timeout_seconds,
+            max_timeout_seconds=max_timeout_seconds,
+            risk_level=risk_level,
+        ),
+        f"ssh.{suffix}": _builtin_python_tool(
+            tool_id=f"ssh.{suffix}",
+            name=name,
+            description=description.replace("workspace", "SSH workspace"),
+            backend=ToolBackend.SSH,
+            category=category,
+            action_type=action_type,
+            input_schema=input_schema,
+            script=script,
+            script_args=script_args,
+            default_timeout_seconds=default_timeout_seconds,
+            max_timeout_seconds=max_timeout_seconds,
+            risk_level=risk_level,
+        ),
+    }
+
+
+def _operations_tool_definitions() -> dict[str, _ToolDefinition]:
+    tools: dict[str, _ToolDefinition] = {}
+    simple_empty_schema = {"type": "object", "properties": {}, "additionalProperties": False}
+    tools.update(_paired_python_tools(
+        suffix="system.info",
+        name="system.info",
+        description="Collect read-only host and runtime facts from the workspace.",
+        category="ops-system",
+        action_type="ops.system.info",
+        input_schema=simple_empty_schema,
+        script=_SYSTEM_INFO_SCRIPT,
+        script_args=lambda payload: [],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="disk.usage",
+        name="disk.usage",
+        description="Summarize disk usage for a bounded path from the workspace.",
+        category="ops-system",
+        action_type="ops.disk.usage",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "max_depth": {"type": "integer", "minimum": 0, "maximum": 4},
+                "top_n": {"type": "integer", "minimum": 1, "maximum": 50},
+            },
+            "additionalProperties": False,
+        },
+        script=_DISK_USAGE_SCRIPT,
+        script_args=lambda payload: [
+            _optional_text(payload, "path", "."),
+            str(_optional_int(payload, "max_depth", 1, minimum=0, maximum=4)),
+            str(_optional_int(payload, "top_n", 20, minimum=1, maximum=50)),
+        ],
+        default_timeout_seconds=60,
+        max_timeout_seconds=120,
+    ))
+    tools.update(_paired_python_tools(
+        suffix="process.list",
+        name="process.list",
+        description="List running processes with an optional keyword filter.",
+        category="ops-system",
+        action_type="ops.process.list",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "keyword": {"type": "string", "maxLength": 128},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+            },
+            "additionalProperties": False,
+        },
+        script=_PROCESS_LIST_SCRIPT,
+        script_args=lambda payload: [
+            _optional_text(payload, "keyword", "__all__") or "__all__",
+            str(_optional_int(payload, "limit", 50, minimum=1, maximum=200)),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="net.connections",
+        name="net.connections",
+        description="List TCP/UDP connection rows from the workspace.",
+        category="ops-network",
+        action_type="ops.net.connections",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "state": {"type": "string", "maxLength": 64},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 300},
+            },
+            "additionalProperties": False,
+        },
+        script=_NET_CONNECTIONS_SCRIPT,
+        script_args=lambda payload: [
+            _optional_text(payload, "state", "__all__") or "__all__",
+            str(_optional_int(payload, "limit", 100, minimum=1, maximum=300)),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="env.check",
+        name="env.check",
+        description="Check PATH and common operations/security tools in the workspace.",
+        category="ops-system",
+        action_type="ops.env.check",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "tools": {"type": "string", "minLength": 1, "maxLength": 512},
+            },
+            "additionalProperties": False,
+        },
+        script=_ENV_CHECK_SCRIPT,
+        script_args=lambda payload: [
+            _optional_text(payload, "tools", "python,python3,node,pnpm,git,curl,nmap,sqlmap,httpx,dnsx,ffuf"),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="curl",
+        name="curl",
+        description="Run a bounded HTTP request from the workspace.",
+        category="ops-http",
+        action_type="web.http.request",
+        input_schema={
+            "type": "object",
+            "required": ["url"],
+            "properties": {
+                "url": {"type": "string", "minLength": 1, "maxLength": 2048},
+                "method": {"type": "string", "enum": ["GET", "HEAD", "POST", "PUT", "PATCH"]},
+                "body": {"type": "string", "maxLength": 8192},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            },
+            "additionalProperties": False,
+        },
+        script=_CURL_SCRIPT,
+        script_args=lambda payload: [
+            _required_url(payload, "url"),
+            _optional_enum(payload, "method", {"GET", "HEAD", "POST", "PUT", "PATCH"}, "GET"),
+            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+            _optional_text(payload, "body", ""),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="http.probe",
+        name="http.probe",
+        description="Probe up to 20 HTTP URLs from the workspace.",
+        category="ops-http",
+        action_type="web.http.probe",
+        input_schema={
+            "type": "object",
+            "required": ["urls"],
+            "properties": {
+                "urls": {"type": "string", "minLength": 1, "maxLength": 8192},
+                "method": {"type": "string", "enum": ["GET", "HEAD"]},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            },
+            "additionalProperties": False,
+        },
+        script=_HTTP_PROBE_SCRIPT,
+        script_args=lambda payload: [
+            _required_urls_text(payload, "urls", max_items=20),
+            _optional_enum(payload, "method", {"GET", "HEAD"}, "HEAD"),
+            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+        ],
+        default_timeout_seconds=60,
+        max_timeout_seconds=120,
+    ))
+    tools.update(_paired_python_tools(
+        suffix="dns.trace",
+        name="dns.trace",
+        description="Resolve DNS records and include nslookup output when available.",
+        category="ops-dns",
+        action_type="network.dns.trace",
+        input_schema={
+            "type": "object",
+            "required": ["host"],
+            "properties": {
+                "host": {"type": "string", "minLength": 1, "maxLength": 255},
+                "record_type": {"type": "string", "enum": ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "ANY"]},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10},
+            },
+            "additionalProperties": False,
+        },
+        script=_DNS_TRACE_SCRIPT,
+        script_args=lambda payload: [
+            _required_host(payload, "host"),
+            _optional_enum(payload, "record_type", {"A", "AAAA", "MX", "TXT", "NS", "CNAME", "ANY"}, "A"),
+            str(_optional_int(payload, "timeout_seconds", 5, minimum=1, maximum=10)),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="port.quickcheck",
+        name="port.quickcheck",
+        description="Check a predefined common/web/database port profile.",
+        category="ops-network",
+        action_type="network.port.quickcheck",
+        input_schema={
+            "type": "object",
+            "required": ["host"],
+            "properties": {
+                "host": {"type": "string", "minLength": 1, "maxLength": 255},
+                "profile": {"type": "string", "enum": ["common", "web", "db"]},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 5},
+            },
+            "additionalProperties": False,
+        },
+        script=_PORT_QUICKCHECK_SCRIPT,
+        script_args=lambda payload: [
+            _required_host(payload, "host"),
+            _optional_enum(payload, "profile", {"common", "web", "db"}, "common").lower(),
+            str(_optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="log.tail",
+        name="log.tail",
+        description="Read the last N lines of a text log file from the workspace.",
+        category="ops-file",
+        action_type="file.log.tail",
+        input_schema={
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "lines": {"type": "integer", "minimum": 1, "maximum": 500},
+            },
+            "additionalProperties": False,
+        },
+        script=_LOG_TAIL_SCRIPT,
+        script_args=lambda payload: [
+            _required_path_text(payload, "path"),
+            str(_optional_int(payload, "lines", 100, minimum=1, maximum=500)),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="log.grep",
+        name="log.grep",
+        description="Search a text log file for a bounded number of matches.",
+        category="ops-file",
+        action_type="file.log.grep",
+        input_schema={
+            "type": "object",
+            "required": ["path", "pattern"],
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "pattern": {"type": "string", "minLength": 1, "maxLength": 256},
+                "ignore_case": {"type": "boolean"},
+                "max_matches": {"type": "integer", "minimum": 1, "maximum": 200},
+            },
+            "additionalProperties": False,
+        },
+        script=_LOG_GREP_SCRIPT,
+        script_args=lambda payload: [
+            _required_path_text(payload, "path"),
+            _required_text(payload, "pattern"),
+            "true" if _optional_bool(payload, "ignore_case", True) else "false",
+            str(_optional_int(payload, "max_matches", 50, minimum=1, maximum=200)),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="file.hash",
+        name="file.hash",
+        description="Calculate a read-only file hash from the workspace.",
+        category="ops-file",
+        action_type="file.hash",
+        input_schema={
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "algorithm": {"type": "string", "enum": ["sha256", "sha1", "md5"]},
+            },
+            "additionalProperties": False,
+        },
+        script=_FILE_HASH_SCRIPT,
+        script_args=lambda payload: [
+            _required_path_text(payload, "path"),
+            _optional_enum(payload, "algorithm", {"sha256", "sha1", "md5"}, "sha256"),
+        ],
+    ))
+    tools.update(_paired_python_tools(
+        suffix="archive.inspect",
+        name="archive.inspect",
+        description="List archive entries without extracting files.",
+        category="ops-file",
+        action_type="archive.inspect",
+        input_schema={
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "max_entries": {"type": "integer", "minimum": 1, "maximum": 500},
+            },
+            "additionalProperties": False,
+        },
+        script=_ARCHIVE_INSPECT_SCRIPT,
+        script_args=lambda payload: [
+            _required_path_text(payload, "path"),
+            str(_optional_int(payload, "max_entries", 100, minimum=1, maximum=500)),
+        ],
+    ))
+    return tools
 
 
 _TOOLS: dict[str, _ToolDefinition] = {
@@ -651,6 +1454,8 @@ _TOOLS: dict[str, _ToolDefinition] = {
     ),
 }
 
+_TOOLS.update(_operations_tool_definitions())
+
 
 async def list_toolpack_tools(sandbox_container_id: int | None = None) -> QueryToolpackToolsResponse:
     tools = [
@@ -774,6 +1579,12 @@ async def _execute_tool_run(
             ToolRunStatus.FAILED,
         )
     except PermissionError as exc:
+        await _store_result(
+            run_id,
+            _error_result(run_id, started_at, ExecutionErrorCode.POLICY_DENIED, str(exc)),
+            ToolRunStatus.FAILED,
+        )
+    except ValueError as exc:
         await _store_result(
             run_id,
             _error_result(run_id, started_at, ExecutionErrorCode.POLICY_DENIED, str(exc)),
@@ -939,6 +1750,32 @@ def _required_url(payload: dict[str, Any], field: str) -> str:
     return value
 
 
+def _required_urls_text(payload: dict[str, Any], field: str, *, max_items: int) -> str:
+    value = _required_text_allow_newlines(payload, field)
+    items = [item.strip() for item in value.replace("\n", ",").split(",") if item.strip()]
+    if not items:
+        raise ValueError(f"{field} is required")
+    if len(items) > max_items:
+        raise PermissionError(f"{field} count exceeds policy limit {max_items}")
+    for item in items:
+        parsed = urlsplit(item)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError(f"{field} contains an invalid http or https URL")
+    return "\n".join(items)
+
+
+def _required_text_allow_newlines(payload: dict[str, Any], field: str) -> str:
+    value = payload.get(field)
+    if not isinstance(value, str):
+        raise ValueError(f"{field} is required")
+    value = value.strip()
+    if not value:
+        raise ValueError(f"{field} is required")
+    if len(value) > 8192 or any((ord(char) < 32 and char not in {"\n", "\r", "\t"}) for char in value):
+        raise ValueError(f"{field} is invalid")
+    return value
+
+
 def _required_host(payload: dict[str, Any], field: str) -> str:
     value = _required_text(payload, field)
     if "://" in value or "/" in value or "\\" in value or any(char.isspace() for char in value):
@@ -946,8 +1783,48 @@ def _required_host(payload: dict[str, Any], field: str) -> str:
     return value
 
 
+def _required_path_text(payload: dict[str, Any], field: str) -> str:
+    value = _required_text(payload, field)
+    if "\x00" in value:
+        raise ValueError(f"{field} is invalid")
+    return value
+
+
+def _optional_text(payload: dict[str, Any], field: str, default: str) -> str:
+    value = payload.get(field)
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be text")
+    value = value.strip()
+    if not value:
+        return default
+    if len(value) > 4096 or any(ord(char) < 32 for char in value):
+        raise ValueError(f"{field} is invalid")
+    return value
+
+
+def _optional_bool(payload: dict[str, Any], field: str, default: bool) -> bool:
+    value = payload.get(field)
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    raise ValueError(f"{field} must be a boolean")
+
+
 def _optional_enum(payload: dict[str, Any], field: str, allowed: set[str], default: str) -> str:
-    value = str(payload.get(field) or default).upper()
+    value = str(payload.get(field) or default)
+    if value in allowed:
+        return value
+    upper_value = value.upper()
+    if upper_value in allowed:
+        return upper_value
+    lower_value = value.lower()
+    if lower_value in allowed:
+        return lower_value
     if value not in allowed:
         raise ValueError(f"{field} must be one of {', '.join(sorted(allowed))}")
     return value

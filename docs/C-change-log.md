@@ -131,6 +131,23 @@ Effect:
 - Users now see execution locations like `SSH · WSL测试机 · zj_sandbox@192.168.203.164:2222 · 运行中`.
 - The hash remains available as secondary Workspace ID detail in dropdown options.
 
+### feat: expand Toolpack operations toolbox
+
+- Added local and SSH variants for common operations diagnostics:
+  - `system.info`, `disk.usage`, `process.list`, `net.connections`, `env.check`
+  - `curl`, `http.probe`, `dns.trace`, `port.quickcheck`
+  - `log.tail`, `log.grep`, `file.hash`, `archive.inspect`
+- Implemented the new tools as bounded read-only Python scripts executed through the existing Toolpack / Workspace command gateway.
+- Added Action Registry entries for the new operations, HTTP, DNS, port, log, hash, and archive actions.
+- Added Toolpack UI Chinese names, descriptions, field labels, boolean controls, and smoke-test-friendly defaults.
+
+Reason:
+- C module needs to look and behave more like a desktop operations toolbox while keeping Agent and manual Toolpack execution on the same local/SSH Workspace path.
+
+Effect:
+- Users can run the same operational diagnostics from local or SSH Workspaces without installing additional binaries beyond Python/Python3.
+- The tools remain read-only and return structured `ExecutionResult` records with artifact support for large output.
+
 ## Deferred Items
 
 ### D-TODO-1: L3 destructive pattern can be masked by always-allow in normal mode
