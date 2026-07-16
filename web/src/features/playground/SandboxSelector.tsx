@@ -1,4 +1,4 @@
-import { Select, Spin, Tag } from "@douyinfe/semi-ui";
+import { Select, Spin, Tag, Tooltip } from "@douyinfe/semi-ui";
 import { Box } from "lucide-react";
 import type { SandboxContainer } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
@@ -28,7 +28,7 @@ export function SandboxSelector({ containers, loading, value, className = "", di
         prefix={<Box size={15} />}
         value={value ?? undefined}
         optionList={optionList}
-        renderSelectedItem={() => selectedContainer ? renderExecutionLocationLabel(selectedContainer) : ""}
+        renderSelectedItem={() => selectedContainer ? renderSelectedContainer(selectedContainer) : ""}
         placeholder={loading ? "正在加载执行工作区" : "选择执行工作区"}
         emptyContent={loading ? <Spin size="small" /> : "暂无可用工作区"}
         disabled={disabled || loading || containers.length === 0}
@@ -52,6 +52,15 @@ function renderContainerOption(container: SandboxContainer) {
   );
 }
 
+function renderSelectedContainer(container: SandboxContainer) {
+  const fullLabel = renderExecutionLocationLabel(container);
+  return (
+    <Tooltip content={fullLabel}>
+      <span className="sandbox-selector-selected">{renderCompactExecutionLocationLabel(container)}</span>
+    </Tooltip>
+  );
+}
+
 function renderExecutionLocationLabel(container: SandboxContainer) {
   const status = SANDBOX_CONTAINER_STATUS_LABEL[container.status];
   if (container.host_execution_backend === "local") {
@@ -59,6 +68,15 @@ function renderExecutionLocationLabel(container: SandboxContainer) {
   }
   const hostName = container.host_display_name || "SSH主机";
   return `SSH · ${hostName} · ${container.host_account}@${container.host_ip_address}:${container.host_ssh_port} · ${status}`;
+}
+
+function renderCompactExecutionLocationLabel(container: SandboxContainer) {
+  const status = SANDBOX_CONTAINER_STATUS_LABEL[container.status];
+  if (container.host_execution_backend === "local") {
+    return `本机 · ${status}`;
+  }
+  const hostName = container.host_display_name || container.host_ip_address || "SSH主机";
+  return `SSH · ${hostName} · ${status}`;
 }
 
 function renderContainerId(containerHash: string) {
