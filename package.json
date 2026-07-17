@@ -9,9 +9,13 @@
     "build": "pnpm --filter @zj-security/web build && pnpm --filter @zj-security/desktop build",
     "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
     "typecheck": "pnpm --filter @zj-security/web typecheck && pnpm --filter @zj-security/desktop typecheck",
-    "test": "uv run python -m unittest discover -s tests -p \"test_*.py\" && pnpm typecheck"
+    "test": "uv run python -m unittest discover -s tests -p \"test_*.py\" && pnpm typecheck",
+    "test:d-runtime": "uv run python -m unittest tests.integration.test_d_mock_runtime tests.unit.test_d_agent_quality_assets",
+    "test:d-web": "powershell -ExecutionPolicy Bypass -File scripts/run-d-web-e2e.ps1",
+    "test:d": "pnpm test:d-runtime && pnpm test:d-web"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "concurrently": "^9.2.1",
     "wait-on": "^8.0.3"
   },

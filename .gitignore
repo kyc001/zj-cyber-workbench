@@ -33,6 +33,8 @@ web/dist-landing/
 desktop/node_modules/
 desktop/dist/
 desktop/release/
+test-results/
+playwright-report/
 
 # Runtime data and secrets
 *.log

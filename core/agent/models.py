@@ -1,8 +1,11 @@
-"""Native OpenAI model construction for configured agents."""
+"""Model construction for configured agents, including deterministic test models."""
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
+from pathlib import Path
+from urllib.parse import urlsplit
 
 from agents import (
     AgentOutputSchemaBase,
@@ -23,6 +26,11 @@ from openai import AsyncOpenAI
 
 from config import AgentConfig
 from core.agent.model_input import ModelInputAdapter
+from core.agent.mock_model import ScriptedMockModel, load_mock_model_scenarios
+
+_MOCK_SCHEME = "mock"
+_MOCK_MODEL_PREFIXES = ("mock:", "zj-mock:")
+_MOCK_SCENARIO_ENV = "ZJ_MOCK_MODEL_SCENARIOS"
 
 
 class ZJOpenAIModel(Model):
@@ -103,5 +111,46 @@ class ZJOpenAIModel(Model):
         await self._client.close()
 
 
-def build_openai_model(cfg: AgentConfig) -> ZJOpenAIModel:
+def build_openai_model(cfg: AgentConfig) -> Model:
+    mock_model = _build_mock_model(cfg)
+    if mock_model is not None:
+        return mock_model
     return ZJOpenAIModel(cfg)
+
+
+def _build_mock_model(cfg: AgentConfig) -> ScriptedMockModel | None:
+    scenario_name = _mock_scenario_name(cfg)
+    if not scenario_name:
+        return None
+
+    scenarios = load_mock_model_scenarios(_mock_scenario_file())
+    try:
+        scenario = scenarios[scenario_name]
+    except KeyError as exc:
+        raise ValueError(f"mock model scenario not found: {scenario_name}") from exc
+    return ScriptedMockModel(scenario, model=cfg.model or f"zj-mock:{scenario_name}")
+
+
+def _mock_scenario_name(cfg: AgentConfig) -> str:
+    base_url = cfg.base_url.strip()
+    if base_url:
+        parsed = urlsplit(base_url)
+        if parsed.scheme == _MOCK_SCHEME:
+            return f"{parsed.netloc}{parsed.path}".strip("/")
+
+    model = cfg.model.strip()
+    for prefix in _MOCK_MODEL_PREFIXES:
+        if model.startswith(prefix):
+            return model.removeprefix(prefix).strip()
+    return ""
+
+
+def _mock_scenario_file() -> Path:
+    configured = os.environ.get(_MOCK_SCENARIO_ENV, "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+
+    default = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "d_agent" / "mock_model_scenarios.json"
+    if default.is_file():
+        return default
+    raise ValueError(f"{_MOCK_SCENARIO_ENV} must point to mock_model_scenarios.json")

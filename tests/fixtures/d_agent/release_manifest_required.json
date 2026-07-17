@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "required_docs": [
+    "docs/release-checklist.md",
+    "docs/release-notes-template.md",
+    "docs/known-issues.md",
+    "docs/d-core-e2e-plan.md",
+    "docs/d-report-timeline-reconciliation.md",
+    "docs/operator-manual.md",
+    "docs/threat-model.md",
+    "docs/incident-report-template.md",
+    "README_zh.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
+  ],
+  "required_artifacts": [
+    "ZJ-<version>-win-x64-portable.exe",
+    "ZJ-<version>-SHA256SUMS.txt",
+    "ZJ-<version>-SBOM.spdx.json",
+    "ZJ-<version>-third-party-licenses.txt"
+  ],
+  "release_blockers": [
+    "ci_requires_real_model",
+    "prompt_injection_bypass",
+    "unapproved_high_risk_execution",
+    "report_timeline_mismatch",
+    "p0_p1_security_issue",
+    "clean_windows_vm_failed"
+  ]
+}

@@ -281,3 +281,31 @@ ZJ-1.0.0-third-party-licenses.txt
 - 向 B 提供 E2E、UI 安全测试、风险文案和报告字段。
 - 向 C 提供恶意输入、Scope 越界、压测限制和执行失败测试。
 - 接收 A/B/C 的测试构建、模块文档和发布候选产物。
+
+## 二十一、当前 D 组落地资产
+
+以下文件是本岗位前四项任务的当前落地版本，后续变更需要同步更新测试：
+
+- `docs/D-agent-operating-spec.md`：7 个产品层 Agent 的正式职责、输入、输出、工具边界、审批条件、拒绝条件和输出 Schema。
+- `docs/D-tool-permission-matrix.md`：人读版 Tool 权限矩阵和 Action 风险分层。
+- `tests/fixtures/d_agent/tool_permission_matrix.json`：机器可读权限矩阵，供 CI 检查运行时工具覆盖。
+- `tests/fixtures/d_agent/prompt_injection_cases.json`：Prompt Injection 与越权测试样本集。
+- `tests/fixtures/d_agent/mock_model_scenarios.json`：Mock Model 场景。
+- `core/agent/mock_model.py`：CI 可注入的确定性 Mock Model。
+- `tests/unit/test_d_agent_quality_assets.py`：上述资产的基础一致性测试。
+- `docs/D-core-e2e-plan.md`：核心 E2E 验收方案。
+- `docs/D-report-timeline-reconciliation.md`：报告与 Timeline 对账规范。
+- `core/agent/report_reconciliation.py`：报告引用对账辅助工具。
+- `docs/release-checklist.md`、`docs/release-notes-template.md`、`docs/known-issues.md`：发布资产。
+
+## 二十二、D 组自动化验收入口
+
+- `tests/integration/test_d_mock_runtime.py`：Mock Model 穿过真实 Agent Runtime、SQLite Timeline 和重启读取的集成测试。
+- `tests/e2e/d-playground.spec.ts`：Playground 浏览器 E2E。
+- `scripts/run-d-web-e2e.ps1`：启动隔离 E2E 环境。
+- `docs/D-verification-2026-07-17.md`：本轮验证结论。
+
+```powershell
+pnpm test:d-runtime
+pnpm test:d-web
+```
