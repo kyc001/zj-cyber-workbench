@@ -301,3 +301,19 @@ ZJ-1.0.0-third-party-licenses.txt
 - 向 B 提供 E2E、UI 安全测试、风险文案和报告字段。
 - 向 C 提供恶意输入、Scope 越界、压测限制和执行失败测试。
 - 接收 A/B/C 的测试构建、模块文档和发布候选产物。
+
+## 二十二、D 组自动化验收入口
+
+- `tests/integration/test_d_mock_runtime.py`：Mock Model 穿过真实 Agent Runtime、SQLite Timeline 和重启读取的集成测试。
+- `tests/e2e/d-playground.spec.ts`：Playground 发送消息、显示 Mock 回复和刷新后恢复会话的浏览器 E2E。
+- `scripts/run-d-web-e2e.ps1`：使用临时 `ZJ_DATA_DIR`、独立端口和空测试 Key 启动隔离 E2E 环境。
+- `docs/d-verification-2026-07-17.md`：本轮通过项、待联调项和发布判断。
+- `docs/incident-report-template.md`：Incident 报告模板。
+- `docs/operator-manual.md`、`docs/threat-model.md`：操作与威胁模型文档。
+
+执行命令：
+
+```powershell
+pnpm test:d-runtime
+pnpm test:d-web
+```

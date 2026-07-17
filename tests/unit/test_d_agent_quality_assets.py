@@ -6,7 +6,9 @@ from pathlib import Path
 from agents import ModelSettings
 from openai.types.responses import ResponseFunctionToolCall, ResponseOutputMessage
 
+from config import AgentConfig
 from core.agent.mock_model import ScriptedMockModel, load_mock_model_scenarios
+from core.agent.models import build_openai_model
 from core.agent.report_reconciliation import extract_report_references, reconcile_report_with_timeline
 from core.agent.specs import AGENT_SPECS
 
@@ -87,6 +89,45 @@ class DAgentQualityAssetTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             asyncio.run(_get_response(ScriptedMockModel(scenarios["token_limit"])))
 
+    def test_build_openai_model_can_inject_mock_model_by_base_url(self) -> None:
+        model = build_openai_model(
+            AgentConfig(
+                code="cso",
+                name="Mock CSO",
+                base_url="mock://fixed_tool_call",
+                model="zj-mock",
+            )
+        )
+        self.assertIsInstance(model, ScriptedMockModel)
+
+        response = asyncio.run(_get_response(model))
+        self.assertIsInstance(response.output[0], ResponseFunctionToolCall)
+        self.assertEqual("http_request", response.output[0].name)
+
+    def test_build_openai_model_can_inject_mock_model_by_model_name(self) -> None:
+        model = build_openai_model(
+            AgentConfig(
+                code="cso",
+                name="Mock CSO",
+                model="zj-mock:diagnostic_text",
+            )
+        )
+        self.assertIsInstance(model, ScriptedMockModel)
+
+        response = asyncio.run(_get_response(model))
+        self.assertIsInstance(response.output[0], ResponseOutputMessage)
+
+    def test_build_openai_model_rejects_unknown_mock_scenario(self) -> None:
+        with self.assertRaisesRegex(ValueError, "mock model scenario not found"):
+            build_openai_model(
+                AgentConfig(
+                    code="cso",
+                    name="Mock CSO",
+                    base_url="mock://missing_scenario",
+                    model="zj-mock",
+                )
+            )
+
     def test_core_e2e_fixture_contains_the_required_release_path(self) -> None:
         payload = json.loads((FIXTURES / "core_e2e_scenarios.json").read_text(encoding="utf-8"))
         scenario = payload["scenarios"][0]
@@ -160,7 +201,7 @@ class DAgentQualityAssetTests(unittest.TestCase):
             self.assertIn(phrase, checklist)
 
 
-async def _get_response(model: ScriptedMockModel):
+async def _get_response(model):
     return await model.get_response(
         system_instructions="system",
         input="user",
@@ -175,7 +216,7 @@ async def _get_response(model: ScriptedMockModel):
     )
 
 
-async def _stream_events(model: ScriptedMockModel):
+async def _stream_events(model):
     return [
         event
         async for event in model.stream_response(

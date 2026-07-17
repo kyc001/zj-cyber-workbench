@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, Literal
@@ -25,6 +26,8 @@ from agents import (
     Usage,
 )
 from openai.types.responses import (
+    Response,
+    ResponseCompletedEvent,
     ResponseContentPartAddedEvent,
     ResponseContentPartDoneEvent,
     ResponseFunctionToolCall,
@@ -193,6 +196,21 @@ class ScriptedMockModel(Model):
                 type="response.output_item.done",
             )
             sequence += 1
+        yield ResponseCompletedEvent(
+            response=Response(
+                id=response.response_id or f"mock-response-{uuid4().hex}",
+                created_at=time.time(),
+                model=self.model,
+                object="response",
+                output=response.output,
+                parallel_tool_calls=False,
+                status="completed",
+                tool_choice="auto",
+                tools=[],
+            ),
+            sequence_number=sequence,
+            type="response.completed",
+        )
 
     async def _maybe_fail(self) -> None:
         if self.scenario.delay_seconds:
@@ -239,4 +257,3 @@ def _output_token_estimate(item: object) -> int:
     if isinstance(item, ResponseFunctionToolCall):
         return max(1, len(item.arguments.split()) + 1)
     return 1
-

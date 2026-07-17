@@ -79,3 +79,23 @@
 11. 重启后确认项目、Timeline 和报告仍可访问。
 ```
 
+## Mock Model Runtime 接入
+
+当前 Mock Model 已接入真实 Agent Runtime 的模型构造层：`core.agent.models.build_openai_model`。
+
+启用方式必须显式配置，避免误伤真实 Provider：
+
+- `base_url = "mock://fixed_tool_call"`：从 `base_url` 选择 Mock 场景。
+- `model = "zj-mock:diagnostic_text"`：从 `model` 名称选择 Mock 场景。
+- `ZJ_MOCK_MODEL_SCENARIOS=tests/fixtures/d_agent/mock_model_scenarios.json`：可选，用于覆盖默认场景文件路径。
+
+默认场景文件为 `tests/fixtures/d_agent/mock_model_scenarios.json`。如果场景名不存在，Runtime 会在启动构造模型时抛出 `ValueError`，防止 E2E 静默跑到错误 Provider。
+
+本阶段测试重点：
+
+- 确认 `AgentConfig(base_url="mock://fixed_tool_call")` 会构造 `ScriptedMockModel`。
+- 确认 `AgentConfig(model="zj-mock:diagnostic_text")` 会构造 `ScriptedMockModel`。
+- 确认未知场景会被阻断。
+- 确认普通 Agent 配置仍保留原 OpenAI-compatible Provider 路径。
+
+后续完整 E2E 可以在临时 `ZJ_DATA_DIR` 中写入测试用 `config.json`，把 6 个现有 runtime agent 的模型统一指向 Mock 场景，然后通过 `/playground` 或后端 session API 跑完主链路。

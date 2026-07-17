@@ -5,7 +5,14 @@
     "docs/release-notes-template.md",
     "docs/known-issues.md",
     "docs/d-core-e2e-plan.md",
-    "docs/d-report-timeline-reconciliation.md"
+    "docs/d-report-timeline-reconciliation.md",
+    "docs/operator-manual.md",
+    "docs/threat-model.md",
+    "docs/incident-report-template.md",
+    "README_zh.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
   ],
   "required_artifacts": [
     "ZJ-<version>-win-x64-portable.exe",
@@ -22,4 +29,3 @@
     "clean_windows_vm_failed"
   ]
 }
-
