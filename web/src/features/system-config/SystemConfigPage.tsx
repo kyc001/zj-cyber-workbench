@@ -1,7 +1,23 @@
 import { Button, Input, InputNumber, Select, Spin, Switch, TextArea, Toast } from "@douyinfe/semi-ui";
-import { Bot, CopyCheck, DatabaseZap, RefreshCw, RotateCcw, Save, Settings, X } from "lucide-react";
+import { Bot, CopyCheck, DatabaseZap, FileText, RefreshCw, RotateCcw, Save, Settings, Wrench, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { fetchProviderModels, getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";
+import {
+  createCustomSkill,
+  deleteCustomSkill,
+  fetchProviderModels,
+  getAgentPrompt,
+  getCustomizableSkill,
+  getInstanceConfig,
+  listCustomizableSkills,
+  resetAgentPrompt,
+  updateAgentPrompt,
+  updateCustomSkill,
+  updateInstanceConfig,
+  type AgentPrompt,
+  type AgentPromptKind,
+  type SkillDetail,
+  type SkillSummary,
+} from "../../shared/api/systemConfig";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import { MetricStrip } from "../../shared/components/ResourcePageShell";
 import { cx } from "../../shared/lib/className";
@@ -73,6 +89,7 @@ const AGENT_TEXT_FIELDS: AgentTextField[] = [
 ];
 
 const EMPTY_PROVIDER: ProviderDraft = { base_url: "", api_key: "", model: "" };
+const SKILL_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 function toFormValue(config: InstanceConfig): ConfigFormValue {
   if (!config.agent_pool || !config.agent_runtime || !config.permissions || !config.lightrag) {
@@ -325,6 +342,10 @@ export function SystemConfigPage() {
                 ))}
               </div>
             </ConfigPanel>
+
+            <ConfigPanel icon={<FileText size={18} />} title="Agent 自定义">
+              <AgentCustomizationPanel agents={values.agents} />
+            </ConfigPanel>
           </div>
         ) : null}
       </Spin>
@@ -360,6 +381,293 @@ function ProviderQuickSetup({ value, models, loading, onChange, onFetch, onApply
           应用到全部智能体
         </Button>
         <span>{models.length ? `已拉取 ${models.length} 个模型，可搜索选择` : "点击“拉取模型”获取服务端列表"}</span>
+      </div>
+    </div>
+  );
+}
+
+function AgentCustomizationPanel({ agents }: { agents: AgentFormValue[] }) {
+  const [agentCode, setAgentCode] = useState(agents[0]?.code ?? "");
+  const [promptKind, setPromptKind] = useState<AgentPromptKind>("rules");
+  const [prompt, setPrompt] = useState<AgentPrompt | null>(null);
+  const [promptDraft, setPromptDraft] = useState("");
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [promptSaving, setPromptSaving] = useState(false);
+  const [skills, setSkills] = useState<SkillSummary[]>([]);
+  const [skillName, setSkillName] = useState("");
+  const [skillDetail, setSkillDetail] = useState<SkillDetail | null>(null);
+  const [skillDraft, setSkillDraft] = useState("");
+  const [newSkillName, setNewSkillName] = useState("");
+  const [skillLoading, setSkillLoading] = useState(false);
+  const [skillSaving, setSkillSaving] = useState(false);
+
+  const selectedAgent = agents.find((agent) => agent.code === agentCode);
+
+  const loadPrompt = useCallback(async () => {
+    if (!agentCode) return;
+    setPromptLoading(true);
+    try {
+      const response = await getAgentPrompt(agentCode, promptKind);
+      if (response.data) {
+        setPrompt(response.data);
+        setPromptDraft(response.data.content);
+      }
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setPromptLoading(false);
+    }
+  }, [agentCode, promptKind]);
+
+  const loadSkills = useCallback(async () => {
+    setSkillLoading(true);
+    try {
+      const response = await listCustomizableSkills();
+      const items = response.data?.items ?? [];
+      setSkills(items);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setSkillLoading(false);
+    }
+  }, []);
+
+  const loadSkillDetail = useCallback(async () => {
+    if (!skillName) {
+      setSkillDetail(null);
+      setSkillDraft("");
+      return;
+    }
+    setSkillLoading(true);
+    try {
+      const response = await getCustomizableSkill(skillName);
+      if (response.data) {
+        setSkillDetail(response.data);
+        setSkillDraft(response.data.content);
+      }
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setSkillLoading(false);
+    }
+  }, [skillName]);
+
+  useEffect(() => {
+    if (!agents.some((agent) => agent.code === agentCode)) {
+      setAgentCode(agents[0]?.code ?? "");
+    }
+  }, [agentCode, agents]);
+
+  useEffect(() => {
+    void loadPrompt();
+  }, [loadPrompt]);
+
+  useEffect(() => {
+    void loadSkills();
+  }, [loadSkills]);
+
+  useEffect(() => {
+    if (!skillName && skills[0]) setSkillName(skills[0].name);
+  }, [skillName, skills]);
+
+  useEffect(() => {
+    void loadSkillDetail();
+  }, [loadSkillDetail]);
+
+  const savePrompt = useCallback(async () => {
+    if (!agentCode || promptSaving) return;
+    setPromptSaving(true);
+    try {
+      const response = await updateAgentPrompt(agentCode, { kind: promptKind, content: promptDraft });
+      if (response.data) {
+        setPrompt(response.data);
+        setPromptDraft(response.data.content);
+      }
+      Toast.success("提示词已保存，新建或后续会话将使用自定义内容");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setPromptSaving(false);
+    }
+  }, [agentCode, promptDraft, promptKind, promptSaving]);
+
+  const restorePrompt = useCallback(async () => {
+    if (!agentCode || promptSaving) return;
+    setPromptSaving(true);
+    try {
+      const response = await resetAgentPrompt(agentCode, promptKind);
+      if (response.data) {
+        setPrompt(response.data);
+        setPromptDraft(response.data.content);
+      }
+      Toast.success("已恢复内置提示词");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setPromptSaving(false);
+    }
+  }, [agentCode, promptKind, promptSaving]);
+
+  const createSkill = useCallback(async () => {
+    const name = newSkillName.trim();
+    if (!name || skillSaving) return;
+    if (!SKILL_NAME_PATTERN.test(name)) {
+      Toast.warning("Skill 名称只能使用小写字母、数字和短横线，且不能以短横线开头或结尾");
+      return;
+    }
+    setSkillSaving(true);
+    try {
+      const response = await createCustomSkill({
+        name,
+        content: `# ${name}\n\n描述这个 Skill 的使用场景、前置条件和操作步骤。`,
+      });
+      if (response.data) {
+        setSkillName(response.data.name);
+        setSkillDetail(response.data);
+        setSkillDraft(response.data.content);
+        setNewSkillName("");
+      }
+      await loadSkills();
+      Toast.success("Skill 已创建");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setSkillSaving(false);
+    }
+  }, [loadSkills, newSkillName, skillSaving]);
+
+  const saveSkill = useCallback(async () => {
+    if (!skillDetail?.editable || skillSaving) return;
+    setSkillSaving(true);
+    try {
+      const response = await updateCustomSkill(skillDetail.name, { content: skillDraft });
+      if (response.data) {
+        setSkillDetail(response.data);
+        setSkillDraft(response.data.content);
+      }
+      await loadSkills();
+      Toast.success("Skill 已保存");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setSkillSaving(false);
+    }
+  }, [loadSkills, skillDetail, skillDraft, skillSaving]);
+
+  const removeSkill = useCallback(async () => {
+    if (!skillDetail?.editable || skillSaving) return;
+    if (!window.confirm(`删除自定义 Skill：${skillDetail.name}？`)) return;
+    setSkillSaving(true);
+    try {
+      await deleteCustomSkill(skillDetail.name);
+      setSkillName("");
+      setSkillDetail(null);
+      setSkillDraft("");
+      await loadSkills();
+      Toast.success("Skill 已删除");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setSkillSaving(false);
+    }
+  }, [loadSkills, skillDetail, skillSaving]);
+
+  return (
+    <div className="agent-customization">
+      <div className="agent-custom-section">
+        <div className="agent-custom-toolbar">
+          <label className="field">
+            <span>智能体</span>
+            <Select
+              value={agentCode}
+              optionList={agents.map((agent) => ({ label: `${agent.name || agent.code} (${agent.code})`, value: agent.code }))}
+              onChange={(value) => typeof value === "string" && setAgentCode(value)}
+            />
+          </label>
+          <label className="field">
+            <span>提示词文件</span>
+            <Select
+              value={promptKind}
+              optionList={[
+                { label: "AGENTS.md - 规则提示词", value: "rules" },
+                { label: "SOUL.md - 角色提示词", value: "soul" },
+              ]}
+              onChange={(value) => (value === "rules" || value === "soul") && setPromptKind(value)}
+            />
+          </label>
+          <div className="agent-custom-status">
+            <strong>{selectedAgent?.name || agentCode || "-"}</strong>
+            <span>{prompt?.customized ? "已自定义" : "使用内置"}</span>
+          </div>
+        </div>
+        <TextArea
+          className="agent-custom-editor"
+          value={promptDraft}
+          autosize={{ minRows: 10, maxRows: 18 }}
+          disabled={promptLoading}
+          onChange={setPromptDraft}
+        />
+        <div className="agent-custom-actions">
+          <span>保存后会重建 Agent runtime，新建或后续会话生效。</span>
+          <Button icon={<RotateCcw size={15} />} disabled={!prompt?.customized || promptSaving} onClick={restorePrompt}>
+            恢复内置
+          </Button>
+          <Button icon={<Save size={15} />} theme="solid" type="primary" loading={promptSaving} onClick={savePrompt}>
+            保存提示词
+          </Button>
+        </div>
+      </div>
+
+      <div className="agent-custom-section">
+        <div className="agent-custom-toolbar">
+          <label className="field">
+            <span>Skill</span>
+            <Select
+              value={skillName}
+              loading={skillLoading}
+              filter
+              placeholder="选择 Skill"
+              optionList={skills.map((skill) => ({
+                label: `${skill.name} · ${skill.source === "custom" ? "自定义" : "内置"}`,
+                value: skill.name,
+              }))}
+              onChange={(value) => typeof value === "string" && setSkillName(value)}
+            />
+          </label>
+          <label className="field">
+            <span>新建 Skill</span>
+            <Input
+              value={newSkillName}
+              onChange={setNewSkillName}
+              suffix={(
+                <Button size="small" theme="borderless" type="tertiary" icon={<Wrench size={14} />} loading={skillSaving} onClick={createSkill}>
+                  创建
+                </Button>
+              )}
+            />
+          </label>
+          <div className="agent-custom-status">
+            <strong>{skillDetail?.name || "-"}</strong>
+            <span>{skillDetail ? (skillDetail.editable ? "可编辑" : "内置只读") : "未选择"}</span>
+          </div>
+        </div>
+        <TextArea
+          className="agent-custom-editor"
+          value={skillDraft}
+          autosize={{ minRows: 8, maxRows: 16 }}
+          disabled={!skillDetail?.editable || skillLoading}
+          placeholder="选择或创建一个自定义 Skill"
+          onChange={setSkillDraft}
+        />
+        <div className="agent-custom-actions">
+          <span>{skillDetail?.description || "自定义 Skill 会出现在 Agent 的 Portable Skill Index 中。"}</span>
+          <Button icon={<X size={15} />} disabled={!skillDetail?.editable || skillSaving} onClick={removeSkill}>
+            删除
+          </Button>
+          <Button icon={<Save size={15} />} theme="solid" type="primary" disabled={!skillDetail?.editable} loading={skillSaving} onClick={saveSkill}>
+            保存 Skill
+          </Button>
+        </div>
       </div>
     </div>
   );

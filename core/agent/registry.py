@@ -15,7 +15,8 @@ from agents import (
     ToolsToFinalOutputResult,
 )
 
-from config import AgentConfig, BUNDLED_AGENT_DIR, get_config
+from config import AgentConfig, get_config
+from core.agent.customization import read_agent_prompt
 from core.agent.instructions import build_instructions
 from core.agent.models import build_openai_model
 from core.agent.specs import AGENT_SPECS, AgentSpec, ToolMount
@@ -50,7 +51,7 @@ class AgentToolSnapshot:
     work_project_id: int | None = None
 
     @classmethod
-    def from_context(cls, context: AgentRuntimeContext) -> "AgentToolSnapshot":
+    def from_context(cls, context: AgentRuntimeContext) -> AgentToolSnapshot:
         return cls(
             sandbox_container_id=context.sandbox_container_id,
             sandbox_container_generation=context.sandbox_container_generation,
@@ -108,9 +109,8 @@ class AgentRegistry:
             self._check_subagent_chain(mount.code, [*path, mount.code])
 
     def _build(self, spec: AgentSpec, cfg: AgentConfig, graph: SessionAgentGraph) -> Agent:
-        agent_path = BUNDLED_AGENT_DIR / spec.code
-        soul = (agent_path / "SOUL.md").read_text(encoding="utf-8").strip()
-        rules = (agent_path / "AGENTS.md").read_text(encoding="utf-8").strip()
+        soul, _ = read_agent_prompt(spec.code, "soul")
+        rules, _ = read_agent_prompt(spec.code, "rules")
         instructions = build_instructions(
             soul,
             rules,

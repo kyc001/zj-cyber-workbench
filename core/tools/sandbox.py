@@ -5,7 +5,7 @@ from dataclasses import replace
 
 from agents import RunContextWrapper, function_tool
 
-from config import BUNDLED_SKILLS_DIR
+from core.agent.customization import resolve_skill_location, validate_skill_name
 from core.execution_guard import authorize_local_action_runtime
 from core.runtime.context import AgentRuntimeContext
 from core.sandbox import command_output
@@ -21,8 +21,6 @@ _SYNC_COMMAND_TIMEOUT_SECONDS = 30
 _ASYNC_COMMAND_TIMEOUT_SECONDS = 300
 _MAX_OUTPUT_BYTES = 256 * 1024
 _ASYNC_COMMAND_CONCURRENCY_LIMIT = 3
-_SKILL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
-SKILLS_DIR = BUNDLED_SKILLS_DIR
 _BLOCKED_COMMAND_PATTERNS = (
     r"\brm\s+-rf\b",
     r"\bdel\s+/[sq]\b",
@@ -235,23 +233,23 @@ def _skill_result(status: ToolResultStatusSchema, output: str) -> str:
 @function_tool
 async def load_skill(ctx: RunContextWrapper[AgentRuntimeContext], name: str) -> str:
     """读取已随程序发布的工具技能说明和资源清单。"""
-    skill_name = name.strip()
-    if not _SKILL_NAME_PATTERN.fullmatch(skill_name):
+    try:
+        skill_name = validate_skill_name(name)
+    except ValueError:
         return _skill_result(ToolResultStatusSchema.ERROR, "技能名称格式无效")
-    skill_root = SKILLS_DIR / skill_name
-    skill_file = skill_root / "SKILL.md"
-    if not skill_file.is_file():
+    location = resolve_skill_location(skill_name)
+    if location is None:
         return _skill_result(ToolResultStatusSchema.ERROR, f"未找到技能：{skill_name}")
-    body = skill_file.read_text(encoding="utf-8")
+    body = location.skill_file.read_text(encoding="utf-8")
     resources = [
-        str(path.relative_to(skill_root)).replace("\\", "/")
-        for path in skill_root.rglob("*")
+        str(path.relative_to(location.root)).replace("\\", "/")
+        for path in location.root.rglob("*")
         if path.is_file() and path.name != "SKILL.md"
     ]
     runtime_note = await _skill_runtime_note(ctx.context, skill_name)
     output = (
         f"## ZJ Execution Runtime\n\n{runtime_note}\n\n"
-        f"## Skill Resource Root\n\n`skills/{skill_name}`\n\n"
+        f"## Skill Resource Root\n\n`{location.root}`\n\n"
         "## Skill Resource Files\n\n"
         + ("\n".join(f"- `{item}`" for item in sorted(resources)) or "None.")
         + f"\n\n{body}"

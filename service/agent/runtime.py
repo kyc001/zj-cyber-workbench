@@ -1,4 +1,4 @@
-from config import BUNDLED_SKILLS_DIR
+from core.agent.customization import iter_skill_locations
 from core.execution_guard import extract_urls
 from core.runtime.context import AgentRuntimeContext, AgentUserContext, main_agent_instance_id
 from core.runtime.input_items import display_text_from_content
@@ -19,7 +19,6 @@ from service.work_project.projects import (
 )
 
 _MAX_SANDBOX_SKILLS = 64
-_SKILLS_DIR = BUNDLED_SKILLS_DIR
 
 
 class SessionNotRunnableError(PermissionError):
@@ -276,13 +275,11 @@ async def build_runtime_context(
 
 def _load_portable_skill_metadata() -> tuple[str, ...]:
     entries: list[str] = []
-    if not _SKILLS_DIR.is_dir():
-        return ()
-    for skill_file in sorted(_SKILLS_DIR.glob("*/SKILL.md"))[:_MAX_SANDBOX_SKILLS]:
-        name = skill_file.parent.name
+    for location in iter_skill_locations(limit=_MAX_SANDBOX_SKILLS):
+        name = location.name
         description = ""
         try:
-            lines = skill_file.read_text(encoding="utf-8").splitlines()
+            lines = location.skill_file.read_text(encoding="utf-8").splitlines()
         except OSError:
             continue
         if lines and lines[0].strip() == "---":

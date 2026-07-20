@@ -1219,6 +1219,73 @@
   min-height: 30px;
 }
 
+.agent-customization {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.agent-custom-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  background: var(--z-surface-soft);
+  border: 1px solid var(--z-line);
+  border-radius: 8px;
+}
+
+.agent-custom-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) minmax(140px, auto);
+  gap: 12px;
+  align-items: end;
+}
+
+.agent-custom-status {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
+.agent-custom-status strong {
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--z-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-custom-status span {
+  padding: 2px 8px;
+  color: var(--z-accent);
+  background: rgba(99, 179, 237, 0.12);
+  border: 1px solid rgba(99, 179, 237, 0.22);
+  border-radius: 999px;
+}
+
+.agent-custom-editor .semi-textarea-wrapper textarea {
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.agent-custom-actions {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.agent-custom-actions span {
+  margin-right: auto;
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
 .project-user-option {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
