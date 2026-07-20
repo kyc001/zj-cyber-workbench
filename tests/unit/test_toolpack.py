@@ -15,6 +15,7 @@ from schema.toolpack import ExecutionErrorCode, ToolRunRequest, ToolRunStatus
 from service import toolpack
 from service.host.hosts import DEFAULT_LOCAL_HOST_ID
 from service.sandbox.commands import SandboxContainerCommandResult
+from tests.unit._network_addresses import LOOPBACK_HOST
 
 
 class ToolpackTests(unittest.IsolatedAsyncioTestCase):
@@ -169,7 +170,7 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         with self.local_workspace_patches(), patch.object(toolpack, "_local_tool_path", return_value="/tmp/python"):
             snapshot = await toolpack.start_tool_run(
                 "local.port.scan",
-                ToolRunRequest(sandbox_container_id=1, input={"host": "127.0.0.1", "ports": ports}),
+                ToolRunRequest(sandbox_container_id=1, input={"host": LOOPBACK_HOST, "ports": ports}),
                 self.user(),
             )
             finished = await self.wait_for_terminal(snapshot.run_id)
@@ -183,7 +184,7 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         with self.local_workspace_patches(), patch.object(toolpack, "_local_tool_path", return_value="/tmp/python"):
             snapshot = await toolpack.start_tool_run(
                 "local.ping",
-                ToolRunRequest(sandbox_container_id=1, input={"host": "127.0.0.1", "count": 99}),
+                ToolRunRequest(sandbox_container_id=1, input={"host": LOOPBACK_HOST, "count": 99}),
                 self.user(),
             )
             finished = await self.wait_for_terminal(snapshot.run_id)

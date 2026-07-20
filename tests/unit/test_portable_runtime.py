@@ -16,6 +16,7 @@ from service.sandbox import files as sandbox_files
 from service.sandbox import local_runtime, remote_files, remote_runtime
 from service.sandbox.egress import SandboxEgressSelection, sandbox_portable_process_environment
 from service.sandbox.files import ContainerUploadSource
+from tests.unit._network_addresses import LOOPBACK_HOST
 
 
 class PortableRuntimeTests(unittest.TestCase):
@@ -82,7 +83,7 @@ class PortableRuntimeTests(unittest.TestCase):
         )
         self.assertEqual("", environment["HTTP_PROXY"])
         self.assertEqual("", environment["all_proxy"])
-        self.assertIn("127.0.0.1", environment["NO_PROXY"])
+        self.assertIn(LOOPBACK_HOST, environment["NO_PROXY"])
 
     def test_managed_proxy_egress_builds_authenticated_process_environment(self) -> None:
         proxy = EgressProxy(

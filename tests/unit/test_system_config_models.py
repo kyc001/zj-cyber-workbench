@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from config import LightRAGConfig
 from core.lightrag.runtime import _configured_openai_complete, _configured_openai_embed
 from service.system_config.config import fetch_provider_models
+from tests.unit._network_addresses import LOOPBACK_HOST
 
 
 class _ModelHandler(BaseHTTPRequestHandler):
@@ -37,7 +38,7 @@ class ProviderModelTests(unittest.IsolatedAsyncioTestCase):
             await _configured_openai_embed(["text"])
 
     async def test_fetches_sorts_and_deduplicates_models(self) -> None:
-        server = ThreadingHTTPServer(("127.0.0.1", 0), _ModelHandler)
+        server = ThreadingHTTPServer((LOOPBACK_HOST, 0), _ModelHandler)
         server.authorization = None  # type: ignore[attr-defined]
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
