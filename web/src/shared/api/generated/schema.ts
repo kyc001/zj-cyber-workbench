@@ -1017,6 +1017,147 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/skill-hub/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Install Hub Skill Handler */
+        post: operations["install_hub_skill_handler_api_skill_hub_install_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/installed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Installed Hub Skills Handler */
+        get: operations["list_installed_hub_skills_handler_api_skill_hub_installed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/installed/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Uninstall Hub Skill Handler */
+        delete: operations["uninstall_hub_skill_handler_api_skill_hub_installed__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Hub Skills Handler */
+        get: operations["list_hub_skills_handler_api_skill_hub_skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skill-hub/skills/{namespace}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Hub Skill Handler */
+        get: operations["get_hub_skill_handler_api_skill_hub_skills__namespace___slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system-config/agent-customization/agents/{agent_code}/prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Prompt Handler */
+        get: operations["get_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_get"];
+        put?: never;
+        post?: never;
+        /** Delete Agent Prompt Handler */
+        delete: operations["delete_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_delete"];
+        options?: never;
+        head?: never;
+        /** Update Agent Prompt Handler */
+        patch: operations["update_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_patch"];
+        trace?: never;
+    };
+    "/api/system-config/agent-customization/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skills Handler */
+        get: operations["list_skills_handler_api_system_config_agent_customization_skills_get"];
+        put?: never;
+        /** Create Skill Handler */
+        post: operations["create_skill_handler_api_system_config_agent_customization_skills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system-config/agent-customization/skills/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Skill Handler */
+        get: operations["get_skill_handler_api_system_config_agent_customization_skills__name__get"];
+        put?: never;
+        post?: never;
+        /** Delete Skill Handler */
+        delete: operations["delete_skill_handler_api_system_config_agent_customization_skills__name__delete"];
+        options?: never;
+        head?: never;
+        /** Update Skill Handler */
+        patch: operations["update_skill_handler_api_system_config_agent_customization_skills__name__patch"];
+        trace?: never;
+    };
     "/api/system-config/instance": {
         parameters: {
             query?: never;
@@ -1411,6 +1552,33 @@ export interface components {
         };
         AgentEventSchema: components["schemas"]["UserMessageEvent"] | components["schemas"]["TurnBoundaryEvent"] | components["schemas"]["RunStateEvent"] | components["schemas"]["TextDeltaEvent"] | components["schemas"]["TextCompleteEvent"] | components["schemas"]["ThinkingDeltaEvent"] | components["schemas"]["ThinkingCompleteEvent"] | components["schemas"]["ToolCallEvent"] | components["schemas"]["ToolResultEvent"] | components["schemas"]["SubagentTaskEvent"] | components["schemas"]["DoneEvent"] | components["schemas"]["ErrorEvent"];
         /**
+         * AgentFileInputPart
+         * @description Reference to a file that already exists in the selected sandbox.
+         */
+        AgentFileInputPart: {
+            /**
+             * Media Type
+             * @default application/octet-stream
+             */
+            media_type: string;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /**
+             * Sha256
+             * @default
+             */
+            sha256: string;
+            /** Size */
+            size: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "file";
+        };
+        /**
          * AgentImageDetailSchema
          * @enum {string}
          */
@@ -1462,6 +1630,25 @@ export interface components {
              * @default 1800
              */
             ttl_seconds: number;
+        };
+        /** AgentPromptSchema */
+        AgentPromptSchema: {
+            /** Agent Code */
+            agent_code: string;
+            /** Content */
+            content: string;
+            /** Customized */
+            customized: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "soul" | "rules";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "builtin" | "custom";
         };
         /** AgentRuntimeConfig */
         AgentRuntimeConfig: {
@@ -1678,7 +1865,7 @@ export interface components {
             /** Agent Code */
             agent_code: string | null;
             /** Content */
-            content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"])[];
+            content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"] | components["schemas"]["AgentFileInputPart"])[];
             /** Sandbox Container Id */
             sandbox_container_id?: number | null;
         };
@@ -1826,6 +2013,20 @@ export interface components {
             code: number;
             /** Data */
             data?: unknown | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[AgentPromptSchema] */
+        CommonResponse_AgentPromptSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["AgentPromptSchema"] | null;
             /**
              * Message
              * @default success
@@ -2099,6 +2300,34 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[HubSkillDetailSchema] */
+        CommonResponse_HubSkillDetailSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["HubSkillDetailSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[HubSkillListSchema] */
+        CommonResponse_HubSkillListSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["HubSkillListSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[ImportCveFindingResponse] */
         CommonResponse_ImportCveFindingResponse_: {
             /**
@@ -2107,6 +2336,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["ImportCveFindingResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[InstallHubSkillResponse] */
+        CommonResponse_InstallHubSkillResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["InstallHubSkillResponse"] | null;
             /**
              * Message
              * @default success
@@ -2421,6 +2664,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QuerySkillsResponse] */
+        CommonResponse_QuerySkillsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QuerySkillsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QuerySystemUsersResponse] */
         CommonResponse_QuerySystemUsersResponse_: {
             /**
@@ -2527,6 +2784,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["SandboxImageSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[SkillDetailSchema] */
+        CommonResponse_SkillDetailSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["SkillDetailSchema"] | null;
             /**
              * Message
              * @default success
@@ -2848,6 +3119,13 @@ export interface components {
              * @default false
              */
             supports_tor: boolean;
+        };
+        /** CreateSkillRequest */
+        CreateSkillRequest: {
+            /** Content */
+            content: string;
+            /** Name */
+            name: string;
         };
         /** CreateSystemUserRequest */
         CreateSystemUserRequest: {
@@ -3278,6 +3556,108 @@ export interface components {
              */
             version: string;
         };
+        /** HubSkillDetailSchema */
+        HubSkillDetailSchema: {
+            /** Author Username */
+            author_username: string;
+            /** Description */
+            description: string;
+            /** Downloads */
+            downloads: number;
+            /** Latest Version */
+            latest_version: string;
+            /** My Rating */
+            my_rating?: number | null;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Rating Average */
+            rating_average: number;
+            /** Rating Count */
+            rating_count: number;
+            /** Slug */
+            slug: string;
+            /**
+             * Starred
+             * @default false
+             */
+            starred: boolean;
+            /** Stars */
+            stars: number;
+            /** Summary */
+            summary: string;
+            /** Tags */
+            tags: string[];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Versions */
+            versions: components["schemas"]["HubSkillVersionSchema"][];
+            /** Visibility */
+            visibility: string;
+        };
+        /** HubSkillListSchema */
+        HubSkillListSchema: {
+            /** Items */
+            items: components["schemas"]["HubSkillSummarySchema"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** HubSkillSummarySchema */
+        HubSkillSummarySchema: {
+            /** Downloads */
+            downloads: number;
+            /** Latest Version */
+            latest_version: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Rating Average */
+            rating_average: number;
+            /** Rating Count */
+            rating_count: number;
+            /** Slug */
+            slug: string;
+            /** Stars */
+            stars: number;
+            /** Summary */
+            summary: string;
+            /** Tags */
+            tags: string[];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** HubSkillVersionSchema */
+        HubSkillVersionSchema: {
+            /** Changelog */
+            changelog: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Scan Status */
+            scan_status: string;
+            /** Scan Warnings */
+            scan_warnings: string[];
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Version */
+            version: string;
+        };
         /** ImportCveFindingRequest */
         ImportCveFindingRequest: {
             /**
@@ -3296,6 +3676,42 @@ export interface components {
             created: boolean;
             /** Finding Id */
             finding_id: number;
+        };
+        /** InstallHubSkillRequest */
+        InstallHubSkillRequest: {
+            /** Namespace */
+            namespace: string;
+            /** Slug */
+            slug: string;
+            /**
+             * Version
+             * @default
+             */
+            version: string;
+        };
+        /** InstallHubSkillResponse */
+        InstallHubSkillResponse: {
+            installed: components["schemas"]["InstalledHubSkillSchema"];
+            /** Updated */
+            updated: boolean;
+        };
+        /** InstalledHubSkillSchema */
+        InstalledHubSkillSchema: {
+            /**
+             * Installed At
+             * Format: date-time
+             */
+            installed_at: string;
+            /** Name */
+            name: string;
+            /** Namespace */
+            namespace: string;
+            /** Sha256 */
+            sha256: string;
+            /** Slug */
+            slug: string;
+            /** Version */
+            version: string;
         };
         /** InstanceConfigSchema */
         InstanceConfigSchema: {
@@ -3869,6 +4285,11 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** QuerySkillsResponse */
+        QuerySkillsResponse: {
+            /** Items */
+            items: components["schemas"]["SkillSummarySchema"][];
+        };
         /** QuerySystemUsersResponse */
         QuerySystemUsersResponse: {
             /** Items */
@@ -4136,6 +4557,34 @@ export interface components {
          * @enum {string}
          */
         SessionType: "chat" | "project";
+        /** SkillDetailSchema */
+        SkillDetailSchema: {
+            /** Content */
+            content: string;
+            /** Editable */
+            editable: boolean;
+            /** Name */
+            name: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "builtin" | "custom";
+        };
+        /** SkillSummarySchema */
+        SkillSummarySchema: {
+            /** Description */
+            description: string;
+            /** Editable */
+            editable: boolean;
+            /** Name */
+            name: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "builtin" | "custom";
+        };
         /** SubagentTaskEvent */
         SubagentTaskEvent: {
             /** Agent Code */
@@ -4701,6 +5150,16 @@ export interface components {
             /** Use Responses */
             use_responses: boolean;
         };
+        /** UpdateAgentPromptRequest */
+        UpdateAgentPromptRequest: {
+            /** Content */
+            content: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "soul" | "rules";
+        };
         /** UpdateAgentSessionSandboxContainerRequest */
         UpdateAgentSessionSandboxContainerRequest: {
             /** Sandbox Container Id */
@@ -4764,6 +5223,11 @@ export interface components {
             /** Egress Proxy Id */
             egress_proxy_id?: number | null;
         };
+        /** UpdateSkillRequest */
+        UpdateSkillRequest: {
+            /** Content */
+            content: string;
+        };
         /** UpdateSystemUserRequest */
         UpdateSystemUserRequest: {
             /** Email */
@@ -4804,7 +5268,7 @@ export interface components {
         /** UserMessageEvent */
         UserMessageEvent: {
             /** Content */
-            content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"])[];
+            content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"] | components["schemas"]["AgentFileInputPart"])[];
             /**
              * Created At
              * Format: date-time
@@ -4833,10 +5297,6 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -8373,6 +8833,533 @@ export interface operations {
             };
             /** @description Sandbox image not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    install_hub_skill_handler_api_skill_hub_install_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallHubSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_InstallHubSkillResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_installed_hub_skills_handler_api_skill_hub_installed_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    uninstall_hub_skill_handler_api_skill_hub_installed__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_hub_skills_handler_api_skill_hub_skills_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_HubSkillListSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_hub_skill_handler_api_skill_hub_skills__namespace___slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_HubSkillDetailSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_get: {
+        parameters: {
+            query: {
+                kind: "soul" | "rules";
+            };
+            header?: never;
+            path: {
+                agent_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentPromptSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_delete: {
+        parameters: {
+            query: {
+                kind: "soul" | "rules";
+            };
+            header?: never;
+            path: {
+                agent_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentPromptSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    update_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAgentPromptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentPromptSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_skills_handler_api_system_config_agent_customization_skills_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QuerySkillsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    create_skill_handler_api_system_config_agent_customization_skills_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SkillDetailSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_skill_handler_api_system_config_agent_customization_skills__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SkillDetailSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_skill_handler_api_system_config_agent_customization_skills__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    update_skill_handler_api_system_config_agent_customization_skills__name__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SkillDetailSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

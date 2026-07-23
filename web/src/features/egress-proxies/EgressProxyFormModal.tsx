@@ -46,6 +46,10 @@ function initial(proxy: EgressProxy | null): EgressProxyFormValues {
 
 export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSubmit }: EgressProxyFormModalProps) {
   const [values, setValues] = useState<EgressProxyFormValues>(() => initial(proxy));
+  const dirty = open && JSON.stringify(values) !== JSON.stringify(initial(proxy));
+  const invalidPort = !Number.isInteger(values.proxy_port)
+    || values.proxy_port < 1
+    || values.proxy_port > 65535;
 
   useEffect(() => {
     if (open) setValues(initial(proxy));
@@ -63,8 +67,8 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
 
   const submitDisabled = (
     !values.proxy_host.trim()
-    || values.proxy_port < 1
-    || values.proxy_port > 65535
+    || invalidPort
+    || (mode === "edit" && !dirty)
   );
 
   return (
@@ -72,6 +76,7 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
       open={open}
       title={mode === "create" ? "添加出口代理" : "编辑出口代理"}
       saving={saving}
+      dirty={dirty}
       submitLabel={mode === "create" ? "添加" : "保存"}
       submitDisabled={submitDisabled}
       onCancel={onCancel}
@@ -98,8 +103,10 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
       <label>
         <span>代理端口</span>
         <InputNumber prefix={<Network size={16} />} value={values.proxy_port} min={1} max={65535}
+          aria-invalid={invalidPort}
           onChange={(proxy_port) => typeof proxy_port === "number" && setValues((current) => ({ ...current, proxy_port }))}
         />
+        {invalidPort ? <small className="resource-field-error" role="status">端口必须是 1–65535 之间的整数</small> : null}
       </label>
       <label>
         <span>代理账号</span>

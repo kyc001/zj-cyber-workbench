@@ -6,9 +6,10 @@
   "packageManager": "pnpm@10.12.4",
   "scripts": {
     "dev": "concurrently -k -n web,desktop -c cyan,yellow \"pnpm --filter @zj-security/web dev\" \"pnpm --filter @zj-security/desktop dev\"",
-    "build": "pnpm --filter @zj-security/web build && pnpm --filter @zj-security/desktop build",
+    "dev:skill-hub": "pnpm --filter @zj-security/skillhub-web dev",
+    "build": "pnpm --filter @zj-security/web build && pnpm --filter @zj-security/desktop build && pnpm --filter @zj-security/skillhub-web build",
     "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
-    "typecheck": "pnpm --filter @zj-security/web typecheck && pnpm --filter @zj-security/desktop typecheck",
+    "typecheck": "pnpm --filter @zj-security/web typecheck && pnpm --filter @zj-security/desktop typecheck && pnpm --filter @zj-security/skillhub-web typecheck",
     "test": "uv run python -m unittest discover -s tests -p \"test_*.py\" && pnpm typecheck",
     "test:d-runtime": "uv run python -m unittest tests.integration.test_d_mock_runtime tests.unit.test_d_agent_quality_assets",
     "test:d-web": "powershell -ExecutionPolicy Bypass -File scripts/run-d-web-e2e.ps1",

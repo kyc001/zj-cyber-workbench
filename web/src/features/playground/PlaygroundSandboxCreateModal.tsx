@@ -1,16 +1,16 @@
 import { Select, Spin } from "@douyinfe/semi-ui";
 import { Boxes, Route, Server } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createSandboxContainer, getSandboxContainerCreateOptions } from "../../shared/api/sandboxContainers";
 import { SANDBOX_CONTAINER_EGRESS_MODE } from "../../shared/api/generated/constants";
-import { showApiError, showApiSuccess } from "../../shared/api/feedback";
+import { getApiErrorMessage, showApiError, showApiSuccess } from "../../shared/api/feedback";
 import type {
   SandboxContainer,
   SandboxContainerEgressMode,
   SandboxContainerHostOption,
   SandboxImage,
 } from "../../shared/api/types";
-import { ResourceModal } from "../../shared/components/ResourceModal";
+import { ResourceFormLoadError, ResourceModal } from "../../shared/components/ResourceModal";
 
 type PlaygroundSandboxCreateModalProps = {
   open: boolean;
@@ -25,25 +25,57 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
   const [imageId, setImageId] = useState<number | undefined>();
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [reloadVersion, setReloadVersion] = useState(0);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const selectedImage = useMemo(() => images.find((image) => image.id === imageId) ?? null, [imageId, images]);
+  const dirty = open && (
+    hostId !== undefined
+    || imageId !== undefined
+    || egressMode !== SANDBOX_CONTAINER_EGRESS_MODE.DIRECT
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setHosts([]);
+      setImages([]);
+      setHostId(undefined);
+      setImageId(undefined);
+      setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
+      setLoadError("");
+      setLoading(false);
+      return;
+    }
+    setHosts([]);
+    setImages([]);
+    setHostId(undefined);
+    setImageId(undefined);
+    setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
+    setLoadError("");
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     let active = true;
-    setHostId(undefined);
-    setImageId(undefined);
-    setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
     setLoading(true);
+    setLoadError("");
     getSandboxContainerCreateOptions()
       .then((response) => {
         if (!active) return;
         const options = response.data;
-        setHosts(options?.hosts ?? []);
-        setImages(options?.images ?? []);
+        if (!options) throw new Error("创建选项响应不可用");
+        setHosts(options.hosts);
+        setImages(options.images);
+        setHostId((current) => (
+          current && options.hosts.some((host) => host.id === current) ? current : undefined
+        ));
+        setImageId((current) => (
+          current && options.images.some((image) => image.id === current) ? current : undefined
+        ));
       })
       .catch((error) => {
-        if (active) showApiError(error);
+        if (active) setLoadError(getApiErrorMessage(error, "加载创建选项失败"));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -51,10 +83,11 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
     return () => {
       active = false;
     };
-  }, [open]);
+  }, [open, reloadVersion]);
 
   const submit = async () => {
-    if (!hostId || !imageId) return;
+    if (savingRef.current || !hostId || !imageId) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const response = await createSandboxContainer({
@@ -63,19 +96,20 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
         egress_mode: egressMode,
         port_mappings: [],
       });
-      if (response.data) {
-        showApiSuccess(response);
-        onCreated(response.data);
-      }
+      if (!response.data) throw new Error("创建响应未包含执行工作区");
+      showApiSuccess(response);
+      onCreated(response.data);
     } catch (error) {
       showApiError(error);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const submitDisabled = (
     loading
+    || Boolean(loadError)
     || !hostId
     || !imageId
     || (egressMode === SANDBOX_CONTAINER_EGRESS_MODE.TOR && !selectedImage?.supports_tor)
@@ -86,12 +120,18 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
       open={open}
       title="创建执行工作区"
       saving={saving}
+      dirty={dirty}
       submitLabel="创建"
       submitDisabled={submitDisabled}
       width={520}
       onCancel={onCancel}
       onSubmit={submit}
     >
+      <ResourceFormLoadError
+        issues={loadError ? [{ label: "创建选项", message: loadError }] : []}
+        loading={loading}
+        onRetry={() => setReloadVersion((version) => version + 1)}
+      />
       <label>
         <span>运行主机</span>
         <Select
@@ -99,6 +139,7 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
           value={hostId}
           loading={loading}
           disabled={loading || hosts.length === 0}
+          aria-label="运行主机"
           placeholder={loading ? "正在加载主机" : "选择运行主机"}
           emptyContent={loading ? <Spin size="small" /> : "暂无主机"}
           optionList={hosts.map((host) => ({
@@ -109,6 +150,9 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
           }))}
           onChange={(value) => typeof value === "number" && setHostId(value)}
         />
+        {!loading && !loadError && hosts.length === 0 ? (
+          <small className="resource-field-error" role="status">暂无可用主机，请先在主机管理中添加</small>
+        ) : null}
       </label>
 
       <label>
@@ -118,6 +162,7 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
           value={imageId}
           loading={loading}
           disabled={loading || images.length === 0}
+          aria-label="工具基线"
           placeholder={loading ? "正在加载工具基线" : "选择工具基线"}
           emptyContent={loading ? <Spin size="small" /> : "暂无工具基线"}
           optionList={images.map((image) => ({
@@ -133,6 +178,9 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
             }
           }}
         />
+        {!loading && !loadError && images.length === 0 ? (
+          <small className="resource-field-error" role="status">暂无工具基线，请先创建工具基线</small>
+        ) : null}
       </label>
 
       <label>
@@ -140,6 +188,7 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
+          aria-label="网络出口模式"
           optionList={[
             { label: "直连", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
             { label: "Tor 代理", value: SANDBOX_CONTAINER_EGRESS_MODE.TOR, disabled: !selectedImage?.supports_tor },

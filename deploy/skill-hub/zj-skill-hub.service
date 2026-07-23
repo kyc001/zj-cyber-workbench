@@ -1,0 +1,26 @@
+[Unit]
+Description=ZJ Skill Hub API
+After=network-online.target mysql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zj-skillhub
+Group=zj-skillhub
+WorkingDirectory=/opt/zj-skill-hub/current
+EnvironmentFile=/etc/zj-skill-hub/backend.env
+ExecStart=/opt/zj-skill-hub/venv/bin/python /opt/zj-skill-hub/current/skill_hub_main.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/zj-skill-hub
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

@@ -763,13 +763,6 @@ def _builtin_python_tool(
     risk_level: RiskLevel = RiskLevel.L1,
 ) -> _ToolDefinition:
     executable = "python" if backend == ToolBackend.LOCAL else "python3"
-    encoded_script = base64.b64encode(script.encode("utf-8")).decode("ascii")
-    bootstrap = (
-        "import base64,sys; "
-        "code=sys.argv[1]; "
-        "sys.argv=[sys.argv[0]]+sys.argv[2:]; "
-        "exec(base64.b64decode(code).decode())"
-    )
     return _ToolDefinition(
         manifest=ToolManifestSchema(
             id=tool_id,
@@ -787,8 +780,19 @@ def _builtin_python_tool(
             policy={"requires_scope": True},
         ),
         install_hint=f"{executable} runtime is required for built-in operations tools.",
-        build_args=lambda payload: [executable, "-c", bootstrap, encoded_script, *script_args(payload)],
+        build_args=lambda payload: _python_script_args(executable, script, script_args(payload)),
     )
+
+
+def _python_script_args(executable: str, script: str, args: list[str]) -> list[str]:
+    encoded_script = base64.b64encode(script.encode("utf-8")).decode("ascii")
+    bootstrap = (
+        "import base64,sys; "
+        "code=sys.argv[1]; "
+        "sys.argv=[sys.argv[0]]+sys.argv[2:]; "
+        "exec(base64.b64decode(code).decode())"
+    )
+    return [executable, "-c", bootstrap, encoded_script, *args]
 
 
 def _paired_python_tools(
@@ -943,9 +947,13 @@ def _operations_tool_definitions() -> dict[str, _ToolDefinition]:
             "required": ["url"],
             "properties": {
                 "url": {"type": "string", "minLength": 1, "maxLength": 2048},
-                "method": {"type": "string", "enum": ["GET", "HEAD", "POST", "PUT", "PATCH"]},
-                "body": {"type": "string", "maxLength": 8192},
-                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                "method": {
+                    "type": "string",
+                    "enum": ["GET", "HEAD", "POST", "PUT", "PATCH"],
+                    "default": "GET",
+                },
+                "body": {"type": "string", "maxLength": 8192, "default": ""},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
             },
             "additionalProperties": False,
         },
@@ -968,8 +976,8 @@ def _operations_tool_definitions() -> dict[str, _ToolDefinition]:
             "required": ["urls"],
             "properties": {
                 "urls": {"type": "string", "minLength": 1, "maxLength": 8192},
-                "method": {"type": "string", "enum": ["GET", "HEAD"]},
-                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                "method": {"type": "string", "enum": ["GET", "HEAD"], "default": "HEAD"},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
             },
             "additionalProperties": False,
         },
@@ -993,8 +1001,12 @@ def _operations_tool_definitions() -> dict[str, _ToolDefinition]:
             "required": ["host"],
             "properties": {
                 "host": {"type": "string", "minLength": 1, "maxLength": 255},
-                "record_type": {"type": "string", "enum": ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "ANY"]},
-                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10},
+                "record_type": {
+                    "type": "string",
+                    "enum": ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "ANY"],
+                    "default": "A",
+                },
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
             },
             "additionalProperties": False,
         },
@@ -1016,8 +1028,8 @@ def _operations_tool_definitions() -> dict[str, _ToolDefinition]:
             "required": ["host"],
             "properties": {
                 "host": {"type": "string", "minLength": 1, "maxLength": 255},
-                "profile": {"type": "string", "enum": ["common", "web", "db"]},
-                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 5},
+                "profile": {"type": "string", "enum": ["common", "web", "db"], "default": "common"},
+                "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 5, "default": 1},
             },
             "additionalProperties": False,
         },
@@ -1137,8 +1149,8 @@ _TOOLS: dict[str, _ToolDefinition] = {
                 "required": ["url"],
                 "properties": {
                     "url": {"type": "string", "minLength": 1, "maxLength": 2048},
-                    "method": {"type": "string", "enum": ["GET", "HEAD"]},
-                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                    "method": {"type": "string", "enum": ["GET", "HEAD"], "default": "GET"},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
                 },
                 "additionalProperties": False,
             },
@@ -1146,14 +1158,15 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"requires_scope": True},
         ),
         install_hint="Python runtime is required for built-in local operations tools.",
-        build_args=lambda payload: [
+        build_args=lambda payload: _python_script_args(
             "python",
-            "-c",
             _WEB_CHECK_SCRIPT,
-            _required_url(payload, "url"),
-            _optional_enum(payload, "method", {"GET", "HEAD"}, "GET"),
-            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
-        ],
+            [
+                _required_url(payload, "url"),
+                _optional_enum(payload, "method", {"GET", "HEAD"}, "GET"),
+                str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+            ],
+        ),
     ),
     "local.tls.inspect": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -1172,9 +1185,9 @@ _TOOLS: dict[str, _ToolDefinition] = {
                 "required": ["host"],
                 "properties": {
                     "host": {"type": "string", "minLength": 1, "maxLength": 255},
-                    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+                    "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 443},
                     "server_name": {"type": "string", "minLength": 1, "maxLength": 255},
-                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
                 },
                 "additionalProperties": False,
             },
@@ -1182,15 +1195,16 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"requires_scope": True},
         ),
         install_hint="Python runtime is required for built-in local operations tools.",
-        build_args=lambda payload: [
+        build_args=lambda payload: _python_script_args(
             "python",
-            "-c",
             _TLS_INSPECT_SCRIPT,
-            _required_host(payload, "host"),
-            str(_optional_int(payload, "port", 443, minimum=1, maximum=65535)),
-            str(payload.get("server_name") or ""),
-            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
-        ],
+            [
+                _required_host(payload, "host"),
+                str(_optional_int(payload, "port", 443, minimum=1, maximum=65535)),
+                str(payload.get("server_name") or ""),
+                str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+            ],
+        ),
     ),
     "local.port.scan": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -1210,7 +1224,7 @@ _TOOLS: dict[str, _ToolDefinition] = {
                 "properties": {
                     "host": {"type": "string", "minLength": 1, "maxLength": 255},
                     "ports": {"type": "string", "minLength": 1, "maxLength": 256},
-                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 5},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 5, "default": 1},
                 },
                 "additionalProperties": False,
             },
@@ -1218,14 +1232,15 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"requires_scope": True, "max_ports": 32},
         ),
         install_hint="Python runtime is required for built-in local operations tools.",
-        build_args=lambda payload: [
+        build_args=lambda payload: _python_script_args(
             "python",
-            "-c",
             _PORT_SCAN_SCRIPT,
-            _required_host(payload, "host"),
-            ",".join(str(port) for port in _required_ports(payload, "ports", max_ports=32)),
-            str(_optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)),
-        ],
+            [
+                _required_host(payload, "host"),
+                ",".join(str(port) for port in _required_ports(payload, "ports", max_ports=32)),
+                str(_optional_int(payload, "timeout_seconds", 1, minimum=1, maximum=5)),
+            ],
+        ),
     ),
     "local.dns.lookup": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -1244,7 +1259,7 @@ _TOOLS: dict[str, _ToolDefinition] = {
                 "required": ["host"],
                 "properties": {
                     "host": {"type": "string", "minLength": 1, "maxLength": 255},
-                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
                 },
                 "additionalProperties": False,
             },
@@ -1252,13 +1267,14 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"requires_scope": True},
         ),
         install_hint="Python runtime is required for built-in local operations tools.",
-        build_args=lambda payload: [
+        build_args=lambda payload: _python_script_args(
             "python",
-            "-c",
             _DNS_LOOKUP_SCRIPT,
-            _required_host(payload, "host"),
-            str(_optional_int(payload, "timeout_seconds", 5, minimum=1, maximum=10)),
-        ],
+            [
+                _required_host(payload, "host"),
+                str(_optional_int(payload, "timeout_seconds", 5, minimum=1, maximum=10)),
+            ],
+        ),
     ),
     "local.ping": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -1277,8 +1293,8 @@ _TOOLS: dict[str, _ToolDefinition] = {
                 "required": ["host"],
                 "properties": {
                     "host": {"type": "string", "minLength": 1, "maxLength": 255},
-                    "count": {"type": "integer", "minimum": 1, "maximum": 10},
-                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10},
+                    "count": {"type": "integer", "minimum": 1, "maximum": 10, "default": 4},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 10, "default": 2},
                 },
                 "additionalProperties": False,
             },
@@ -1286,14 +1302,15 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"requires_scope": True, "max_count": 10},
         ),
         install_hint="Python runtime and system ping command are required.",
-        build_args=lambda payload: [
+        build_args=lambda payload: _python_script_args(
             "python",
-            "-c",
             _PING_SCRIPT,
-            _required_host(payload, "host"),
-            str(_optional_int(payload, "count", 4, minimum=1, maximum=10)),
-            str(_optional_int(payload, "timeout_seconds", 2, minimum=1, maximum=10)),
-        ],
+            [
+                _required_host(payload, "host"),
+                str(_optional_int(payload, "count", 4, minimum=1, maximum=10)),
+                str(_optional_int(payload, "timeout_seconds", 2, minimum=1, maximum=10)),
+            ],
+        ),
     ),
     "local.http.headers": _ToolDefinition(
         manifest=ToolManifestSchema(
@@ -1312,7 +1329,7 @@ _TOOLS: dict[str, _ToolDefinition] = {
                 "required": ["url"],
                 "properties": {
                     "url": {"type": "string", "minLength": 1, "maxLength": 2048},
-                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+                    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
                 },
                 "additionalProperties": False,
             },
@@ -1320,13 +1337,14 @@ _TOOLS: dict[str, _ToolDefinition] = {
             policy={"requires_scope": True},
         ),
         install_hint="Python runtime is required for built-in local operations tools.",
-        build_args=lambda payload: [
+        build_args=lambda payload: _python_script_args(
             "python",
-            "-c",
             _HTTP_HEADERS_SCRIPT,
-            _required_url(payload, "url"),
-            str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
-        ],
+            [
+                _required_url(payload, "url"),
+                str(_optional_int(payload, "timeout_seconds", 10, minimum=1, maximum=30)),
+            ],
+        ),
     ),
     "local.httpx": _ToolDefinition(
         manifest=ToolManifestSchema(

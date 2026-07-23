@@ -1,6 +1,6 @@
 import { Button, Popconfirm, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
 import { Network, Pencil, Server, Trash2, Wifi } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressProxy, updateEgressProxy } from "../../shared/api/egressProxies";
 import { showApiError } from "../../shared/api/feedback";
 import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPES } from "../../shared/api/generated/constants";
@@ -21,12 +21,13 @@ type ModalState = { mode: "create" } | { mode: "edit"; proxy: EgressProxy } | nu
 
 export function EgressProxiesPage() {
   const {
-    items: proxies, page, keyword, loading, loadItems: loadProxies, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
+    items: proxies, page, keyword, activeKeyword, loading, error, loadItems: loadProxies, total, rangeStart, rangeEnd,
+    setKeyword, search, clearSearch, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<EgressProxy>({ query: queryEgressProxies });
   const [modal, setModal] = useState<ModalState>(null);
   const secrets = useVisibleResourceIds(proxies);
   const [testingId, setTestingId] = useState<number | null>(null);
+  const testingRef = useRef(false);
 
   const { run: deleteProxy, busyId: deletingId } = useResourceAction<EgressProxy>(
     (proxy) => deleteEgressProxy(proxy.id), loadProxies,
@@ -56,6 +57,8 @@ export function EgressProxiesPage() {
   );
 
   const testProxy = async (proxy: EgressProxy) => {
+    if (testingRef.current || deletingId !== null) return;
+    testingRef.current = true;
     setTestingId(proxy.id);
     try {
       const response = await testEgressProxy(proxy.id);
@@ -67,9 +70,12 @@ export function EgressProxiesPage() {
     } catch (error) {
       showApiError(error);
     } finally {
+      testingRef.current = false;
       setTestingId(null);
     }
   };
+
+  const rowActionBusy = testingId !== null || deletingId !== null;
 
   const columns: ResourceColumn<EgressProxy>[] = [
     {
@@ -104,15 +110,18 @@ export function EgressProxiesPage() {
           <Tooltip content="测试代理连通性">
             <Button icon={<Wifi size={15} />} theme="borderless" type="tertiary"
               loading={testingId === proxy.id}
+              disabled={rowActionBusy && testingId !== proxy.id}
               aria-label={`Test ${proxy.proxy_host}`}
               onClick={() => void testProxy(proxy)}
             />
           </Tooltip>
           <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
+            disabled={rowActionBusy}
             aria-label={`Edit ${proxy.proxy_host}`} onClick={() => setModal({ mode: "edit", proxy })}
           />
           <Popconfirm title="删除出口代理" content={`确定删除 ${proxy.proxy_host}:${proxy.proxy_port}？`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteProxy(proxy)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
+              disabled={rowActionBusy && deletingId !== proxy.id}
               loading={deletingId === proxy.id} aria-label={`Delete ${proxy.proxy_host}`}
             />
           </Popconfirm>
@@ -126,10 +135,12 @@ export function EgressProxiesPage() {
       <ResourcePageShell
         searchPlaceholder="搜索主机、账号、类型或端口"
         keyword={keyword}
+        activeKeyword={activeKeyword}
         loading={loading}
+        error={error}
         metrics={[
           { label: "总数", value: total },
-          ...EGRESS_PROXY_TYPES.map((type) => ({ label: type.toUpperCase(), value: summary[type] ?? 0 })),
+          ...EGRESS_PROXY_TYPES.map((type) => ({ label: `本页 ${type.toUpperCase()}`, value: summary[type] ?? 0 })),
         ]}
         empty={proxies.length === 0}
         emptyIcon={<Network size={42} />}
@@ -142,8 +153,10 @@ export function EgressProxiesPage() {
         canGoNext={canGoNext}
         onKeywordChange={setKeyword}
         onSearch={search}
+        onClearSearch={clearSearch}
         onPrevious={previous}
         onNext={next}
+        onRetry={loadProxies}
       >
         <ResourceTable<EgressProxy>
           ariaLabel="出口代理"

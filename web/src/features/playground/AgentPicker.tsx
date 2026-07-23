@@ -4,6 +4,7 @@ import type { AgentInfo } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
 
 type AgentPickerProps = {
+  id: string;
   agents: AgentInfo[];
   highlightedIndex: number;
   disabled?: boolean;
@@ -13,6 +14,7 @@ type AgentPickerProps = {
 };
 
 export function AgentPicker({
+  id,
   agents,
   highlightedIndex,
   disabled = false,
@@ -36,7 +38,7 @@ export function AgentPicker({
   }
 
   return (
-    <div className="agent-picker" role="listbox" aria-label="选择智能体">
+    <div id={id} className="agent-picker" role="listbox" aria-label="选择智能体">
       <div className="agent-picker-hint">选择智能体 · ↑↓ 切换 · Enter 或 Tab 确认</div>
       {agents.map((agent, index) => {
         const active = index === highlightedIndex;
@@ -44,10 +46,12 @@ export function AgentPicker({
         return (
           <button
             key={agent.code}
+            id={`${id}-option-${index}`}
             ref={active ? activeRef : null}
             type="button"
             role="option"
             aria-selected={active}
+            tabIndex={-1}
             disabled={disabled}
             title={description || agent.name}
             className={cx("agent-picker-row", active && "agent-picker-row-active")}

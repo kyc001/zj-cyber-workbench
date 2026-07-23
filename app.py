@@ -35,6 +35,7 @@ from router.local_actions import router as local_actions_router
 from router.runtime_permissions import router as runtime_permission_router
 from router.sandbox.containers import router as sandbox_container_router
 from router.sandbox.images import router as sandbox_image_router
+from router.skill_hub import router as skill_hub_router
 from router.system_config.config import router as system_config_router
 from router.system_user.users import router as system_user_router
 from router.toolpack import router as toolpack_router
@@ -180,6 +181,7 @@ def create_app() -> FastAPI:
     app.include_router(agent_session_router, prefix=API_PREFIX)
     app.include_router(approval_router, prefix=API_PREFIX)
     app.include_router(runtime_permission_router, prefix=API_PREFIX)
+    app.include_router(skill_hub_router, prefix=API_PREFIX)
     app.include_router(system_config_router, prefix=API_PREFIX)
     app.include_router(toolpack_router, prefix=API_PREFIX)
     app.include_router(desktop_router)

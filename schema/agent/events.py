@@ -1,6 +1,6 @@
-from enum import StrEnum
-from datetime import datetime
 import base64
+from datetime import datetime
+from enum import StrEnum
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -26,6 +26,7 @@ class AgentEventTypeSchema(StrEnum):
 class AgentInputPartTypeSchema(StrEnum):
     TEXT = "text"
     IMAGE = "image"
+    FILE = "file"
 
 
 class AgentImageDetailSchema(StrEnum):
@@ -76,8 +77,44 @@ class AgentImageInputPart(BaseModel):
         return compact
 
 
+class AgentFileInputPart(BaseModel):
+    """Reference to a file that already exists in the selected sandbox."""
+
+    type: Literal[AgentInputPartTypeSchema.FILE] = AgentInputPartTypeSchema.FILE
+    name: str = Field(min_length=1, max_length=255)
+    path: str = Field(min_length=1, max_length=4096)
+    size: int = Field(ge=0)
+    sha256: str = Field(default="", pattern=r"^[a-fA-F0-9]{64}$|^$")
+    media_type: str = Field(default="application/octet-stream", max_length=255)
+
+    @field_validator("name", "path", "media_type", mode="before")
+    @classmethod
+    def normalize_file_text(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if any(ord(character) < 32 for character in normalized):
+            raise ValueError("file metadata must not contain control characters")
+        return normalized
+
+    @field_validator("path")
+    @classmethod
+    def validate_sandbox_path(cls, value: str) -> str:
+        normalized = value.replace("\\", "/")
+        if not normalized.startswith("/") or normalized in {"/", "/."}:
+            raise ValueError("file path must be an absolute sandbox path")
+        if any(part in {".", ".."} for part in normalized.split("/")):
+            raise ValueError("file path must not contain relative segments")
+        return normalized
+
+    @field_validator("sha256")
+    @classmethod
+    def normalize_sha256(cls, value: str) -> str:
+        return value.lower()
+
+
 AgentInputPart = Annotated[
-    AgentTextInputPart | AgentImageInputPart,
+    AgentTextInputPart | AgentImageInputPart | AgentFileInputPart,
     Field(discriminator="type"),
 ]
 
@@ -218,6 +255,9 @@ def validate_agent_input_content(content: list[AgentInputPart]) -> None:
     image_count = sum(1 for part in content if isinstance(part, AgentImageInputPart))
     if image_count > 4:
         raise ValueError("at most 4 images are allowed in one message")
+    file_count = sum(1 for part in content if isinstance(part, AgentFileInputPart))
+    if file_count > 8:
+        raise ValueError("at most 8 files are allowed in one message")
     image_bytes = sum(len(part.data) for part in content if isinstance(part, AgentImageInputPart))
     if image_bytes > _MAX_MESSAGE_BASE64_LENGTH:
         raise ValueError("image payload is too large")

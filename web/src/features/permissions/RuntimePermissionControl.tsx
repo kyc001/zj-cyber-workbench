@@ -1,13 +1,13 @@
-import { Button, Modal, Select, Tag, Toast } from "@douyinfe/semi-ui";
-import { Shield, ShieldAlert, ShieldCheck, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Modal, Select, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
+import { RefreshCw, Shield, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   decideRuntimePermission,
   getPendingRuntimePermissions,
   getRuntimePermissionSettings,
   updateRuntimePermissionSettings,
 } from "../../shared/api/runtimePermissions";
-import { showApiError } from "../../shared/api/feedback";
+import { getApiErrorMessage, showApiError } from "../../shared/api/feedback";
 import type {
   PermissionMode,
   RuntimePermissionDecision,
@@ -21,64 +21,142 @@ const MODE_OPTIONS = [
 
 export function RuntimePermissionControl() {
   const [mode, setMode] = useState<PermissionMode>("normal");
-  const [loadingMode, setLoadingMode] = useState(false);
+  const [loadingMode, setLoadingMode] = useState(true);
   const [pending, setPending] = useState<RuntimePermissionRequest[]>([]);
+  const [pendingError, setPendingError] = useState("");
   const [deciding, setDeciding] = useState<RuntimePermissionDecision | null>(null);
+  const mountedRef = useRef(true);
+  const modeUpdateRef = useRef(false);
+  const decisionRef = useRef<RuntimePermissionDecision | null>(null);
+  const pendingRequestRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      pendingRequestRef.current += 1;
+      modeUpdateRef.current = false;
+      decisionRef.current = null;
+    };
+  }, []);
 
   const refreshPending = useCallback(async () => {
+    if (decisionRef.current) return;
+    const requestId = pendingRequestRef.current + 1;
+    pendingRequestRef.current = requestId;
     try {
       const response = await getPendingRuntimePermissions();
+      if (!mountedRef.current || pendingRequestRef.current !== requestId || decisionRef.current) return;
       setPending(response.data ?? []);
-    } catch {
-      // The next poll retries; avoid repetitive toasts while the sidecar restarts.
+      setPendingError("");
+    } catch (error) {
+      if (mountedRef.current && pendingRequestRef.current === requestId) {
+        setPendingError(getApiErrorMessage(error, "权限请求服务暂不可用"));
+      }
     }
   }, []);
 
   useEffect(() => {
+    let active = true;
     void getRuntimePermissionSettings()
-      .then((response) => setMode(response.data?.settings.mode ?? "normal"))
-      .catch(showApiError);
+      .then((response) => {
+        if (active) setMode(response.data?.settings.mode ?? "normal");
+      })
+      .catch((error) => {
+        if (active) showApiError(error);
+      })
+      .finally(() => {
+        if (active) setLoadingMode(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    void refreshPending();
-    const timer = window.setInterval(refreshPending, 800);
-    return () => window.clearInterval(timer);
-  }, [refreshPending]);
+    if (mode === "full_access") {
+      pendingRequestRef.current += 1;
+      setPending([]);
+      setPendingError("");
+      return;
+    }
+
+    let stopped = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      if (document.visibilityState === "visible") await refreshPending();
+      if (!stopped) timer = window.setTimeout(poll, 800);
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+      pendingRequestRef.current += 1;
+    };
+  }, [mode, refreshPending]);
 
   const updateMode = useCallback(async (nextMode: PermissionMode) => {
-    if (loadingMode || nextMode === mode) return;
+    if (modeUpdateRef.current || nextMode === mode) return;
+    modeUpdateRef.current = true;
     setLoadingMode(true);
     try {
       const response = await updateRuntimePermissionSettings({ mode: nextMode });
       const savedMode = response.data?.settings.mode ?? nextMode;
+      if (!mountedRef.current) return;
       setMode(savedMode);
-      if (savedMode === "full_access") setPending([]);
+      if (savedMode === "full_access") {
+        pendingRequestRef.current += 1;
+        setPending([]);
+        setPendingError("");
+      }
       Toast.success(savedMode === "full_access" ? "已启用完全访问" : "已启用普通访问");
     } catch (error) {
-      showApiError(error);
+      if (mountedRef.current) showApiError(error);
     } finally {
-      setLoadingMode(false);
+      modeUpdateRef.current = false;
+      if (mountedRef.current) setLoadingMode(false);
     }
-  }, [loadingMode, mode]);
+  }, [mode]);
 
   const current = pending[0] ?? null;
   const decide = useCallback(async (decision: RuntimePermissionDecision) => {
-    if (!current || deciding) return;
+    if (!current || decisionRef.current) return;
+    const requestId = current.id ?? "";
+    decisionRef.current = decision;
     setDeciding(decision);
+    let refreshAfterDecision = false;
     try {
-      await decideRuntimePermission(current.id ?? "", decision);
-      setPending((items) => items.filter((item) => item.id !== current.id));
+      await decideRuntimePermission(requestId, decision);
+      if (!mountedRef.current) return;
+      pendingRequestRef.current += 1;
+      setPending((items) => items.filter((item) => item.id !== requestId));
+      setPendingError("");
+      refreshAfterDecision = true;
       if (decision === "always_allow") Toast.success("已添加始终允许规则");
     } catch (error) {
-      showApiError(error);
-      await refreshPending();
+      if (mountedRef.current) {
+        showApiError(error);
+        refreshAfterDecision = true;
+      }
     } finally {
-      setDeciding(null);
+      decisionRef.current = null;
+      if (mountedRef.current) setDeciding(null);
     }
-  }, [current, deciding, refreshPending]);
+    if (refreshAfterDecision) void refreshPending();
+  }, [current, refreshPending]);
 
-  const modeIcon = mode === "full_access" ? <ShieldAlert size={15} /> : <Shield size={15} />;
+  const modeIcon = pendingError ? (
+    <Tooltip content={`${pendingError}，点击重试`}>
+      <button
+        type="button"
+        className="permission-poll-error"
+        aria-label={`${pendingError}，点击重试`}
+        onClick={() => void refreshPending()}
+      >
+        <RefreshCw size={15} />
+      </button>
+    </Tooltip>
+  ) : mode === "full_access" ? <ShieldAlert size={15} /> : <Shield size={15} />;
   return (
     <>
       <div className={`permission-mode-control permission-mode-${mode}`}>
@@ -87,6 +165,7 @@ export function RuntimePermissionControl() {
           size="small"
           value={mode}
           loading={loadingMode}
+          disabled={loadingMode}
           optionList={MODE_OPTIONS}
           onChange={(value) => {
             if (value === "normal" || value === "full_access") void updateMode(value);

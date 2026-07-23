@@ -276,6 +276,33 @@
   background: var(--z-surface-muted);
 }
 
+.file-manager-load-error {
+  position: absolute;
+  top: 68px;
+  left: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px 6px 10px;
+  color: var(--z-danger);
+  background: var(--semi-color-danger-light-default);
+  border: 1px solid var(--semi-color-danger-light-active);
+  border-radius: 6px;
+  box-shadow: var(--z-shadow-sm);
+  font-size: 12px;
+}
+
+.file-manager-load-error > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-manager-list {
   display: flex;
   flex-direction: column;
@@ -299,6 +326,12 @@
 
 .file-manager-list-row:hover {
   background: var(--z-surface-muted);
+}
+
+.file-manager-list-row[role="button"]:focus-visible,
+.file-manager-icon-item[role="button"]:focus-visible {
+  outline: 2px solid var(--z-info);
+  outline-offset: -2px;
 }
 
 .file-manager-list-row-selected {
@@ -412,8 +445,19 @@
   background: var(--z-info-bg);
 }
 
+.file-manager-list-row.file-manager-create-row {
+  padding-block: 4px;
+}
+
 .file-manager-create-row:hover {
   background: var(--z-info-bg);
+}
+
+.file-manager-inline-field {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
 }
 
 .file-manager-inline-input {
@@ -434,10 +478,30 @@
   color: var(--z-text-subtle);
 }
 
+.file-manager-inline-input[aria-invalid="true"] {
+  border-color: var(--z-danger);
+}
+
+.file-manager-name .file-manager-inline-error,
+.file-manager-icon-item .file-manager-inline-error {
+  max-width: 100%;
+  overflow: visible;
+  color: var(--z-danger);
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: left;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .file-manager-icon-item .file-manager-inline-input {
   width: 100%;
   text-align: center;
   font-size: 11px;
+}
+
+.file-manager-icon-item .file-manager-inline-error {
+  text-align: center;
 }
 
 .file-manager-statusbar {
@@ -484,6 +548,10 @@
   min-height: 0;
   color: var(--z-text-muted);
   user-select: none;
+}
+
+.fv-body:focus {
+  outline: none;
 }
 
 .fv-toolbar {
@@ -613,6 +681,60 @@
 .cm-host .cm-scroller {
   overflow: auto;
 }
+
+@media (max-width: 640px) {
+  .shell-window:not(.shell-window-maximized) {
+    left: 8px !important;
+    width: calc(100vw - 16px) !important;
+    min-width: 0;
+  }
+
+  .file-manager-toolbar {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .file-manager-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .file-manager-list-row {
+    grid-template-columns: minmax(0, 1fr) 76px !important;
+  }
+
+  .file-manager-list-row > :nth-child(3),
+  .file-manager-list-row > :nth-child(4) {
+    display: none;
+  }
+
+  .file-manager-statusbar > :last-child:not(:first-child) {
+    display: none;
+  }
+
+  .fv-meta {
+    display: none;
+  }
+
+  .fv-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fv-spacer {
+    display: none;
+  }
+
+  .fv-toolbar .semi-button {
+    width: 28px;
+    padding-inline: 4px;
+  }
+
+  .fv-toolbar .semi-button-content-right {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shell-window,
   .shell-minimized-button,

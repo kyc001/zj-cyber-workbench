@@ -1,3 +1,5 @@
+# ruff: noqa: E402, I001
+
 import json
 import sys
 from pathlib import Path
@@ -38,6 +40,7 @@ def export_openapi_schema() -> Path:
     _patch_validation_contracts(schema)
     _patch_error_contracts(schema)
     _register_extra_schemas(schema)
+    _patch_freeform_object_contracts(schema)
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(
         json.dumps(schema, ensure_ascii=False, indent=2, sort_keys=True),
@@ -61,8 +64,10 @@ def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
         f"export const EGRESS_PROXY_TYPE = {_enum_object_ts(schema, 'EgressProxyType')} as const;\n"
         f"export const SANDBOX_CONTAINER_STATUSES = {_enum_values_ts(schema, 'SandboxContainerStatus')} as const;\n"
         f"export const SANDBOX_CONTAINER_STATUS = {_enum_object_ts(schema, 'SandboxContainerStatus')} as const;\n"
-        f"export const SANDBOX_CONTAINER_EGRESS_MODES = {_enum_values_ts(schema, 'SandboxContainerEgressMode')} as const;\n"
-        f"export const SANDBOX_CONTAINER_EGRESS_MODE = {_enum_object_ts(schema, 'SandboxContainerEgressMode')} as const;\n"
+        "export const SANDBOX_CONTAINER_EGRESS_MODES = "
+        f"{_enum_values_ts(schema, 'SandboxContainerEgressMode')} as const;\n"
+        "export const SANDBOX_CONTAINER_EGRESS_MODE = "
+        f"{_enum_object_ts(schema, 'SandboxContainerEgressMode')} as const;\n"
         f"export const WORK_PROJECT_TYPES = {_enum_values_ts(schema, 'WorkProjectType')} as const;\n"
         f"export const WORK_PROJECT_STATUSES = {_enum_values_ts(schema, 'WorkProjectStatus')} as const;\n"
         f"export const WORK_PROJECT_STATUS = {_enum_object_ts(schema, 'WorkProjectStatus')} as const;\n"
@@ -71,12 +76,16 @@ def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
         f"export const WORK_PROJECT_ASSET_TYPE = {_enum_object_ts(schema, 'WorkProjectAssetType')} as const;\n"
         f"export const WORK_PROJECT_ASSET_ORIGINS = {_enum_values_ts(schema, 'WorkProjectAssetOrigin')} as const;\n"
         f"export const WORK_PROJECT_ASSET_ORIGIN = {_enum_object_ts(schema, 'WorkProjectAssetOrigin')} as const;\n"
-        f"export const WORK_PROJECT_FINDING_SEVERITIES = {_enum_values_ts(schema, 'WorkProjectFindingSeverity')} as const;\n"
-        f"export const WORK_PROJECT_FINDING_STATUSES = {_enum_values_ts(schema, 'WorkProjectFindingStatus')} as const;\n"
-        f"export const WORK_PROJECT_GRAPH_EDGE_TYPES = {_enum_values_ts(schema, 'WorkProjectGraphEdgeType')} as const;\n"
+        "export const WORK_PROJECT_FINDING_SEVERITIES = "
+        f"{_enum_values_ts(schema, 'WorkProjectFindingSeverity')} as const;\n"
+        "export const WORK_PROJECT_FINDING_STATUSES = "
+        f"{_enum_values_ts(schema, 'WorkProjectFindingStatus')} as const;\n"
+        "export const WORK_PROJECT_GRAPH_EDGE_TYPES = "
+        f"{_enum_values_ts(schema, 'WorkProjectGraphEdgeType')} as const;\n"
         f"export const WORK_PROJECT_GRAPH_EDGE_CATEGORIES = {json.dumps(edge_categories)} as const;\n"
         f"export const WORK_PROJECT_GRAPH_EDGE_CATEGORY = {json.dumps(edge_type_category)} as const;\n"
-        f"export const WORK_PROJECT_ATTACK_PATH_STATUSES = {_enum_values_ts(schema, 'WorkProjectAttackPathStatus')} as const;\n"
+        "export const WORK_PROJECT_ATTACK_PATH_STATUSES = "
+        f"{_enum_values_ts(schema, 'WorkProjectAttackPathStatus')} as const;\n"
         f"export const SESSION_TYPES = {_enum_values_ts(schema, 'SessionType')} as const;\n"
         f"export const TOOL_RESULT_TYPES = {_enum_values_ts(schema, 'ToolResultTypeSchema')} as const;\n"
         f"export const TOOL_RESULT_TYPE = {_enum_object_ts(schema, 'ToolResultTypeSchema')} as const;\n\n"
@@ -155,6 +164,27 @@ def _register_extra_schemas(schema: dict[str, Any]) -> None:
         for nested_name, nested_body in body.pop("$defs", {}).items():
             schemas.setdefault(nested_name, nested_body)
         schemas[name] = body
+
+
+def _patch_freeform_object_contracts(value: Any) -> None:
+    """Preserve free-form dictionaries when consumed by OpenAPI TypeScript generators.
+
+    Pydantic may emit ``{"type": "object"}`` for ``dict[str, Any]``. Although that
+    JSON Schema permits arbitrary properties, some generators interpret it as an
+    object that permits none and produce ``Record<string, never>``.
+    """
+    if isinstance(value, dict):
+        if (
+            value.get("type") == "object"
+            and "properties" not in value
+            and "additionalProperties" not in value
+        ):
+            value["additionalProperties"] = True
+        for child in value.values():
+            _patch_freeform_object_contracts(child)
+    elif isinstance(value, list):
+        for child in value:
+            _patch_freeform_object_contracts(child)
 
 
 def _common_response_ref(description: str) -> dict[str, Any]:

@@ -21,7 +21,6 @@ import {
   retryWorkProject,
   updateWorkProjectMetadata,
 } from "../../shared/api/workProjects";
-import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import type {
   CreateWorkProjectRequest,
   WorkProject,
@@ -31,6 +30,7 @@ import { ResourceTable, type ResourceColumn } from "../../shared/components/Reso
 import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
+import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
 import { UI_TEXT } from "../../shared/lib/uiText";
@@ -47,17 +47,22 @@ import {
 
 type AdminAction = "cancel" | "retry" | "delete";
 
+type ProjectAdminActionRequest = {
+  id: number;
+  project: WorkProject;
+  type: AdminAction;
+};
+
 export function WorkProjectsPage() {
   const {
-    items: projects, page, keyword, loading, loadItems: loadProjects, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
+    items: projects, page, keyword, activeKeyword, loading, error, loadItems: loadProjects, total, rangeStart, rangeEnd,
+    setKeyword, search, clearSearch, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<WorkProject>({ query: queryWorkProjects });
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<WorkProject | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const refreshProjectSidebar = useRefreshWorkProjects();
   const navigate = useNavigate();
-  const [adminAction, setAdminAction] = useState<{ id: number; type: AdminAction } | null>(null);
 
   const refreshAll = useCallback(async () => {
     await loadProjects();
@@ -83,6 +88,21 @@ export function WorkProjectsPage() {
     },
   });
 
+  const afterAdminAction = useCallback(async () => {
+    await loadProjects();
+    refreshProjectSidebar();
+  }, [loadProjects, refreshProjectSidebar]);
+  const executeAdminAction = useCallback((request: ProjectAdminActionRequest) => {
+    if (request.type === "cancel") return cancelWorkProject(request.id);
+    if (request.type === "retry") return retryWorkProject(request.id);
+    return deleteWorkProject(request.id);
+  }, []);
+  const {
+    run: runAdminAction,
+    busyId: adminBusyId,
+    busyItem: adminAction,
+  } = useResourceAction<ProjectAdminActionRequest>(executeAdminAction, afterAdminAction);
+
   const summary = useMemo(
     () => projects.reduce(
       (acc, project) => ({
@@ -105,28 +125,11 @@ export function WorkProjectsPage() {
     current === project.id ? null : project.id
   ));
 
-  const handleAdminProjectAction = async (
+  const handleAdminProjectAction = (
     project: WorkProject,
     type: AdminAction,
   ) => {
-    setAdminAction({ id: project.id, type });
-    try {
-      const response = type === "cancel"
-        ? await cancelWorkProject(project.id)
-        : type === "retry"
-          ? await retryWorkProject(project.id)
-          : await deleteWorkProject(project.id);
-      showApiSuccess(response);
-      if (type === "delete") {
-        setExpandedId((current) => (current === project.id ? null : current));
-      }
-      await loadProjects();
-      refreshProjectSidebar();
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setAdminAction(null);
-    }
+    return runAdminAction({ id: project.id, project, type });
   };
 
   const columns: ResourceColumn<WorkProject>[] = [
@@ -159,13 +162,19 @@ export function WorkProjectsPage() {
     { key: "updated", header: "更新时间", width: "minmax(150px, 0.4fr)", render: (p) => formatDateTime(p.updated_at) },
     {
       key: "actions", header: "操作", width: "132px",
-      render: (project) => (
-        <RowActions>
+      render: (project) => {
+        const actionBusy = adminBusyId !== null;
+        const rowBusy = adminBusyId === project.id;
+        const busyTitle = adminAction ? `正在${adminAction.type === "cancel" ? "取消" : adminAction.type === "retry" ? "重试" : "删除"} ${adminAction.project.name}` : "";
+        return (
+          <RowActions>
           <Button
             icon={<FolderOpen size={15} />}
             theme="borderless"
             type="tertiary"
             aria-label={`打开 ${project.name} 工作区`}
+            title={actionBusy ? busyTitle : "打开项目工作区"}
+            disabled={actionBusy}
             onClick={() => navigate(`/work-projects/${project.id}`)}
           />
           <Button
@@ -173,24 +182,35 @@ export function WorkProjectsPage() {
             theme="borderless"
             type="tertiary"
             aria-label={`编辑 ${project.name}`}
+            title={actionBusy ? busyTitle : "编辑项目"}
+            disabled={actionBusy}
             onClick={() => { setEditingProject(project); setModalOpen(true); }}
           />
-          <Button
-            icon={<Ban size={15} />}
-            theme="borderless"
-            type="danger"
-            disabled={!project.can_cancel}
-            loading={adminAction?.id === project.id && adminAction.type === "cancel"}
-            aria-label={`取消 ${project.name}`}
-            onClick={() => void handleAdminProjectAction(project, "cancel")}
-          />
+          <Popconfirm
+            title="取消项目"
+            content={`确定取消 ${project.name}？正在运行的项目任务将停止。`}
+            okType="danger"
+            cancelText={UI_TEXT.cancel}
+            onConfirm={() => void handleAdminProjectAction(project, "cancel")}
+          >
+            <Button
+              icon={<Ban size={15} />}
+              theme="borderless"
+              type="danger"
+              disabled={actionBusy || !project.can_cancel}
+              loading={rowBusy && adminAction?.type === "cancel"}
+              aria-label={`取消 ${project.name}`}
+              title={actionBusy ? busyTitle : project.can_cancel ? "取消项目" : "当前状态不可取消"}
+            />
+          </Popconfirm>
           <Button
             icon={<RotateCcw size={15} />}
             theme="borderless"
             type="tertiary"
-            disabled={!project.can_retry}
-            loading={adminAction?.id === project.id && adminAction.type === "retry"}
+            disabled={actionBusy || !project.can_retry}
+            loading={rowBusy && adminAction?.type === "retry"}
             aria-label={`重试 ${project.name}`}
+            title={actionBusy ? busyTitle : project.can_retry ? "重试项目" : "当前状态不可重试"}
             onClick={() => void handleAdminProjectAction(project, "retry")}
           />
           <Popconfirm title="删除项目" content={`确定删除 ${project.name} 及其全部项目会话吗？`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void handleAdminProjectAction(project, "delete")}>
@@ -198,12 +218,15 @@ export function WorkProjectsPage() {
               icon={<Trash2 size={15} />}
               theme="borderless"
               type="danger"
-              loading={adminAction?.id === project.id && adminAction.type === "delete"}
+              disabled={actionBusy}
+              loading={rowBusy && adminAction?.type === "delete"}
               aria-label={`删除 ${project.name}`}
+              title={actionBusy ? busyTitle : "删除项目"}
             />
           </Popconfirm>
         </RowActions>
-      ),
+        );
+      },
     },
   ];
 
@@ -214,12 +237,14 @@ export function WorkProjectsPage() {
       <ResourcePageShell
         searchPlaceholder="搜索项目名称、类型、描述或状态"
         keyword={keyword}
+        activeKeyword={activeKeyword}
         loading={loading}
+        error={error}
         metrics={[
           { label: "总数", value: total },
-          { label: "进行中", value: summary.working },
-          { label: "项目会话", value: summary.sessions },
-          { label: "资产", value: summary.assets },
+          { label: "本页进行中", value: summary.working },
+          { label: "本页会话", value: summary.sessions },
+          { label: "本页资产", value: summary.assets },
         ]}
         empty={projects.length === 0}
         emptyIcon={<FolderKanban size={42} />}
@@ -232,8 +257,10 @@ export function WorkProjectsPage() {
         canGoNext={canGoNext}
         onKeywordChange={setKeyword}
         onSearch={search}
+        onClearSearch={clearSearch}
         onPrevious={previous}
         onNext={next}
+        onRetry={loadProjects}
       >
         <ResourceTable<WorkProject>
           ariaLabel="工作项目"

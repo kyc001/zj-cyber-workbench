@@ -16,14 +16,15 @@ import { SandboxImageFormModal } from "./SandboxImageFormModal";
 
 export function SandboxImagesPage() {
   const {
-    items: images, page, keyword, loading, loadItems: loadImages, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
+    items: images, page, keyword, activeKeyword, loading, error, loadItems: loadImages, total, rangeStart, rangeEnd,
+    setKeyword, search, clearSearch, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<SandboxImage>({ query: querySandboxImages });
   const [modalOpen, setModalOpen] = useState(false);
 
   const { run: deleteImage, busyId: deletingId } = useResourceAction<SandboxImage>(
     (image) => deleteSandboxImage(image.id), loadImages,
   );
+  const rowActionBusy = deletingId !== null;
 
   useAdminResourceHeader({
     createLabel: "创建工具基线",
@@ -81,6 +82,7 @@ export function SandboxImagesPage() {
         <RowActions>
           <Popconfirm title="删除工具基线" content={`确定删除 ${image.image_name}？`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteImage(image)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
+              disabled={rowActionBusy && deletingId !== image.id}
               loading={deletingId === image.id} aria-label={`Delete ${image.image_name}`}
             />
           </Popconfirm>
@@ -94,10 +96,12 @@ export function SandboxImagesPage() {
       <ResourcePageShell
         searchPlaceholder="搜索工具基线名称"
         keyword={keyword}
+        activeKeyword={activeKeyword}
         loading={loading}
+        error={error}
         metrics={[
           { label: "总数", value: total },
-          { label: "Tor", value: summary.tor },
+          { label: "本页 Tor", value: summary.tor },
         ]}
         empty={images.length === 0}
         emptyIcon={<Boxes size={42} />}
@@ -110,8 +114,10 @@ export function SandboxImagesPage() {
         canGoNext={canGoNext}
         onKeywordChange={setKeyword}
         onSearch={search}
+        onClearSearch={clearSearch}
         onPrevious={previous}
         onNext={next}
+        onRetry={loadImages}
       >
         <ResourceTable<SandboxImage>
           ariaLabel="工具基线"

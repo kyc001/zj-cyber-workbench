@@ -9,7 +9,61 @@
   pointer-events: none;
 }
 
+.playground-run-recovery {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: min(1120px, 100%);
+  margin: 0 auto 8px;
+  padding: 8px 10px 8px 14px;
+  color: var(--z-danger);
+  background: var(--z-surface-strong);
+  border: 1px solid var(--z-danger-border);
+  border-radius: 12px;
+  box-shadow: var(--z-shadow);
+  pointer-events: auto;
+}
+
+.playground-run-recovery-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.playground-run-recovery-copy strong {
+  flex: 0 0 auto;
+}
+
+.playground-run-recovery-copy span {
+  overflow: hidden;
+  color: var(--z-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playground-run-recovery .semi-button {
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.playground-has-run-recovery .playground-canvas {
+  padding-bottom: 222px;
+}
+
+.playground-has-run-recovery .playground-canvas-shell .message-scroll-viewport {
+  scroll-padding-bottom: 222px;
+}
+
+.playground-has-run-recovery .chat-scroll-tail-floating {
+  bottom: 194px;
+}
+
 .composer {
+  width: 100%;
+  min-width: 0;
   max-width: min(1120px, 100%);
   margin: 0 auto;
   pointer-events: auto;
@@ -23,12 +77,35 @@
 }
 
 .composer-panel {
+  position: relative;
   display: grid;
+  width: 100%;
+  min-width: 0;
   gap: 8px;
   padding: 10px;
   background: var(--z-surface-strong);
   border: 1px solid var(--z-line);
   border-radius: 20px;
+}
+
+.composer-dragging .composer-panel {
+  border-color: var(--z-brand);
+  box-shadow: 0 0 0 4px rgba(217, 45, 58, 0.1);
+}
+
+.composer-drop-hint {
+  position: absolute;
+  inset: 6px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  color: var(--z-text-strong);
+  background: color-mix(in srgb, var(--z-surface-strong) 90%, transparent);
+  border: 1px dashed var(--z-brand);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .composer-file-input {
@@ -79,15 +156,92 @@
   cursor: pointer;
 }
 
+.composer-file-attachment {
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 210px;
+  width: 210px;
+  height: 68px;
+  padding: 9px 30px 9px 10px;
+  background: var(--z-surface-soft);
+  border: 1px solid var(--z-line);
+  border-radius: 10px;
+}
+
+.composer-file-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--z-brand);
+  background: var(--z-brand-tint);
+  border-radius: 9px;
+}
+
+.composer-file-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.composer-file-name {
+  overflow: hidden;
+  color: var(--z-text-strong);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-file-size {
+  color: var(--z-text-subtle);
+  font-size: 11px;
+}
+
+.composer-file-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  color: var(--z-text-muted);
+  background: var(--z-surface-muted);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.composer-action-spinner {
+  animation: composerSpin 800ms linear infinite;
+}
+
+@keyframes composerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .composer .semi-input-textarea-wrapper,
 .composer .semi-input-textarea-wrapper:hover,
 .composer .semi-input-textarea-wrapper-focus {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   background: transparent;
   border: 0;
   box-shadow: none;
 }
 
 .composer .semi-input-textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 4px 6px;
   font-size: 14px;
   line-height: 1.55;
@@ -95,6 +249,7 @@
 
 .composer-footer {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -102,6 +257,7 @@
 
 .composer-actions {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
 }
@@ -147,6 +303,7 @@
 
 .composer-agent-chip {
   display: inline-flex;
+  min-width: 0;
   align-items: center;
   gap: 6px;
   max-width: min(240px, 46vw);

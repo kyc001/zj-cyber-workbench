@@ -1,5 +1,5 @@
 import { Button, Spin } from "@douyinfe/semi-ui";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, CircleAlert, RefreshCw } from "lucide-react";
 import { ReactNode, RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cx } from "../../shared/lib/className";
 import { useAutoFollowScroll } from "./useAutoFollowScroll";
@@ -10,9 +10,11 @@ type MessageScrollPanelProps = {
   className?: string;
   contentClassName?: string;
   enabled?: boolean;
+  error?: string;
   loading?: boolean;
   loadingPrevious?: boolean;
   onLoadPrevious?: () => void;
+  onRetry?: () => void;
   preserveScrollKey?: string | number | null;
   resetKey?: string | number | null;
   scrollButtonClassName?: string;
@@ -27,9 +29,11 @@ export function MessageScrollPanel({
   className = "",
   contentClassName = "",
   enabled = true,
+  error = "",
   loading = false,
   loadingPrevious = false,
   onLoadPrevious,
+  onRetry,
   preserveScrollKey,
   resetKey,
   scrollButtonClassName = "",
@@ -131,6 +135,23 @@ export function MessageScrollPanel({
           <Spin spinning />
         </div>
       ) : null}
+      {error && !loading ? (
+        <div className="message-scroll-error" role="alert">
+          <CircleAlert size={24} />
+          <strong>无法加载会话历史</strong>
+          <span>{error}</span>
+          {onRetry ? (
+            <Button
+              icon={<RefreshCw size={14} />}
+              theme="solid"
+              type="primary"
+              onClick={onRetry}
+            >
+              重新加载
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {enabled && !following ? (
         <Button
           className={cx("message-scroll-tail-floating", scrollButtonClassName)}
@@ -138,7 +159,7 @@ export function MessageScrollPanel({
           theme="solid"
           type="tertiary"
           onClick={scrollToLatest}
-        aria-label="滚动到最新消息"
+          aria-label="滚动到最新消息"
         />
       ) : null}
     </div>

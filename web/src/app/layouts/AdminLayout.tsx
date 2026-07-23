@@ -1,13 +1,13 @@
-import { Avatar, Button } from "@douyinfe/semi-ui";
-import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageSquareCode, Network, Server, Settings, Wrench } from "lucide-react";
-import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Avatar, SideSheet } from "@douyinfe/semi-ui";
+import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageCircleMore, MessageSquareCode, Network, Server, Settings, Users, Wrench } from "lucide-react";
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
 import { RuntimePermissionControl } from "../../features/permissions/RuntimePermissionControl";
 import { useAgentSessionContext } from "../../features/playground/AgentSessionProvider";
 import { useAuth } from "../../shared/auth/AuthProvider";
 import { cx } from "../../shared/lib/className";
-import { preloadAdminRoute, preloadAdminRoutes } from "../routePreload";
+import { preloadAdminRoute, scheduleAdminRoutePreloads } from "../routePreload";
 
 type AdminLayoutContext = {
   setHeaderActions: (actions: ReactNode) => void;
@@ -31,8 +31,12 @@ const navItems = [
   { path: "/sandbox-images", label: "工具基线", eyebrow: "便携工具配置", icon: Boxes, adminOnly: true },
   { path: "/sandbox-containers", label: "执行工作区", eyebrow: "本机运行实例", icon: Box, adminOnly: true },
   { path: "/toolpack", label: "Toolpack", eyebrow: "工具执行入口", icon: Wrench, adminOnly: true },
+  { path: "/skill-hub", label: "Skill Hub", eyebrow: "社区技能市场", icon: Boxes, adminOnly: true },
   { path: "/system-config", label: "系统配置", eyebrow: "运行时与模型配置", icon: Settings, adminOnly: true },
+  { path: "/system-users", label: "用户管理", eyebrow: "账号与角色管理", icon: Users, adminOnly: true },
 ];
+
+const MOBILE_LAYOUT_QUERY = "(max-width: 900px)";
 
 export function AdminLayout() {
   const { user } = useAuth();
@@ -40,9 +44,16 @@ export function AdminLayout() {
   const location = useLocation();
   const [headerActions, setHeaderActionsState] = useState<ReactNode>(null);
   const [projectListVersion, setProjectListVersion] = useState(0);
+  const [mobileLayout, setMobileLayout] = useState(() => (
+    typeof window !== "undefined" && window.matchMedia(MOBILE_LAYOUT_QUERY).matches
+  ));
+  const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
+  const activeNavRef = useRef<HTMLAnchorElement | null>(null);
   const {
     sessions,
     sessionsLoading,
+    sessionsError,
+    deletingSessionIds,
     activeSessionId,
     selectSession,
     deleteSession,
@@ -56,15 +67,34 @@ export function AdminLayout() {
   }, []);
 
   useEffect(() => {
-    const id = window.setTimeout(preloadAdminRoutes, 300);
-    return () => window.clearTimeout(id);
+    return scheduleAdminRoutePreloads(location.pathname);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_LAYOUT_QUERY);
+    const sync = () => setMobileLayout(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    setMobileSessionsOpen(false);
+  }, [location.pathname, mobileLayout]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      activeNavRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname]);
 
   const refreshWorkProjects = useCallback(() => {
     setProjectListVersion((version) => version + 1);
   }, []);
 
   const handleSelectAgentSession = useCallback((sessionId: string) => {
+    setMobileSessionsOpen(false);
     selectSession(sessionId);
     if (!location.pathname.startsWith("/playground")) {
       navigate("/playground");
@@ -80,6 +110,22 @@ export function AdminLayout() {
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
   const activeItem = visibleNavItems.find((item) => location.pathname.startsWith(item.path));
   const contentMode = location.pathname.startsWith("/playground") ? "fixed" : "scroll";
+  const sessionList = (
+    <SessionList
+      sessions={sessions}
+      loading={sessionsLoading}
+      error={sessionsError}
+      activeSessionId={activeSessionId}
+      deletingSessionIds={deletingSessionIds}
+      projectListVersion={projectListVersion}
+      onSelect={handleSelectAgentSession}
+      onDelete={deleteSession}
+      onRefreshSessions={refreshSessions}
+      onDropRuntime={dropSessionRuntime}
+      onClearSelection={() => selectSession(null)}
+      onSyncSessionSummaries={syncSessionSummaries}
+    />
+  );
 
   return (
     <div className="admin-shell">
@@ -96,28 +142,36 @@ export function AdminLayout() {
           <div className="admin-sidebar-top">
             <NavLink
               to="/playground"
+              ref={location.pathname.startsWith("/playground") ? activeNavRef : undefined}
               className="admin-nav-link"
-              onFocus={() => preloadAdminRoute("/playground")}
-              onPointerDown={() => preloadAdminRoute("/playground")}
-              onPointerEnter={() => preloadAdminRoute("/playground")}
+              aria-label="智能体工作台"
+              title="智能体工作台"
+              onFocus={() => void preloadAdminRoute("/playground")}
+              onPointerDown={() => void preloadAdminRoute("/playground")}
+              onPointerEnter={() => void preloadAdminRoute("/playground")}
             >
               <MessageSquareCode size={18} />
               <span>智能体工作台</span>
             </NavLink>
-            <div className="admin-sidebar-secondary">
-              <SessionList
-                sessions={sessions}
-                loading={sessionsLoading}
-                activeSessionId={activeSessionId}
-                projectListVersion={projectListVersion}
-                onSelect={handleSelectAgentSession}
-                onDelete={deleteSession}
-                onRefreshSessions={refreshSessions}
-                onDropRuntime={dropSessionRuntime}
-                onSyncSessionSummaries={syncSessionSummaries}
-              />
-            </div>
+            {!mobileLayout ? <div className="admin-sidebar-secondary">{sessionList}</div> : null}
           </div>
+
+          {mobileLayout ? (
+            <button
+              type="button"
+              className="admin-mobile-session-trigger"
+              aria-label={`打开会话列表，共 ${sessions.length} 个普通会话`}
+              aria-haspopup="dialog"
+              aria-expanded={mobileSessionsOpen}
+              onClick={() => setMobileSessionsOpen(true)}
+            >
+              <MessageCircleMore size={18} aria-hidden="true" />
+              <span className="admin-mobile-session-label">会话</span>
+              <span className="admin-mobile-session-count" aria-hidden="true">
+                {sessions.length > 99 ? "99+" : sessions.length}
+              </span>
+            </button>
+          ) : null}
 
           <nav className="admin-nav admin-nav-bottom" aria-label="主导航">
             {visibleNavItems.slice(1).map((item) => {
@@ -126,10 +180,13 @@ export function AdminLayout() {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  ref={location.pathname.startsWith(item.path) ? activeNavRef : undefined}
                   className="admin-nav-link"
-                  onFocus={() => preloadAdminRoute(item.path)}
-                  onPointerDown={() => preloadAdminRoute(item.path)}
-                  onPointerEnter={() => preloadAdminRoute(item.path)}
+                  aria-label={item.label}
+                  title={item.label}
+                  onFocus={() => void preloadAdminRoute(item.path)}
+                  onPointerDown={() => void preloadAdminRoute(item.path)}
+                  onPointerEnter={() => void preloadAdminRoute(item.path)}
                 >
                   <Icon size={18} />
                   <span>{item.label}</span>
@@ -139,6 +196,30 @@ export function AdminLayout() {
           </nav>
         </div>
       </aside>
+
+      {mobileLayout ? (
+        <SideSheet
+          className="admin-mobile-session-sheet"
+          visible={mobileSessionsOpen}
+          placement="left"
+          width="min(360px, calc(100vw - 32px))"
+          title={(
+            <span className="admin-mobile-session-sheet-title">
+              <MessageCircleMore size={19} aria-hidden="true" />
+              <span>会话与项目</span>
+            </span>
+          )}
+          footer={null}
+          maskClosable
+          closeOnEsc
+          keepDOM
+          aria-label="会话与项目"
+          bodyStyle={{ padding: 0, overflow: "hidden" }}
+          onCancel={() => setMobileSessionsOpen(false)}
+        >
+          {sessionList}
+        </SideSheet>
+      ) : null}
 
       <div className="admin-main">
         <header className="admin-topbar">
@@ -170,8 +251,9 @@ export function AdminLayout() {
 
 function AdminRouteFallback() {
   return (
-    <div className="admin-route-fallback">
-      <div className="route-fallback-spinner" />
+    <div className="admin-route-fallback" role="status" aria-live="polite">
+      <div className="route-fallback-spinner" aria-hidden="true" />
+      <span className="sr-only">正在加载页面内容</span>
     </div>
   );
 }

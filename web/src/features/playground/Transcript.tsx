@@ -1,5 +1,15 @@
-import { AlertOctagon, Brain, ChevronDown, ChevronRight, Download, FileText } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertOctagon, ArrowDown, Brain, ChevronDown, ChevronRight, Download, FileText, LoaderCircle } from "lucide-react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type {
   AgentTranscript,
   ErrorItem,
@@ -9,7 +19,6 @@ import type {
 } from "./chatState";
 import { downloadAgentReport } from "../../shared/api/agentSessions";
 import { showApiError } from "../../shared/api/feedback";
-import { MarkdownRenderer } from "./MarkdownRenderer";
 import { normalizeMarkdownForRender } from "./markdown";
 import type { SubagentSelection } from "./subagentView";
 import { cx } from "../../shared/lib/className";
@@ -24,6 +33,10 @@ import {
   type ContentBlock,
   type TranscriptRenderSegment,
 } from "./transcriptView";
+
+const MarkdownRenderer = lazy(() => import("./MarkdownRenderer").then((module) => ({
+  default: module.MarkdownRenderer,
+})));
 
 export function TranscriptContent({
   transcript,
@@ -159,7 +172,15 @@ const MarkdownText = memo(function MarkdownText({ text, streaming }: { text: str
   if (!renderText && !streaming) return null;
   return (
     <div className="agent-text">
-      <MarkdownRenderer markdown={markdown} />
+      <Suspense
+        fallback={(
+          <div className="markdown-render-fallback" aria-busy="true">
+            {markdown}
+          </div>
+        )}
+      >
+        <MarkdownRenderer markdown={markdown} />
+      </Suspense>
     </div>
   );
 });
@@ -176,8 +197,10 @@ function ThinkingGroup({
   live: boolean;
 }) {
   const [open, setOpen] = useState(active);
+  const [following, setFollowing] = useState(true);
   const wasActive = useRef(active);
   const bodyRef = useRef<HTMLPreElement | null>(null);
+  const followingRef = useRef(true);
   const text = useMemo(
     () => items.map((item) => item.text.trim()).filter(Boolean).join("\n\n"),
     [items],
@@ -185,6 +208,8 @@ function ThinkingGroup({
 
   useEffect(() => {
     if (active) {
+      followingRef.current = true;
+      setFollowing(true);
       setOpen(true);
     } else if (wasActive.current) {
       setOpen(false);
@@ -193,10 +218,35 @@ function ThinkingGroup({
   }, [active]);
 
   useEffect(() => {
-    if (open && bodyRef.current) {
+    if (active && open && followingRef.current && bodyRef.current) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
-  }, [text, open]);
+  }, [active, text, open]);
+
+  const toggleOpen = () => {
+    setOpen((current) => {
+      const next = !current;
+      if (next && active) {
+        followingRef.current = true;
+        setFollowing(true);
+      }
+      return next;
+    });
+  };
+
+  const handleThinkingScroll = () => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const next = body.scrollHeight - body.scrollTop - body.clientHeight <= 20;
+    followingRef.current = next;
+    setFollowing((current) => current === next ? current : next);
+  };
+
+  const scrollThinkingToLatest = () => {
+    followingRef.current = true;
+    setFollowing(true);
+    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
+  };
 
   return (
     <div className={cx("thinking-block", live && "transcript-panel-live", active && "thinking-block-active")}>
@@ -205,15 +255,29 @@ function ThinkingGroup({
         title={active ? "思考中…" : "思考过程"}
         count={items.length > 1 ? items.length : undefined}
         open={open}
-        onToggle={() => setOpen((next) => !next)}
+        onToggle={toggleOpen}
       />
       {open ? (
         <div className="thinking-body">
           <div className="thinking-fade thinking-fade-top" />
-          <pre ref={bodyRef} className="thinking-text">
+          <pre
+            ref={bodyRef}
+            className="thinking-text"
+            onScroll={handleThinkingScroll}
+          >
             {text || (activeItemId ? " " : "(empty)")}
           </pre>
           <div className="thinking-fade thinking-fade-bottom" />
+          {active && !following ? (
+            <button
+              type="button"
+              className="thinking-follow-button"
+              onClick={scrollThinkingToLatest}
+            >
+              <ArrowDown size={12} />
+              <span>查看最新</span>
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -234,7 +298,12 @@ function PanelHeader({
   onToggle: () => void;
 }) {
   return (
-    <button type="button" className="transcript-panel-header" onClick={onToggle}>
+    <button
+      type="button"
+      className="transcript-panel-header"
+      aria-expanded={open}
+      onClick={onToggle}
+    >
       {icon}
       <span>{title}</span>
       {count ? <span className="transcript-panel-count">{count}</span> : null}
@@ -269,6 +338,7 @@ const TRANSCRIPT_ATTACHMENT_RENDERERS: {
     <ReportAttachment
       report={attachment}
       disabled={Boolean(context.downloadingReportId)}
+      loading={context.downloadingReportId === attachment.reportId}
       onDownload={() => context.onDownloadReport(attachment)}
     />
   ),
@@ -276,8 +346,10 @@ const TRANSCRIPT_ATTACHMENT_RENDERERS: {
 
 function TranscriptAttachments({ attachments }: { attachments: TranscriptAttachmentItem[] }) {
   const [downloadingReportId, setDownloadingReportId] = useState("");
+  const downloadingReportIdRef = useRef("");
   const downloadReport = useCallback(async (report: ReportAttachmentItem) => {
-    if (downloadingReportId) return;
+    if (downloadingReportIdRef.current) return;
+    downloadingReportIdRef.current = report.reportId;
     setDownloadingReportId(report.reportId);
     try {
       const { blob, filename } = await downloadAgentReport(report.reportId);
@@ -285,9 +357,12 @@ function TranscriptAttachments({ attachments }: { attachments: TranscriptAttachm
     } catch (error) {
       showApiError(error);
     } finally {
+      if (downloadingReportIdRef.current === report.reportId) {
+        downloadingReportIdRef.current = "";
+      }
       setDownloadingReportId((current) => (current === report.reportId ? "" : current));
     }
-  }, [downloadingReportId]);
+  }, []);
   const context = useMemo(
     () => ({ downloadingReportId, onDownloadReport: downloadReport }),
     [downloadReport, downloadingReportId],
@@ -323,10 +398,12 @@ function TranscriptAttachment({
 function ReportAttachment({
   report,
   disabled,
+  loading,
   onDownload,
 }: {
   report: ReportAttachmentItem;
   disabled: boolean;
+  loading: boolean;
   onDownload: () => void;
 }) {
   return (
@@ -335,7 +412,8 @@ function ReportAttachment({
       className="report-attachment"
       disabled={disabled}
       title={`${report.filename} · ${formatBytes(report.size)}`}
-        aria-label={`下载 ${report.filename}`}
+      aria-label={loading ? `正在下载 ${report.filename}` : `下载 ${report.filename}`}
+      aria-busy={loading}
       onClick={onDownload}
     >
       <span className="report-attachment-icon">
@@ -346,7 +424,9 @@ function ReportAttachment({
         <span className="report-attachment-size">{formatBytes(report.size)}</span>
       </span>
       <span className="report-attachment-download">
-        <Download size={14} />
+        {loading
+          ? <LoaderCircle className="transcript-action-spinner" size={14} />
+          : <Download size={14} />}
       </span>
     </button>
   );

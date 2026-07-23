@@ -1,3 +1,16 @@
+@media (max-width: 1100px) {
+  .playground-shell-split .playground-conversation-frame {
+    grid-template-columns: minmax(0, 1fr) 0;
+  }
+
+  .subagent-side-panel {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 8;
+    width: min(480px, 100%);
+  }
+}
+
 @media (max-width: 900px) {
   .playground-shell {
     height: 100%;
@@ -32,9 +45,148 @@
   }
 
   .subagent-side-panel {
-    position: absolute;
-    inset: 0 0 0 auto;
     width: min(420px, 92vw);
-    z-index: 5;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1400px) {
+  .playground-new-session-button {
+    flex: 0 0 auto;
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+
+  .playground-new-session-label,
+  .stream-status > span {
+    display: none;
+  }
+
+  .stream-status {
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .playground-new-session-button {
+    order: -3;
+    flex: 0 0 auto;
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+
+  .playground-new-session-label {
+    display: none;
+  }
+
+  .sandbox-selector-topbar {
+    order: -2;
+    flex: 0 0 190px;
+    width: 190px;
+  }
+
+  .sandbox-selector-topbar .semi-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sandbox-container-actions {
+    order: -1;
+  }
+
+  .playground-canvas {
+    padding: 18px 14px 150px;
+  }
+
+  .chat-scroll-tail-floating {
+    right: 20px;
+    bottom: 124px;
+  }
+
+  .playground-canvas-shell .message-scroll-viewport {
+    scroll-padding-bottom: 150px;
+  }
+
+  .playground-composer {
+    padding: 12px 12px 14px;
+  }
+
+  .playground-run-recovery {
+    align-items: flex-start;
+    padding-left: 12px;
+  }
+
+  .playground-run-recovery-copy {
+    display: grid;
+    gap: 2px;
+  }
+
+  .playground-has-run-recovery .playground-canvas {
+    padding-bottom: 206px;
+  }
+
+  .playground-has-run-recovery .playground-canvas-shell .message-scroll-viewport {
+    scroll-padding-bottom: 206px;
+  }
+
+  .playground-has-run-recovery .chat-scroll-tail-floating {
+    bottom: 180px;
+  }
+
+  .composer {
+    padding: 0;
+  }
+
+  .composer,
+  .composer-panel {
+    border-radius: 14px;
+  }
+
+  .composer-panel {
+    padding: 8px;
+  }
+
+  .composer-actions {
+    gap: 4px;
+  }
+
+  .composer-actions .semi-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
+
+  .composer-agent-chip {
+    max-width: min(180px, 42vw);
+  }
+
+  .subagent-side-panel {
+    width: 100%;
+  }
+
+  .subagent-side-header {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .subagent-side-heading {
+    max-width: 34%;
+  }
+
+  .subagent-side-body {
+    padding: 12px 12px 150px;
+  }
+
+  .subagent-side-body-shell .message-scroll-viewport {
+    scroll-padding-bottom: 150px;
+  }
+
+  .subagent-scroll-tail-floating {
+    right: 12px;
+    bottom: 124px;
   }
 }

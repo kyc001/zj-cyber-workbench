@@ -7,6 +7,8 @@ import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "
 type SandboxSelectorProps = {
   containers: SandboxContainer[];
   loading: boolean;
+  updating?: boolean;
+  error?: string;
   value: number | null;
   className?: string;
   disabled?: boolean;
@@ -15,7 +17,25 @@ type SandboxSelectorProps = {
 
 const CONTAINER_ID_PREVIEW_LENGTH = 12;
 
-export function SandboxSelector({ containers, loading, value, className = "", disabled = false, onChange }: SandboxSelectorProps) {
+function parseContainerId(value: unknown) {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim()
+      ? Number(value)
+      : Number.NaN;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function SandboxSelector({
+  containers,
+  loading,
+  updating = false,
+  error = "",
+  value,
+  className = "",
+  disabled = false,
+  onChange,
+}: SandboxSelectorProps) {
   const optionList = containers.map((container) => ({
     label: renderContainerOption(container),
     value: container.id,
@@ -23,18 +43,20 @@ export function SandboxSelector({ containers, loading, value, className = "", di
   const selectedContainer = containers.find((container) => container.id === value) ?? null;
 
   return (
-    <div className={cx("sandbox-selector", className)}>
+    <div className={cx("sandbox-selector", error && "sandbox-selector-error", className)} title={error || undefined}>
       <Select
         prefix={<Box size={15} />}
+        aria-label="执行工作区"
         value={value ?? undefined}
         optionList={optionList}
         renderSelectedItem={() => selectedContainer ? renderSelectedContainer(selectedContainer) : ""}
-        placeholder={loading ? "正在加载执行工作区" : "选择执行工作区"}
-        emptyContent={loading ? <Spin size="small" /> : "暂无可用工作区"}
-        disabled={disabled || loading || containers.length === 0}
+        loading={loading || updating}
+        placeholder={loading ? "正在加载执行工作区" : error ? "执行工作区加载失败" : "选择执行工作区"}
+        emptyContent={loading ? <Spin size="small" /> : error || "暂无可用工作区"}
+        disabled={disabled || loading || updating || containers.length === 0}
         showClear={!disabled}
         onClear={() => onChange(null)}
-        onChange={(nextValue) => onChange(typeof nextValue === "number" ? nextValue : null)}
+        onChange={(nextValue) => onChange(parseContainerId(nextValue))}
       />
     </div>
   );

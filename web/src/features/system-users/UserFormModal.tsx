@@ -41,6 +41,10 @@ function initial(user: SystemUser | null): UserFormValues {
 export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: UserFormModalProps) {
   const [values, setValues] = useState<UserFormValues>(() => initial(user));
   const roles = useMemo(() => getSystemUserRoles(), []);
+  const dirty = open && JSON.stringify(values) !== JSON.stringify(initial(user));
+  const submitDisabled = !values.username.trim()
+    || (mode === "create" && !values.password)
+    || (mode === "edit" && !dirty);
 
   useEffect(() => {
     if (open) setValues(initial(user));
@@ -60,7 +64,9 @@ export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: 
       open={open}
       title={mode === "create" ? "创建用户" : "编辑用户"}
       saving={saving}
+      dirty={dirty}
       submitLabel={mode === "create" ? "创建" : "保存"}
+      submitDisabled={submitDisabled}
       onCancel={onCancel}
       onSubmit={submit}
     >

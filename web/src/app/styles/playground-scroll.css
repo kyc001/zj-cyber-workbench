@@ -59,6 +59,41 @@
   background: rgba(9, 13, 22, 0.42);
 }
 
+.message-scroll-error {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 6;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(420px, calc(100% - 40px));
+  padding: 20px;
+  color: var(--z-danger);
+  background: var(--z-surface-strong);
+  border: 1px solid var(--z-danger-border);
+  border-radius: 14px;
+  box-shadow: var(--z-shadow);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.message-scroll-error strong {
+  color: var(--z-text-strong);
+  font-size: 14px;
+}
+
+.message-scroll-error span {
+  max-width: 100%;
+  color: var(--z-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.message-scroll-error .semi-button {
+  margin-top: 4px;
+  border-radius: 999px;
+}
+
 .message-scroll-tail-floating {
   position: absolute;
   z-index: 7;
@@ -86,6 +121,7 @@
 }
 
 .playground-conversation-frame {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 0;
   flex: 1;

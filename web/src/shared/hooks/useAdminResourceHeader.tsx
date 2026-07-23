@@ -6,8 +6,10 @@ import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
 
 type AdminResourceHeaderOptions = {
   createLabel?: string;
+  createDisabled?: boolean;
   refreshLabel: string;
   loading: boolean;
+  refreshDisabled?: boolean;
   onCreate?: () => void;
   onRefresh: () => void | Promise<void>;
   createIcon?: ReactNode;
@@ -17,8 +19,10 @@ type AdminResourceHeaderOptions = {
 
 export function useAdminResourceHeader({
   createLabel,
+  createDisabled = false,
   refreshLabel,
   loading,
+  refreshDisabled = false,
   onCreate,
   onRefresh,
   createIcon,
@@ -41,10 +45,24 @@ export function useAdminResourceHeader({
 
   useEffect(() => {
     const refreshButton = (
-      <Button icon={<RefreshCw size={16} />} type="tertiary" onClick={refresh} loading={loading} aria-label={refreshLabel} title={refreshLabel} />
+      <Button
+        icon={<RefreshCw size={16} />}
+        type="tertiary"
+        onClick={refresh}
+        loading={loading}
+        disabled={refreshDisabled}
+        aria-label={refreshLabel}
+        title={refreshLabel}
+      />
     );
     const createButton = createLabel && hasCreate ? (
-      <Button icon={createIcon ?? <Plus size={16} />} theme="solid" type="primary" onClick={create}>
+      <Button
+        icon={createIcon ?? <Plus size={16} />}
+        theme="solid"
+        type="primary"
+        disabled={createDisabled}
+        onClick={create}
+      >
         {createLabel}
       </Button>
     ) : null;
@@ -62,11 +80,13 @@ export function useAdminResourceHeader({
     appendExtraActions,
     createIcon,
     createLabel,
+    createDisabled,
     extraActions,
     hasCreate,
     loading,
     create,
     refresh,
+    refreshDisabled,
     refreshLabel,
     setHeaderActions,
   ]);

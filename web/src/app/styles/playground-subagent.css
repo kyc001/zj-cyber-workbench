@@ -28,6 +28,17 @@
   backdrop-filter: blur(14px);
 }
 
+.subagent-side-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.subagent-side-content > .message-scroll-shell {
+  flex: 1 1 auto;
+}
+
 .subagent-side-header {
   display: flex;
   flex: 0 0 auto;

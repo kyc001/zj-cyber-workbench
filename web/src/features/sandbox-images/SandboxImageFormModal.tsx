@@ -19,6 +19,10 @@ const EMPTY: CreateSandboxImageRequest = {
 
 export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: SandboxImageFormModalProps) {
   const [values, setValues] = useState<CreateSandboxImageRequest>(EMPTY);
+  const dirty = open && JSON.stringify(values) !== JSON.stringify(EMPTY);
+  const invalidPort = !Number.isInteger(values.control_proxy_port)
+    || values.control_proxy_port < 1
+    || values.control_proxy_port > 65535;
 
   useEffect(() => {
     if (open) setValues(EMPTY);
@@ -29,8 +33,9 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
       open={open}
       title="创建工具基线"
       saving={saving}
+      dirty={dirty}
       submitLabel="创建"
-      submitDisabled={!values.image_name.trim() || values.control_proxy_port < 1 || values.control_proxy_port > 65535}
+      submitDisabled={!values.image_name.trim() || invalidPort}
       onCancel={onCancel}
       onSubmit={() => onSubmit({
         image_name: values.image_name.trim(),
@@ -52,10 +57,12 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
           value={values.control_proxy_port}
           min={1}
           max={65535}
+          aria-invalid={invalidPort}
           onChange={(control_proxy_port) => {
             if (typeof control_proxy_port === "number") setValues((current) => ({ ...current, control_proxy_port }));
           }}
         />
+        {invalidPort ? <small className="resource-field-error" role="status">端口必须是 1–65535 之间的整数</small> : null}
       </label>
       <label>
         <span>Tor 代理能力</span>

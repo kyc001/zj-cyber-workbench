@@ -1,6 +1,6 @@
 import { Button, Modal, Popconfirm } from "@douyinfe/semi-ui";
 import { Pencil, Server, ShieldCheck, SquareTerminal, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import {
   createManagedHost,
@@ -28,11 +28,12 @@ const DEFAULT_LOCAL_HOST_ID = 1;
 
 export function HostsPage() {
   const {
-    items: hosts, page, keyword, loading, loadItems: loadHosts, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
+    items: hosts, page, keyword, activeKeyword, loading, error, loadItems: loadHosts, total, rangeStart, rangeEnd,
+    setKeyword, search, clearSearch, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<ManagedHost>({ query: queryManagedHosts });
   const [modal, setModal] = useState<ModalState>(null);
   const [trustingHostId, setTrustingHostId] = useState<number | null>(null);
+  const trustingHostRef = useRef(false);
   const { openHostShell } = useContainerShell();
   const { run: deleteHost, busyId: deletingHostId } = useResourceAction<ManagedHost>(
     (host) => deleteManagedHost(host.id),
@@ -55,11 +56,17 @@ export function HostsPage() {
   });
 
   const trustHostKey = async (host: ManagedHost) => {
+    if (trustingHostRef.current || deletingHostId !== null) return;
+    trustingHostRef.current = true;
     setTrustingHostId(host.id);
     try {
       const response = await previewManagedHostKey(host.id);
       const key = response.data;
-      if (!key) return;
+      if (!key) {
+        trustingHostRef.current = false;
+        setTrustingHostId(null);
+        return;
+      }
       Modal.confirm({
         title: "信任 SSH Host Key",
         okText: key.trusted ? "重新信任当前指纹" : "信任当前指纹",
@@ -82,18 +89,26 @@ export function HostsPage() {
           try {
             const trusted = await trustManagedHostKey(host.id, key.fingerprint_sha256);
             showApiSuccess(trusted);
+            trustingHostRef.current = false;
+            setTrustingHostId(null);
           } catch (error) {
             showApiError(error);
             throw error;
           }
         },
+        onCancel: () => {
+          trustingHostRef.current = false;
+          setTrustingHostId(null);
+        },
       });
     } catch (error) {
       showApiError(error);
-    } finally {
+      trustingHostRef.current = false;
       setTrustingHostId(null);
     }
   };
+
+  const rowActionBusy = trustingHostId !== null || deletingHostId !== null;
 
   const summary = useMemo(
     () => hosts.reduce(
@@ -130,19 +145,22 @@ export function HostsPage() {
       render: (host) => (
         <RowActions>
           <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
+            disabled={rowActionBusy}
             aria-label={`Connect shell for ${host.ip_address}`} onClick={() => openHostShell(host)}
           />
           <Button icon={<ShieldCheck size={15} />} theme="borderless" type="tertiary"
-            disabled={host.id === DEFAULT_LOCAL_HOST_ID}
+            disabled={rowActionBusy || host.id === DEFAULT_LOCAL_HOST_ID}
             loading={trustingHostId === host.id}
             aria-label={`Trust host key for ${host.ip_address}`}
             onClick={() => void trustHostKey(host)}
           />
           <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
+            disabled={rowActionBusy}
             aria-label={`Edit ${host.ip_address}`} onClick={() => setModal({ mode: "edit", host })}
           />
           <Popconfirm title="删除主机" content={`确定删除 ${host.ip_address}？`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteHost(host)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
+              disabled={rowActionBusy && deletingHostId !== host.id}
               loading={deletingHostId === host.id} aria-label={`Delete ${host.ip_address}`}
             />
           </Popconfirm>
@@ -156,10 +174,12 @@ export function HostsPage() {
       <ResourcePageShell
         searchPlaceholder="搜索主机名称、IP、账号或 SSH 端口"
         keyword={keyword}
+        activeKeyword={activeKeyword}
         loading={loading}
+        error={error}
         metrics={[
           { label: "总数", value: total },
-          { label: "SSH", value: summary.ssh },
+          { label: "本页 SSH", value: summary.ssh },
         ]}
         empty={hosts.length === 0}
         emptyIcon={<Server size={42} />}
@@ -172,8 +192,10 @@ export function HostsPage() {
         canGoNext={canGoNext}
         onKeywordChange={setKeyword}
         onSearch={search}
+        onClearSearch={clearSearch}
         onPrevious={previous}
         onNext={next}
+        onRetry={loadHosts}
       >
         <ResourceTable<ManagedHost>
           ariaLabel="主机列表"

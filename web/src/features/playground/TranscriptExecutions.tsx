@@ -1,8 +1,9 @@
-import { Button, Tag } from "@douyinfe/semi-ui";
-import { ChevronDown, ChevronRight, GitBranch, PanelRightOpen, Wrench } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Button, Tag, Toast } from "@douyinfe/semi-ui";
+import { Check, ChevronDown, ChevronRight, Copy, GitBranch, Maximize2, Minimize2, PanelRightOpen, Wrench } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { NestedTranscript, SubagentExecutionItem, ToolExecutionItem } from "./chatState";
 import { cx } from "../../shared/lib/className";
+import { copyTextToClipboard } from "../../shared/lib/clipboard";
 import { subagentStatusColor, subordinateStatusLabel, type SubagentSelection } from "./subagentView";
 import { emptyAgentTranscript, transcriptHasRunningExecution, transcriptItemCount, type ToolBlock } from "./transcriptView";
 
@@ -206,33 +207,111 @@ export function SubagentStatusTag({ status }: { status: SubagentExecutionItem["s
   return <Tag size="small" color={subagentStatusColor(status)}>{subordinateStatusLabel(status)}</Tag>;
 }
 
-export function ExecutionSection({ label, body, tone }: { label: string; body: string; tone?: "error" }) {
+const EXECUTION_PREVIEW_MAX_CHARS = 12_000;
+const EXECUTION_PREVIEW_MAX_LINES = 160;
+
+export function ExecutionSection({
+  label,
+  body,
+  tone,
+  structured = false,
+}: {
+  label: string;
+  body: string;
+  tone?: "error";
+  structured?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyingRef = useRef(false);
+  const bodyId = useId();
+  const preview = useMemo(() => createExecutionPreview(body), [body]);
+  const displayBody = expanded || !preview.truncated ? body : preview.text;
+  const json = useMemo(
+    () => structured ? tokenizeJson(displayBody) : null,
+    [displayBody, structured],
+  );
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  const copy = async () => {
+    if (copyingRef.current || !body) return;
+    copyingRef.current = true;
+    try {
+      await copyTextToClipboard(body);
+      setCopied(true);
+    } catch (error) {
+      Toast.error(error instanceof Error ? error.message : "复制失败");
+    } finally {
+      copyingRef.current = false;
+    }
+  };
+
   return (
-    <div className={cx("execution-section", tone && `execution-section-${tone}`)}>
-      <div className="execution-section-label">{label}</div>
-      <pre className="execution-section-body">{body}</pre>
+    <div className={cx(
+      "execution-section",
+      tone && `execution-section-${tone}`,
+      preview.truncated && !expanded && "execution-section-collapsed",
+    )}>
+      <div className="execution-section-head">
+        <div className="execution-section-label">{label}</div>
+        <div className="execution-section-actions">
+          {preview.truncated ? (
+            <button
+              type="button"
+              className="execution-section-action"
+              aria-controls={bodyId}
+              aria-expanded={expanded}
+              title={expanded ? "收起内容" : "展开完整内容"}
+              onClick={() => setExpanded((current) => !current)}
+            >
+              {expanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+              <span>{expanded ? "收起" : "展开"}</span>
+            </button>
+          ) : null}
+          {body ? (
+            <button
+              type="button"
+              className="execution-section-action"
+              aria-label={copied ? `已复制${label}` : `复制${label}`}
+              title={copied ? "已复制" : "复制完整内容"}
+              onClick={() => void copy()}
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+              <span>{copied ? "已复制" : "复制"}</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className="execution-section-body-wrap">
+        <pre
+          id={bodyId}
+          className={cx("execution-section-body", structured && "execution-json-body")}
+        >
+          {json ? (
+            <code>
+              {json.map((token, index) => (
+                token.tone ? (
+                  <span key={index} className={`json-token-${token.tone}`}>
+                    {token.text}
+                  </span>
+                ) : token.text
+              ))}
+            </code>
+          ) : displayBody}
+        </pre>
+      </div>
     </div>
   );
 }
 
 function JsonExecutionSection({ label, value, tone }: { label: string; value: unknown; tone?: "error" }) {
-  const json = useMemo(() => tokenizeJson(stringifyJson(value)), [value]);
-  return (
-    <div className={cx("execution-section", tone && `execution-section-${tone}`)}>
-      <div className="execution-section-label">{label}</div>
-      <pre className="execution-section-body execution-json-body">
-        <code>
-          {json.map((token, index) => (
-            token.tone ? (
-              <span key={`${index}:${token.text}`} className={`json-token-${token.tone}`}>
-                {token.text}
-              </span>
-            ) : token.text
-          ))}
-        </code>
-      </pre>
-    </div>
-  );
+  const body = useMemo(() => stringifyJson(value), [value]);
+  return <ExecutionSection label={label} body={body} tone={tone} structured />;
 }
 
 function ToolOutputSection({ output, tone }: { output: string; tone?: "error" }) {
@@ -268,6 +347,35 @@ function stringifyJson(value: unknown) {
   } catch {
     return JSON.stringify(String(value));
   }
+}
+
+function createExecutionPreview(body: string): { text: string; truncated: boolean } {
+  if (body.length > EXECUTION_PREVIEW_MAX_CHARS) {
+    const headLength = 8_500;
+    const tailLength = 2_500;
+    const omitted = body.length - headLength - tailLength;
+    return {
+      text: `${body.slice(0, headLength)}\n\n… 已省略 ${omitted.toLocaleString()} 个字符 …\n\n${body.slice(-tailLength)}`,
+      truncated: true,
+    };
+  }
+  const lines = body.split("\n");
+  if (lines.length > EXECUTION_PREVIEW_MAX_LINES) {
+    const headLines = 120;
+    const tailLines = 24;
+    const omitted = lines.length - headLines - tailLines;
+    return {
+      text: [
+        ...lines.slice(0, headLines),
+        "",
+        `… 已省略 ${omitted.toLocaleString()} 行 …`,
+        "",
+        ...lines.slice(-tailLines),
+      ].join("\n"),
+      truncated: true,
+    };
+  }
+  return { text: body, truncated: false };
 }
 
 type JsonToken = { text: string; tone?: "key" | "string" | "number" | "boolean" | "null" };

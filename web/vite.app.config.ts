@@ -1,5 +1,8 @@
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
+
+const WEB_SRC_PATH = fileURLToPath(new URL("./src", import.meta.url));
 
 // vendor groups split off into their own chunks so the main bundle stays small
 // and heavy libs (Semi-UI, xterm, markdown) can be cached independently
@@ -31,6 +34,11 @@ function semiEnglishOnlyPlugin(): Plugin {
 export default defineConfig({
   root: "app",
   plugins: [react(), semiEnglishOnlyPlugin()],
+  resolve: {
+    alias: {
+      "/src": WEB_SRC_PATH,
+    },
+  },
   server: {
     port: 5173,
     proxy: {

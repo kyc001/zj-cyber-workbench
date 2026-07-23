@@ -99,7 +99,15 @@ export function endStreaming(store: TimelineStore): TimelineStore {
 export function orderedEvents(store: TimelineStore): AgentContentEvent[] {
   return [...store.items.values()]
     .sort((a, b) => a.order - b.order || a.seq - b.seq)
-    .map((entry) => entry.event);
+    .map((entry) => {
+      // A streaming delta replaces the event stored under the same logical
+      // key, so its latest server seq keeps changing while `order` remains the
+      // seq that opened the item. Replay with that opening seq: React node
+      // keys then stay stable across deltas and local panel/copy/scroll state
+      // is not destroyed on every streamed frame.
+      if (entry.event.seq === entry.order) return entry.event;
+      return { ...entry.event, seq: entry.order };
+    });
 }
 
 // Derive the rendered transcript. The ordered, key-deduped event list is

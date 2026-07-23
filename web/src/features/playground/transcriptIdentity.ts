@@ -11,7 +11,8 @@ import type {
 export function contentSignature(content: AgentInputPart[]): string {
   return content.map((part) => {
     if (part.type === "text") return `text:${part.text}`;
-    return `image:${part.media_type}:${part.data.length}:${part.data.slice(0, 64)}`;
+    if (part.type === "image") return `image:${part.media_type}:${part.data.length}:${part.data.slice(0, 64)}`;
+    return `file:${part.path}:${part.size}:${part.sha256}`;
   }).join("\n");
 }
 

@@ -5,14 +5,13 @@ from pathlib import Path
 from time import time
 from uuid import uuid4
 
-from config import get_config
+from config import WORKSPACE, get_config
 from logger import get_logger
 from schema.common.tool_results import ReportToolResultOutputSchema
 
-
 logger = get_logger(__name__)
 
-REPORT_ROOT = Path("/tmp/reports")
+REPORT_ROOT = WORKSPACE / "reports"
 REPORT_EXTENSION = ".md"
 _REPORT_SESSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 _REPORT_FILE_ID_PATTERN = re.compile(r"^[0-9a-z]{1,16}-[a-f0-9]{4}$")

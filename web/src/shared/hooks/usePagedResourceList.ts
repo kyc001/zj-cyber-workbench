@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { showApiError } from "../api/feedback";
+import { getApiErrorMessage } from "../api/feedback";
 import { RESOURCE_PAGE_SIZE } from "../api/generated/constants";
 
 type QueryParams = {
@@ -32,6 +32,7 @@ export function usePagedResourceList<Item, Data extends QueryData<Item> = QueryD
   const [activeKeyword, setActiveKeyword] = useState("");
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const requestIdRef = useRef(0);
   const mountedRef = useRef(true);
 
@@ -47,20 +48,32 @@ export function usePagedResourceList<Item, Data extends QueryData<Item> = QueryD
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setLoading(true);
+    setError("");
     try {
       const response = await query({ page, size: RESOURCE_PAGE_SIZE, keyword: activeKeyword });
       if (!mountedRef.current || requestIdRef.current !== requestId) return;
-      const nextItems = response.data?.items || [];
-      setTotal(response.data?.total ?? 0);
+      const nextItems = response.data?.items ?? [];
+      const responseTotal = response.data?.total ?? 0;
+      const nextTotal = Number.isFinite(responseTotal)
+        ? Math.max(0, Math.floor(responseTotal))
+        : 0;
+      const lastPage = Math.max(1, Math.ceil(nextTotal / RESOURCE_PAGE_SIZE));
+      setTotal(nextTotal);
+      setError("");
       onData?.(response.data ?? null);
-      if (nextItems.length === 0 && page > 1) {
-        setPage((current) => Math.max(1, current - 1));
+      const fallbackPage = page > lastPage
+        ? lastPage
+        : nextItems.length === 0 && page > 1
+          ? page - 1
+          : page;
+      if (fallbackPage !== page) {
+        setPage(fallbackPage);
         return;
       }
       setItems(nextItems);
     } catch (error) {
       if (mountedRef.current && requestIdRef.current === requestId) {
-        showApiError(error);
+        setError(getApiErrorMessage(error, "加载列表失败"));
       }
     } finally {
       if (mountedRef.current && requestIdRef.current === requestId) {
@@ -74,33 +87,48 @@ export function usePagedResourceList<Item, Data extends QueryData<Item> = QueryD
   }, [loadItems]);
 
   const search = useCallback(() => {
+    const nextKeyword = keyword.trim();
+    if (page === 1 && nextKeyword === activeKeyword) {
+      void loadItems();
+      return;
+    }
     setPage(1);
-    setActiveKeyword(keyword.trim());
-  }, [keyword]);
+    setActiveKeyword(nextKeyword);
+  }, [activeKeyword, keyword, loadItems, page]);
 
   const previous = useCallback(() => {
     setPage((current) => Math.max(1, current - 1));
   }, []);
 
   const next = useCallback(() => {
-    setPage((current) => current + 1);
-  }, []);
+    const lastPage = Math.max(1, Math.ceil(total / RESOURCE_PAGE_SIZE));
+    setPage((current) => Math.min(lastPage, current + 1));
+  }, [total]);
 
   const goToFirstPage = useCallback(() => {
     setPage(1);
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    setKeyword("");
+    setPage(1);
+    setActiveKeyword("");
   }, []);
 
   return {
     items,
     page,
     keyword,
+    activeKeyword,
     total,
     rangeStart: total === 0 ? 0 : (page - 1) * RESOURCE_PAGE_SIZE + 1,
     rangeEnd: Math.min(page * RESOURCE_PAGE_SIZE, total),
     loading,
+    error,
     loadItems,
     setKeyword,
     search,
+    clearSearch,
     previous,
     next,
     goToFirstPage,

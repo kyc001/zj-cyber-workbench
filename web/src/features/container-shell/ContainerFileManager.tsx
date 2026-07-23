@@ -1,15 +1,15 @@
 import { Button, Popconfirm, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
 import {
-  ArrowLeft, ArrowRight, ArrowUp, Clipboard, ClipboardPaste,
+  ArrowLeft, ArrowRight, ArrowUp, CircleAlert, Clipboard, ClipboardPaste,
   Copy, Download, File, FilePlus, Folder, FolderOpen, FolderPlus, Grid3X3, List,
   RefreshCw, Scissors, Trash2, Upload,
 } from "lucide-react";
-import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   copyContainerFiles, createContainerDirectory, deleteContainerFiles,
   downloadContainerFiles, listContainerFiles, moveContainerFiles, uploadContainerFiles, writeContainerFile,
 } from "../../shared/api/sandboxContainers";
-import { showApiError } from "../../shared/api/feedback";
+import { getApiErrorMessage, showApiError } from "../../shared/api/feedback";
 import type { ContainerFileInfo } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import { saveBlob } from "../../shared/lib/download";
@@ -21,32 +21,67 @@ const FileViewer = lazy(() => import("./FileViewer").then((module) => ({ default
 
 type ViewMode = "list" | "icon";
 type ClipboardState = { action: "copy" | "cut"; paths: string[]; sourceDir: string } | null;
+const MAX_FILE_NAME_BYTES = 255;
+
+function validateFileName(value: string, existingNames: ReadonlySet<string>) {
+  const name = value.trim();
+  if (!name) return "请输入名称";
+  if (name === "." || name === "..") return "不能使用 . 或 .. 作为名称";
+  if (/[/\u0000-\u001f\u007f]/.test(name)) return "名称不能包含 / 或控制字符";
+  if (new TextEncoder().encode(name).length > MAX_FILE_NAME_BYTES) {
+    return `名称不能超过 ${MAX_FILE_NAME_BYTES} 字节`;
+  }
+  if (existingNames.has(name)) return "当前目录已存在同名项目";
+  return "";
+}
 
 type Props = {
   containerId: number;
+  initialPath?: string;
+  navigationKey?: number;
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
-export function ContainerFileManager({ containerId }: Props) {
-  const [path, setPath] = useState("/");
+export function ContainerFileManager({
+  containerId,
+  initialPath = "/",
+  navigationKey = 0,
+  onDirtyChange,
+}: Props) {
+  const [path, setPath] = useState(initialPath);
   const [files, setFiles] = useState<ContainerFileInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [clipboard, setClipboard] = useState<ClipboardState>(null);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
-  const [pathHistory, setPathHistory] = useState<string[]>(["/"]);
+  const [pathHistory, setPathHistory] = useState<string[]>([initialPath]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [viewingFile, setViewingFile] = useState<ContainerFileInfo | null>(null);
   const [createType, setCreateType] = useState<"file" | "dir" | null>(null);
   const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
+  const actionBusyRef = useRef(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
-  const loadFiles = useCallback(async (dir: string) => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+      actionBusyRef.current = false;
+    };
+  }, []);
+
+  const loadFiles = useCallback(async (dir: string): Promise<boolean> => {
+    if (!mountedRef.current) return false;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setLoading(true);
+    setLoadError("");
     try {
       const response = await listContainerFiles(containerId, { path: dir });
-      if (requestIdRef.current !== requestId) return;
+      if (!mountedRef.current || requestIdRef.current !== requestId) return false;
       const fileList = response.data?.files ?? [];
       fileList.sort((a, b) => {
         if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
@@ -55,12 +90,14 @@ export function ContainerFileManager({ containerId }: Props) {
       setFiles(fileList);
       setPath(dir);
       setSelectedPaths(new Set());
+      return true;
     } catch (error) {
-      if (requestIdRef.current === requestId) {
-        showApiError(error);
+      if (mountedRef.current && requestIdRef.current === requestId) {
+        setLoadError(getApiErrorMessage(error, "加载目录失败"));
       }
+      return false;
     } finally {
-      if (requestIdRef.current === requestId) {
+      if (mountedRef.current && requestIdRef.current === requestId) {
         setLoading(false);
       }
     }
@@ -68,62 +105,72 @@ export function ContainerFileManager({ containerId }: Props) {
 
   useEffect(() => {
     requestIdRef.current += 1;
-    setPath("/");
+    setPath(initialPath);
     setFiles([]);
+    setLoadError("");
     setClipboard(null);
     setSelectedPaths(new Set());
-    setPathHistory(["/"]);
+    setPathHistory([initialPath]);
     setHistoryIndex(0);
     setViewingFile(null);
     setCreateType(null);
-    void loadFiles("/");
-  }, [containerId, loadFiles]);
+    void loadFiles(initialPath);
+  }, [containerId, initialPath, loadFiles, navigationKey]);
 
-  const navigateTo = useCallback((dir: string) => {
+  const navigateTo = useCallback(async (dir: string) => {
+    if (dir === path) return;
+    const loaded = await loadFiles(dir);
+    if (!loaded) return;
     const newHistory = pathHistory.slice(0, historyIndex + 1);
     newHistory.push(dir);
     setPathHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-    void loadFiles(dir);
-  }, [pathHistory, historyIndex, loadFiles]);
+  }, [historyIndex, loadFiles, path, pathHistory]);
 
-  const goBack = useCallback(() => {
+  const goBack = useCallback(async () => {
     if (historyIndex <= 0) return;
     const newIndex = historyIndex - 1;
+    const loaded = await loadFiles(pathHistory[newIndex]);
+    if (!loaded) return;
     setHistoryIndex(newIndex);
-    void loadFiles(pathHistory[newIndex]);
-  }, [historyIndex, pathHistory, loadFiles]);
+  }, [historyIndex, loadFiles, pathHistory]);
 
-  const goForward = useCallback(() => {
+  const goForward = useCallback(async () => {
     if (historyIndex >= pathHistory.length - 1) return;
     const newIndex = historyIndex + 1;
+    const loaded = await loadFiles(pathHistory[newIndex]);
+    if (!loaded) return;
     setHistoryIndex(newIndex);
-    void loadFiles(pathHistory[newIndex]);
-  }, [historyIndex, pathHistory, loadFiles]);
+  }, [historyIndex, loadFiles, pathHistory]);
 
   const goUp = useCallback(() => {
     if (path === "/") return;
     const parent = path.replace(/\/[^/]*$/, "") || "/";
-    navigateTo(parent);
+    void navigateTo(parent);
   }, [path, navigateTo]);
 
   const refresh = useCallback(() => {
     void loadFiles(path);
   }, [path, loadFiles]);
 
-  const runFileAction = useCallback(async (action: () => Promise<void>) => {
+  const runFileAction = useCallback(async (action: () => Promise<void>): Promise<boolean> => {
+    if (!mountedRef.current || actionBusyRef.current) return false;
+    actionBusyRef.current = true;
     setLoading(true);
     try {
       await action();
+      return true;
     } catch (error) {
-      showApiError(error);
+      if (mountedRef.current) showApiError(error);
+      return false;
     } finally {
-      setLoading(false);
+      actionBusyRef.current = false;
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
-  const handleFileClick = useCallback((file: ContainerFileInfo, event: React.MouseEvent) => {
-    if (event.ctrlKey || event.metaKey) {
+  const selectFile = useCallback((file: ContainerFileInfo, toggle: boolean) => {
+    if (toggle) {
       setSelectedPaths((prev) => {
         const next = new Set(prev);
         if (next.has(file.path)) next.delete(file.path);
@@ -141,7 +188,7 @@ export function ContainerFileManager({ containerId }: Props) {
 
   const handleFileDoubleClick = useCallback((file: ContainerFileInfo) => {
     if (file.type === "directory") {
-      navigateTo(file.path);
+      void navigateTo(file.path);
       return;
     }
     openFileViewer(file);
@@ -150,13 +197,13 @@ export function ContainerFileManager({ containerId }: Props) {
   const handleCopy = useCallback(() => {
     if (selectedPaths.size === 0) return;
     setClipboard({ action: "copy", paths: Array.from(selectedPaths), sourceDir: path });
-    Toast.success(`${selectedPaths.size} item(s) copied to clipboard`);
+    Toast.success(`已复制 ${selectedPaths.size} 项`);
   }, [selectedPaths, path]);
 
   const handleCut = useCallback(() => {
     if (selectedPaths.size === 0) return;
     setClipboard({ action: "cut", paths: Array.from(selectedPaths), sourceDir: path });
-    Toast.success(`${selectedPaths.size} item(s) cut to clipboard`);
+    Toast.success(`已剪切 ${selectedPaths.size} 项`);
   }, [selectedPaths, path]);
 
   const handlePaste = useCallback(async () => {
@@ -168,7 +215,7 @@ export function ContainerFileManager({ containerId }: Props) {
         await moveContainerFiles(containerId, { sources: clipboard.paths, destination: path });
         setClipboard(null);
       }
-      Toast.success(`${clipboard.action === "copy" ? "Copied" : "Moved"} ${clipboard.paths.length} item(s)`);
+      Toast.success(`${clipboard.action === "copy" ? "已复制" : "已移动"} ${clipboard.paths.length} 项`);
       await loadFiles(path);
     });
   }, [clipboard, containerId, path, loadFiles, runFileAction]);
@@ -177,7 +224,7 @@ export function ContainerFileManager({ containerId }: Props) {
     if (selectedPaths.size === 0) return;
     await runFileAction(async () => {
       await deleteContainerFiles(containerId, { paths: Array.from(selectedPaths) });
-      Toast.success(`${selectedPaths.size} item(s) deleted`);
+      Toast.success(`已删除 ${selectedPaths.size} 项`);
       await loadFiles(path);
     });
   }, [selectedPaths, containerId, path, loadFiles, runFileAction]);
@@ -188,19 +235,28 @@ export function ContainerFileManager({ containerId }: Props) {
   }, []);
 
   const handleCreateConfirm = useCallback(async (name: string) => {
-    if (!name.trim() || !createType) return;
-    const itemPath = path.replace(/\/$/, "") + "/" + name.trim();
-    await runFileAction(async () => {
+    if (!createType) return;
+    const normalizedName = name.trim();
+    const validationError = validateFileName(
+      normalizedName,
+      new Set(files.map((file) => file.name)),
+    );
+    if (validationError) {
+      Toast.warning(validationError);
+      return;
+    }
+    const itemPath = path.replace(/\/$/, "") + "/" + normalizedName;
+    const created = await runFileAction(async () => {
       if (createType === "dir") {
         await createContainerDirectory(containerId, { path: itemPath });
       } else {
         await writeContainerFile(containerId, { path: itemPath, content: "" });
       }
-      Toast.success(createType === "dir" ? "Directory created" : "File created");
+      Toast.success(createType === "dir" ? "文件夹已创建" : "文件已创建");
       await loadFiles(path);
     });
-      setCreateType(null);
-  }, [createType, containerId, path, loadFiles, runFileAction]);
+    if (created) setCreateType(null);
+  }, [createType, containerId, files, path, loadFiles, runFileAction]);
 
   const handleCreateCancel = useCallback(() => {
     setCreateType(null);
@@ -217,7 +273,7 @@ export function ContainerFileManager({ containerId }: Props) {
 
     await runFileAction(async () => {
       await uploadContainerFiles(containerId, path, uploadFiles, true);
-      Toast.success(`${uploadFiles.length} file(s) uploaded`);
+      Toast.success(`已上传 ${uploadFiles.length} 个文件`);
       await loadFiles(path);
     });
   }, [containerId, path, loadFiles, runFileAction]);
@@ -241,6 +297,7 @@ export function ContainerFileManager({ containerId }: Props) {
       })),
     ];
   }, [path]);
+  const existingFileNames = useMemo(() => new Set(files.map((file) => file.name)), [files]);
 
   const toolbarDisabled = loading;
   const hasSelection = selectedPaths.size > 0;
@@ -249,8 +306,8 @@ export function ContainerFileManager({ containerId }: Props) {
   return (
     <div className="file-manager-body">
       <div className="file-manager-toolbar">
-        <Button icon={<ArrowLeft size={15} />} theme="borderless" type="tertiary" disabled={historyIndex <= 0 || toolbarDisabled} onClick={goBack} aria-label="后退" />
-        <Button icon={<ArrowRight size={15} />} theme="borderless" type="tertiary" disabled={historyIndex >= pathHistory.length - 1 || toolbarDisabled} onClick={goForward} aria-label="前进" />
+        <Button icon={<ArrowLeft size={15} />} theme="borderless" type="tertiary" disabled={historyIndex <= 0 || toolbarDisabled} onClick={() => void goBack()} aria-label="后退" />
+        <Button icon={<ArrowRight size={15} />} theme="borderless" type="tertiary" disabled={historyIndex >= pathHistory.length - 1 || toolbarDisabled} onClick={() => void goForward()} aria-label="前进" />
         <Button icon={<ArrowUp size={15} />} theme="borderless" type="tertiary" disabled={path === "/" || toolbarDisabled} onClick={goUp} aria-label="上一级" />
         <Button icon={<RefreshCw size={15} />} theme="borderless" type="tertiary" disabled={toolbarDisabled} onClick={refresh} aria-label="刷新" />
         <span className="file-manager-separator" />
@@ -289,12 +346,29 @@ export function ContainerFileManager({ containerId }: Props) {
         {breadcrumbs.map((crumb, i) => (
           <span key={crumb.path}>
             {i > 1 && <span className="file-manager-breadcrumb-sep">/</span>}
-            <button type="button" className="file-manager-breadcrumb-item" onClick={() => navigateTo(crumb.path)}>
+            <button type="button" className="file-manager-breadcrumb-item" onClick={() => void navigateTo(crumb.path)}>
               {crumb.label}
             </button>
           </span>
         ))}
       </div>
+
+      {loadError ? (
+        <div className="file-manager-load-error" role="alert">
+          <CircleAlert size={15} aria-hidden="true" />
+          <span>{loadError}</span>
+          <Button
+            icon={<RefreshCw size={13} />}
+            size="small"
+            theme="borderless"
+            type="danger"
+            disabled={loading}
+            onClick={refresh}
+          >
+            重试
+          </Button>
+        </div>
+      ) : null}
 
       {viewMode === "list" ? (
         <div className="file-manager-list">
@@ -302,6 +376,7 @@ export function ContainerFileManager({ containerId }: Props) {
           {createType && (
             <InlineCreateRow
               type={createType}
+              existingNames={existingFileNames}
               onConfirm={handleCreateConfirm}
               onCancel={handleCreateCancel}
             />
@@ -314,8 +389,8 @@ export function ContainerFileManager({ containerId }: Props) {
                 key={file.path}
                 file={file}
                 selected={selectedPaths.has(file.path)}
-                onClick={(e) => handleFileClick(file, e)}
-                onDoubleClick={() => handleFileDoubleClick(file)}
+                onSelect={(toggle) => selectFile(file, toggle)}
+                onOpen={() => handleFileDoubleClick(file)}
               />
             ))
           )}
@@ -325,6 +400,7 @@ export function ContainerFileManager({ containerId }: Props) {
           {createType && (
             <InlineCreateIcon
               type={createType}
+              existingNames={existingFileNames}
               onConfirm={handleCreateConfirm}
               onCancel={handleCreateCancel}
             />
@@ -337,8 +413,8 @@ export function ContainerFileManager({ containerId }: Props) {
                 key={file.path}
                 file={file}
                 selected={selectedPaths.has(file.path)}
-                onClick={(e) => handleFileClick(file, e)}
-                onDoubleClick={() => handleFileDoubleClick(file)}
+                onSelect={(toggle) => selectFile(file, toggle)}
+                onOpen={() => handleFileDoubleClick(file)}
               />
             ))
           )}
@@ -346,12 +422,13 @@ export function ContainerFileManager({ containerId }: Props) {
       )}
 
       <div className="file-manager-statusbar">
-        <span>{files.length} 项</span>
+        <span>{files.length} 项{selectedPaths.size ? `，已选择 ${selectedPaths.size} 项` : ""}</span>
         {clipboard && (
           <span className="file-manager-clipboard-hint">
             <Clipboard size={12} /> {clipboard.action === "cut" ? "已剪切" : "已复制"} {clipboard.paths.length} 项 - <button type="button" onClick={() => setClipboard(null)}>清除</button>
           </span>
         )}
+        {!clipboard ? <span>双击打开文件或目录</span> : null}
       </div>
 
       {viewingFile ? (
@@ -361,6 +438,7 @@ export function ContainerFileManager({ containerId }: Props) {
               containerId={containerId}
               file={viewingFile}
               onClose={() => setViewingFile(null)}
+              onDirtyChange={onDirtyChange}
             />
           </Suspense>
         </div>
@@ -385,18 +463,30 @@ function FileListHeader() {
   );
 }
 
-function FileListRow({ file, selected, onClick, onDoubleClick }: {
+function FileListRow({ file, selected, onSelect, onOpen }: {
   file: ContainerFileInfo;
   selected: boolean;
-  onClick: (e: React.MouseEvent) => void;
-  onDoubleClick: () => void;
+  onSelect: (toggle: boolean) => void;
+  onOpen: () => void;
 }) {
   return (
     <div
       className={cx("file-manager-list-row", selected && "file-manager-list-row-selected")}
       style={FILE_LIST_GRID_STYLE}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={(event) => onSelect(event.ctrlKey || event.metaKey)}
+      onDoubleClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onOpen();
+        } else if (event.key === " ") {
+          event.preventDefault();
+          onSelect(event.ctrlKey || event.metaKey);
+        }
+      }}
     >
       <div className="file-manager-name">
         {file.type === "directory" ? <Folder size={15} /> : file.type === "symlink" ? <File size={15} /> : <File size={15} />}
@@ -409,17 +499,29 @@ function FileListRow({ file, selected, onClick, onDoubleClick }: {
   );
 }
 
-function FileIconItem({ file, selected, onClick, onDoubleClick }: {
+function FileIconItem({ file, selected, onSelect, onOpen }: {
   file: ContainerFileInfo;
   selected: boolean;
-  onClick: (e: React.MouseEvent) => void;
-  onDoubleClick: () => void;
+  onSelect: (toggle: boolean) => void;
+  onOpen: () => void;
 }) {
   return (
     <div
       className={cx("file-manager-icon-item", selected && "file-manager-icon-item-selected")}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={(event) => onSelect(event.ctrlKey || event.metaKey)}
+      onDoubleClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onOpen();
+        } else if (event.key === " ") {
+          event.preventDefault();
+          onSelect(event.ctrlKey || event.metaKey);
+        }
+      }}
       title={file.name}
     >
       {file.type === "directory" ? <FolderOpen size={32} /> : <File size={32} />}
@@ -428,42 +530,72 @@ function FileIconItem({ file, selected, onClick, onDoubleClick }: {
   );
 }
 
-function InlineCreateInput({ type, onConfirm, onCancel, cancelOnBlur = false }: {
+function InlineCreateInput({ type, existingNames, onConfirm, onCancel, cancelOnBlur = false }: {
   type: "file" | "dir";
+  existingNames: ReadonlySet<string>;
   onConfirm: (name: string) => void;
   onCancel: () => void;
   cancelOnBlur?: boolean;
 }) {
+  const errorId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState("");
+  const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
   const commit = () => {
-    if (name.trim()) onConfirm(name);
-    else onCancel();
+    const validationError = validateFileName(name, existingNames);
+    if (validationError) {
+      setAttempted(true);
+      return;
+    }
+    onConfirm(name.trim());
   };
+  const validationError = validateFileName(name, existingNames);
+  const visibleError = Boolean(validationError && (attempted || name.length > 0));
 
   return (
-    <input
-      ref={inputRef}
-      className="file-manager-inline-input"
-      value={name}
-      onChange={(e) => setName(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-        if (e.key === "Escape") onCancel();
-      }}
-      onBlur={cancelOnBlur ? () => onCancel() : undefined}
-      placeholder={type === "dir" ? "新建文件夹" : "新建文件"}
-    />
+    <div className="file-manager-inline-field">
+      <input
+        ref={inputRef}
+        className="file-manager-inline-input"
+        value={name}
+        onChange={(event) => {
+          setName(event.target.value);
+          if (attempted) setAttempted(false);
+        }}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) return;
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commit();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            onCancel();
+          }
+        }}
+        onBlur={cancelOnBlur ? () => onCancel() : undefined}
+        placeholder={type === "dir" ? "新建文件夹" : "新建文件"}
+        aria-invalid={visibleError}
+        aria-describedby={visibleError ? errorId : undefined}
+        autoComplete="off"
+        spellCheck={false}
+      />
+      {visibleError ? (
+        <span id={errorId} className="file-manager-inline-error" role="alert">
+          {validationError}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
-function InlineCreateRow({ type, onConfirm, onCancel }: {
+function InlineCreateRow({ type, existingNames, onConfirm, onCancel }: {
   type: "file" | "dir";
+  existingNames: ReadonlySet<string>;
   onConfirm: (name: string) => void;
   onCancel: () => void;
 }) {
@@ -475,7 +607,12 @@ function InlineCreateRow({ type, onConfirm, onCancel }: {
     >
       <div className="file-manager-name">
         {type === "dir" ? <Folder size={15} /> : <File size={15} />}
-        <InlineCreateInput type={type} onConfirm={onConfirm} onCancel={onCancel} />
+        <InlineCreateInput
+          type={type}
+          existingNames={existingNames}
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+        />
       </div>
       <div className="file-manager-cell-muted">—</div>
       <div className="file-manager-cell-muted">—</div>
@@ -484,15 +621,22 @@ function InlineCreateRow({ type, onConfirm, onCancel }: {
   );
 }
 
-function InlineCreateIcon({ type, onConfirm, onCancel }: {
+function InlineCreateIcon({ type, existingNames, onConfirm, onCancel }: {
   type: "file" | "dir";
+  existingNames: ReadonlySet<string>;
   onConfirm: (name: string) => void;
   onCancel: () => void;
 }) {
   return (
     <div className="file-manager-icon-item file-manager-create-row">
       {type === "dir" ? <FolderOpen size={32} /> : <File size={32} />}
-      <InlineCreateInput type={type} onConfirm={onConfirm} onCancel={onCancel} cancelOnBlur />
+      <InlineCreateInput
+        type={type}
+        existingNames={existingNames}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+        cancelOnBlur
+      />
     </div>
   );
 }

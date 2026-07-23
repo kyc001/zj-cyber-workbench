@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import StrEnum
-
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -50,7 +49,7 @@ class ListAgentEventsResponse(BaseModel):
 
 
 class AgentTurnRequest(BaseModel):
-    content: list[AgentInputPart] = Field(min_length=1, max_length=8)
+    content: list[AgentInputPart] = Field(min_length=1, max_length=16)
     agent_code: str | None = Field(min_length=1, max_length=32)
     sandbox_container_id: int | None = Field(default=None, gt=0)
 

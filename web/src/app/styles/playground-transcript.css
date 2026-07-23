@@ -247,8 +247,9 @@
 .agent-text pre {
   max-width: 100%;
   box-sizing: border-box;
+  margin: 0;
   padding: 12px 14px;
-  overflow-x: hidden;
+  overflow-x: auto;
   background: var(--z-code-bg);
   border-radius: 12px;
   color: var(--z-text);
@@ -257,6 +258,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+  scrollbar-width: thin;
+  tab-size: 2;
 }
 
 .agent-text pre code {
@@ -264,6 +267,74 @@
   background: transparent;
   color: inherit;
   white-space: inherit;
+}
+
+.markdown-code-block {
+  position: relative;
+  max-width: 100%;
+  min-width: 0;
+  margin: 8px 0;
+}
+
+.agent-text .markdown-code-block pre {
+  padding: 34px 14px 12px;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.markdown-code-language {
+  position: absolute;
+  top: 9px;
+  left: 13px;
+  z-index: 1;
+  max-width: calc(100% - 100px);
+  overflow: hidden;
+  color: var(--z-text-subtle);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.markdown-code-copy {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  min-width: 54px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 7px;
+  color: var(--z-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.markdown-code-copy:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.markdown-code-copy:disabled {
+  cursor: progress;
+  opacity: 0.72;
 }
 
 .agent-text .mermaid-diagram {
@@ -287,8 +358,17 @@
 }
 
 .agent-text .mermaid-diagram[aria-busy="true"] {
+  display: grid;
   min-height: 96px;
+  place-items: center;
   background: var(--z-surface-muted);
+}
+
+.markdown-render-fallback {
+  color: var(--z-text);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .agent-text .mermaid-diagram-error {
@@ -329,6 +409,43 @@
 .agent-text a {
   color: var(--z-accent);
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.agent-text img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 8px 0;
+  border-radius: 8px;
+}
+
+.markdown-table-scroll {
+  max-width: 100%;
+  margin: 8px 0;
+  overflow-x: auto;
+  border: 1px solid var(--z-line);
+  border-radius: 8px;
+  scrollbar-width: thin;
+}
+
+.markdown-table-scroll:focus-visible {
+  outline: 2px solid var(--z-brand);
+  outline-offset: 2px;
+}
+
+.agent-text .markdown-table-scroll table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  margin: 0;
+  table-layout: auto;
+}
+
+.agent-text .markdown-table-scroll th,
+.agent-text .markdown-table-scroll td {
+  min-width: 112px;
+  max-width: 420px;
 }
 
 .agent-text blockquote {
@@ -404,6 +521,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+  overflow-anchor: none;
   scrollbar-width: none;
 }
 
@@ -433,6 +551,39 @@
   bottom: 0;
   -webkit-mask-image: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0) 100%);
   mask-image: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+.thinking-follow-button {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  z-index: 2;
+  display: inline-flex;
+  height: 26px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 9px;
+  color: var(--z-text-strong);
+  background: var(--z-surface-strong);
+  border: 1px solid var(--z-line-strong);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.16);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.thinking-follow-button:hover {
+  border-color: var(--z-danger-border);
+  color: var(--z-brand);
+}
+
+.transcript-action-spinner {
+  animation: transcriptActionSpin 700ms linear infinite;
+}
+
+@keyframes transcriptActionSpin {
+  to { transform: rotate(360deg); }
 }
 
 .execution-row {
@@ -557,6 +708,52 @@
   text-transform: uppercase;
 }
 
+.execution-section-head {
+  display: flex;
+  min-width: 0;
+  min-height: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.execution-section-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+}
+
+.execution-section-action {
+  display: inline-flex;
+  height: 24px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  color: var(--z-text-subtle);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 700;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+
+.execution-section-action:hover,
+.execution-section-action:focus-visible {
+  color: var(--z-text-strong);
+  background: var(--z-surface-muted);
+}
+
+.execution-section-body-wrap {
+  position: relative;
+  min-width: 0;
+}
+
 .execution-section-body {
   margin: 0;
   max-width: 100%;
@@ -572,6 +769,23 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.execution-section-collapsed .execution-section-body {
+  max-height: 220px;
+  overflow-y: hidden;
+}
+
+.execution-section-collapsed .execution-section-body-wrap::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 42px;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--z-code-bg));
+  border-radius: 0 0 8px 8px;
 }
 
 .execution-json-body {
@@ -601,6 +815,10 @@
 .execution-section-error .execution-section-body {
   background: var(--z-danger-bg);
   color: var(--z-danger);
+}
+
+.execution-section-error.execution-section-collapsed .execution-section-body-wrap::after {
+  background: linear-gradient(180deg, transparent, var(--z-danger-bg));
 }
 
 .nested-panel {

@@ -106,6 +106,53 @@
           }
         ]
       },
+      "AgentFileInputPart": {
+        "description": "Reference to a file that already exists in the selected sandbox.",
+        "properties": {
+          "media_type": {
+            "default": "application/octet-stream",
+            "maxLength": 255,
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "sha256": {
+            "default": "",
+            "pattern": "^[a-fA-F0-9]{64}$|^$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "minimum": 0.0,
+            "title": "Size",
+            "type": "integer"
+          },
+          "type": {
+            "const": "file",
+            "default": "file",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "size"
+        ],
+        "title": "AgentFileInputPart",
+        "type": "object"
+      },
       "AgentImageDetailSchema": {
         "enum": [
           "auto",
@@ -199,6 +246,48 @@
           }
         },
         "title": "AgentPoolConfig",
+        "type": "object"
+      },
+      "AgentPromptSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_code": {
+            "title": "Agent Code",
+            "type": "string"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "customized": {
+            "title": "Customized",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "soul",
+              "rules"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_code",
+          "kind",
+          "content",
+          "customized",
+          "source"
+        ],
+        "title": "AgentPromptSchema",
         "type": "object"
       },
       "AgentRuntimeConfig": {
@@ -564,6 +653,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "file": "#/components/schemas/AgentFileInputPart",
                   "image": "#/components/schemas/AgentImageInputPart",
                   "text": "#/components/schemas/AgentTextInputPart"
                 },
@@ -575,10 +665,13 @@
                 },
                 {
                   "$ref": "#/components/schemas/AgentImageInputPart"
+                },
+                {
+                  "$ref": "#/components/schemas/AgentFileInputPart"
                 }
               ]
             },
-            "maxItems": 8,
+            "maxItems": 16,
             "minItems": 1,
             "title": "Content",
             "type": "array"
@@ -984,7 +1077,7 @@
         "properties": {
           "files": {
             "items": {
-              "contentMediaType": "application/octet-stream",
+              "format": "binary",
               "type": "string"
             },
             "title": "Files",
@@ -1011,7 +1104,7 @@
         "properties": {
           "files": {
             "items": {
-              "contentMediaType": "application/octet-stream",
+              "format": "binary",
               "type": "string"
             },
             "title": "Files",
@@ -1047,6 +1140,32 @@
           }
         },
         "title": "CommonResponse",
+        "type": "object"
+      },
+      "CommonResponse_AgentPromptSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentPromptSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[AgentPromptSchema]",
         "type": "object"
       },
       "CommonResponse_AgentSessionSummarySchema_": {
@@ -1536,6 +1655,58 @@
         "title": "CommonResponse[FetchProviderModelsResponse]",
         "type": "object"
       },
+      "CommonResponse_HubSkillDetailSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HubSkillDetailSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[HubSkillDetailSchema]",
+        "type": "object"
+      },
+      "CommonResponse_HubSkillListSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HubSkillListSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[HubSkillListSchema]",
+        "type": "object"
+      },
       "CommonResponse_ImportCveFindingResponse_": {
         "properties": {
           "code": {
@@ -1560,6 +1731,32 @@
           }
         },
         "title": "CommonResponse[ImportCveFindingResponse]",
+        "type": "object"
+      },
+      "CommonResponse_InstallHubSkillResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstallHubSkillResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[InstallHubSkillResponse]",
         "type": "object"
       },
       "CommonResponse_InstanceConfigSchema_": {
@@ -2134,6 +2331,32 @@
         "title": "CommonResponse[QuerySandboxImagesResponse]",
         "type": "object"
       },
+      "CommonResponse_QuerySkillsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuerySkillsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QuerySkillsResponse]",
+        "type": "object"
+      },
       "CommonResponse_QuerySystemUsersResponse_": {
         "properties": {
           "code": {
@@ -2340,6 +2563,32 @@
           }
         },
         "title": "CommonResponse[SandboxImageSchema]",
+        "type": "object"
+      },
+      "CommonResponse_SkillDetailSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkillDetailSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[SkillDetailSchema]",
         "type": "object"
       },
       "CommonResponse_SystemUserSchema_": {
@@ -3035,6 +3284,28 @@
           "image_name"
         ],
         "title": "CreateSandboxImageRequest",
+        "type": "object"
+      },
+      "CreateSkillRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 500000,
+            "title": "Content",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "content"
+        ],
+        "title": "CreateSkillRequest",
         "type": "object"
       },
       "CreateSystemUserRequest": {
@@ -3914,6 +4185,261 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "HubSkillDetailSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "author_username": {
+            "title": "Author Username",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "downloads": {
+            "title": "Downloads",
+            "type": "integer"
+          },
+          "latest_version": {
+            "title": "Latest Version",
+            "type": "string"
+          },
+          "my_rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Rating"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "rating_average": {
+            "title": "Rating Average",
+            "type": "number"
+          },
+          "rating_count": {
+            "title": "Rating Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starred": {
+            "default": false,
+            "title": "Starred",
+            "type": "boolean"
+          },
+          "stars": {
+            "title": "Stars",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/HubSkillVersionSchema"
+            },
+            "title": "Versions",
+            "type": "array"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespace",
+          "slug",
+          "name",
+          "summary",
+          "tags",
+          "latest_version",
+          "downloads",
+          "stars",
+          "rating_average",
+          "rating_count",
+          "updated_at",
+          "description",
+          "visibility",
+          "author_username",
+          "versions"
+        ],
+        "title": "HubSkillDetailSchema",
+        "type": "object"
+      },
+      "HubSkillListSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HubSkillSummarySchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "HubSkillListSchema",
+        "type": "object"
+      },
+      "HubSkillSummarySchema": {
+        "additionalProperties": false,
+        "properties": {
+          "downloads": {
+            "title": "Downloads",
+            "type": "integer"
+          },
+          "latest_version": {
+            "title": "Latest Version",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "rating_average": {
+            "title": "Rating Average",
+            "type": "number"
+          },
+          "rating_count": {
+            "title": "Rating Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "stars": {
+            "title": "Stars",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespace",
+          "slug",
+          "name",
+          "summary",
+          "tags",
+          "latest_version",
+          "downloads",
+          "stars",
+          "rating_average",
+          "rating_count",
+          "updated_at"
+        ],
+        "title": "HubSkillSummarySchema",
+        "type": "object"
+      },
+      "HubSkillVersionSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changelog": {
+            "title": "Changelog",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "scan_status": {
+            "title": "Scan Status",
+            "type": "string"
+          },
+          "scan_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scan Warnings",
+            "type": "array"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "changelog",
+          "sha256",
+          "size_bytes",
+          "scan_status",
+          "scan_warnings",
+          "published_at"
+        ],
+        "title": "HubSkillVersionSchema",
+        "type": "object"
+      },
       "ImportCveFindingRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3965,6 +4491,93 @@
           "confidence"
         ],
         "title": "ImportCveFindingResponse",
+        "type": "object"
+      },
+      "InstallHubSkillRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "namespace": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Namespace",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Slug",
+            "type": "string"
+          },
+          "version": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespace",
+          "slug"
+        ],
+        "title": "InstallHubSkillRequest",
+        "type": "object"
+      },
+      "InstallHubSkillResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "installed": {
+            "$ref": "#/components/schemas/InstalledHubSkillSchema"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "installed",
+          "updated"
+        ],
+        "title": "InstallHubSkillResponse",
+        "type": "object"
+      },
+      "InstalledHubSkillSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "installed_at": {
+            "format": "date-time",
+            "title": "Installed At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "namespace",
+          "slug",
+          "version",
+          "sha256",
+          "installed_at"
+        ],
+        "title": "InstalledHubSkillSchema",
         "type": "object"
       },
       "InstanceConfigSchema": {
@@ -5326,6 +5939,23 @@
         "title": "QuerySandboxImagesResponse",
         "type": "object"
       },
+      "QuerySkillsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SkillSummarySchema"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "QuerySkillsResponse",
+        "type": "object"
+      },
       "QuerySystemUsersResponse": {
         "properties": {
           "items": {
@@ -5920,6 +6550,72 @@
         ],
         "title": "SessionType",
         "type": "string"
+      },
+      "SkillDetailSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "editable": {
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "source",
+          "editable",
+          "content"
+        ],
+        "title": "SkillDetailSchema",
+        "type": "object"
+      },
+      "SkillSummarySchema": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "editable": {
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "source",
+          "editable",
+          "description"
+        ],
+        "title": "SkillSummarySchema",
+        "type": "object"
       },
       "SubagentTaskEvent": {
         "properties": {
@@ -6865,6 +7561,30 @@
         "title": "UpdateAgentConfigRequest",
         "type": "object"
       },
+      "UpdateAgentPromptRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 500000,
+            "title": "Content",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "soul",
+              "rules"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "content"
+        ],
+        "title": "UpdateAgentPromptRequest",
+        "type": "object"
+      },
       "UpdateAgentSessionSandboxContainerRequest": {
         "properties": {
           "sandbox_container_id": {
@@ -7118,6 +7838,21 @@
         "title": "UpdateSandboxContainerEgressRequest",
         "type": "object"
       },
+      "UpdateSkillRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 500000,
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "UpdateSkillRequest",
+        "type": "object"
+      },
       "UpdateSystemUserRequest": {
         "properties": {
           "email": {
@@ -7265,6 +8000,7 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "file": "#/components/schemas/AgentFileInputPart",
                   "image": "#/components/schemas/AgentImageInputPart",
                   "text": "#/components/schemas/AgentTextInputPart"
                 },
@@ -7276,6 +8012,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/AgentImageInputPart"
+                },
+                {
+                  "$ref": "#/components/schemas/AgentFileInputPart"
                 }
               ]
             },
@@ -7319,13 +8058,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -12503,6 +13235,724 @@
         "summary": "Delete Sandbox Image Handler",
         "tags": [
           "sandbox-images"
+        ]
+      }
+    },
+    "/api/skill-hub/install": {
+      "post": {
+        "operationId": "install_hub_skill_handler_api_skill_hub_install_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallHubSkillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_InstallHubSkillResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Install Hub Skill Handler",
+        "tags": [
+          "skill-hub"
+        ]
+      }
+    },
+    "/api/skill-hub/installed": {
+      "get": {
+        "operationId": "list_installed_hub_skills_handler_api_skill_hub_installed_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Installed Hub Skills Handler",
+        "tags": [
+          "skill-hub"
+        ]
+      }
+    },
+    "/api/skill-hub/installed/{name}": {
+      "delete": {
+        "operationId": "uninstall_hub_skill_handler_api_skill_hub_installed__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uninstall Hub Skill Handler",
+        "tags": [
+          "skill-hub"
+        ]
+      }
+    },
+    "/api/skill-hub/skills": {
+      "get": {
+        "operationId": "list_hub_skills_handler_api_skill_hub_skills_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "recent",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_HubSkillListSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Hub Skills Handler",
+        "tags": [
+          "skill-hub"
+        ]
+      }
+    },
+    "/api/skill-hub/skills/{namespace}/{slug}": {
+      "get": {
+        "operationId": "get_hub_skill_handler_api_skill_hub_skills__namespace___slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "namespace",
+            "required": true,
+            "schema": {
+              "title": "Namespace",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_HubSkillDetailSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Hub Skill Handler",
+        "tags": [
+          "skill-hub"
+        ]
+      }
+    },
+    "/api/system-config/agent-customization/agents/{agent_code}/prompt": {
+      "delete": {
+        "operationId": "delete_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_code",
+            "required": true,
+            "schema": {
+              "title": "Agent Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "soul",
+                "rules"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentPromptSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Agent Prompt Handler",
+        "tags": [
+          "system-config"
+        ]
+      },
+      "get": {
+        "operationId": "get_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_code",
+            "required": true,
+            "schema": {
+              "title": "Agent Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "soul",
+                "rules"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentPromptSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Agent Prompt Handler",
+        "tags": [
+          "system-config"
+        ]
+      },
+      "patch": {
+        "operationId": "update_agent_prompt_handler_api_system_config_agent_customization_agents__agent_code__prompt_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_code",
+            "required": true,
+            "schema": {
+              "title": "Agent Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgentPromptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentPromptSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Agent Prompt Handler",
+        "tags": [
+          "system-config"
+        ]
+      }
+    },
+    "/api/system-config/agent-customization/skills": {
+      "get": {
+        "operationId": "list_skills_handler_api_system_config_agent_customization_skills_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QuerySkillsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Skills Handler",
+        "tags": [
+          "system-config"
+        ]
+      },
+      "post": {
+        "operationId": "create_skill_handler_api_system_config_agent_customization_skills_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SkillDetailSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Skill Handler",
+        "tags": [
+          "system-config"
+        ]
+      }
+    },
+    "/api/system-config/agent-customization/skills/{name}": {
+      "delete": {
+        "operationId": "delete_skill_handler_api_system_config_agent_customization_skills__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Skill Handler",
+        "tags": [
+          "system-config"
+        ]
+      },
+      "get": {
+        "operationId": "get_skill_handler_api_system_config_agent_customization_skills__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SkillDetailSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Skill Handler",
+        "tags": [
+          "system-config"
+        ]
+      },
+      "patch": {
+        "operationId": "update_skill_handler_api_system_config_agent_customization_skills__name__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSkillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SkillDetailSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Skill Handler",
+        "tags": [
+          "system-config"
         ]
       }
     },

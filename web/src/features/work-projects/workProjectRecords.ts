@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { showApiError } from "../../shared/api/feedback";
+import { useCallback, useEffect, useState } from "react";
+import { getApiErrorMessage } from "../../shared/api/feedback";
 import { getWorkProjectRecordSnapshot } from "../../shared/api/workProjects";
 import type { WorkProject, WorkProjectGraphSnapshot, WorkProjectRecordSnapshot, WorkProjectRecords } from "../../shared/api/types";
 
@@ -7,6 +7,7 @@ export type WorkProjectSnapshotState = {
   project: WorkProject | null;
   records: WorkProjectRecords;
   loading: boolean;
+  error: string;
   refresh: () => void;
 };
 
@@ -34,26 +35,34 @@ export function useWorkProjectRecordSnapshot(projectId: number | null, enabled =
     project: null,
     records: EMPTY_WORK_PROJECT_RECORDS,
     loading: false,
+    error: "",
   });
 
   useEffect(() => {
     let canceled = false;
     if (!enabled || !projectId) {
-      setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: false });
+      setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: false, error: "" });
       return () => {
         canceled = true;
       };
     }
 
-    setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: true });
+    setState((current) => (
+      current.project?.id === projectId
+        ? { ...current, loading: true, error: "" }
+        : { project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: true, error: "" }
+    ));
     loadWorkProjectRecordSnapshot(projectId)
       .then((snapshot) => {
-        if (!canceled) setState({ project: snapshot.project, records: snapshot.records, loading: false });
+        if (!canceled) setState({ project: snapshot.project, records: snapshot.records, loading: false, error: "" });
       })
       .catch((error) => {
         if (!canceled) {
-          showApiError(error);
-          setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: false });
+          setState((current) => ({
+            ...current,
+            loading: false,
+            error: getApiErrorMessage(error, "加载项目详情失败"),
+          }));
         }
       });
 
@@ -62,7 +71,8 @@ export function useWorkProjectRecordSnapshot(projectId: number | null, enabled =
     };
   }, [enabled, projectId, version]);
 
-  return { ...state, refresh: () => setVersion((value) => value + 1) };
+  const refresh = useCallback(() => setVersion((value) => value + 1), []);
+  return { ...state, refresh };
 }
 
 export type { WorkProjectRecordSnapshot, WorkProjectRecords };

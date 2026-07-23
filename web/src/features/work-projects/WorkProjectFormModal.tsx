@@ -18,7 +18,7 @@ import type {
   WorkProject,
   WorkProjectAssetRequest,
 } from "../../shared/api/types";
-import { ResourceModal } from "../../shared/components/ResourceModal";
+import { ResourceFormLoadError, ResourceModal } from "../../shared/components/ResourceModal";
 import { useOptionList } from "../../shared/hooks/useOptionList";
 import {
   SYSTEM_USER_ROLE_COLOR,
@@ -70,30 +70,48 @@ const EMPTY: WorkProjectFormValues = {
 
 export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit }: WorkProjectFormModalProps) {
   const [values, setValues] = useState<WorkProjectFormValues>(EMPTY);
+  const [initialSnapshot, setInitialSnapshot] = useState("");
   const loadWorkspaces = useCallback((params: { page: number; size: number; keyword: string }) => (
     queryAvailableSandboxContainers({ ...params, work_project_id: project?.id })
   ), [project?.id]);
-  const { items: workspaces, loading: workspacesLoading } = useOptionList<SandboxContainer>({
+  const {
+    items: workspaces,
+    loading: workspacesLoading,
+    error: workspacesError,
+    load: loadWorkspaceOptions,
+  } = useOptionList<SandboxContainer>({
     enabled: open,
     query: loadWorkspaces,
   });
-  const { items: users, loading: usersLoading } = useOptionList<SystemUser>({
+  const {
+    items: users,
+    loading: usersLoading,
+    error: usersError,
+    load: loadUserOptions,
+  } = useOptionList<SystemUser>({
     enabled: open,
     query: querySystemUsers,
   });
   const editing = Boolean(project);
+  const retryOptions = useCallback(() => {
+    void Promise.all([loadWorkspaceOptions(), loadUserOptions()]);
+  }, [loadUserOptions, loadWorkspaceOptions]);
 
   useEffect(() => {
     if (!open) return;
-    setValues(project ? {
+    const nextValues: WorkProjectFormValues = project ? {
       name: project.name,
       description: project.description,
       owner_user_ids: project.owner_user_ids,
       sandbox_container_id: project.sandbox_container_id ?? null,
       assets: scopeAssetsFromProject(project),
       type: project.type,
-    } : { ...EMPTY, assets: [{ ...EMPTY_ASSET }] });
+    } : { ...EMPTY, assets: [{ ...EMPTY_ASSET }] };
+    setValues(nextValues);
+    setInitialSnapshot(JSON.stringify(nextValues));
   }, [open, project]);
+
+  const dirty = open && Boolean(initialSnapshot) && JSON.stringify(values) !== initialSnapshot;
 
   const userOptionList = useMemo(() => users.map((user) => ({
     label: <UserOption user={user} />,
@@ -135,12 +153,21 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       open={open}
       title={editing ? "编辑工作项目" : "创建工作项目"}
       saving={saving}
+      dirty={dirty}
       submitLabel={editing ? "保存" : "创建"}
-      submitDisabled={!canSubmit}
+      submitDisabled={!canSubmit || (editing && !dirty)}
       width={980}
       onCancel={onCancel}
       onSubmit={submit}
     >
+      <ResourceFormLoadError
+        issues={[
+          ...(usersError ? [{ label: "负责人", message: usersError }] : []),
+          ...(workspacesError ? [{ label: "执行工作区", message: workspacesError }] : []),
+        ]}
+        loading={usersLoading || workspacesLoading}
+        onRetry={retryOptions}
+      />
       <div className="project-form-grid">
         <label>
           <span>名称</span>
@@ -162,7 +189,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             value={values.owner_user_ids}
             optionList={userOptionList}
             placeholder={usersLoading ? "正在加载用户" : "选择项目负责人"}
-            emptyContent={usersLoading ? <Spin size="small" /> : "暂无用户"}
+            emptyContent={usersLoading ? <Spin size="small" /> : usersError || "暂无用户"}
             loading={usersLoading}
             multiple
             renderSelectedItem={(option: SelectedOption) => ({
@@ -184,7 +211,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             value={values.sandbox_container_id ?? undefined}
             optionList={workspaceOptionList}
             placeholder={workspacesLoading ? "正在加载执行工作区" : "选择项目执行工作区"}
-            emptyContent={workspacesLoading ? <Spin size="small" /> : "暂无可用工作区"}
+            emptyContent={workspacesLoading ? <Spin size="small" /> : workspacesError || "暂无可用工作区"}
             loading={workspacesLoading}
             showClear
             renderSelectedItem={(option: { value?: number }) => (
@@ -266,6 +293,11 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
               />
             </article>
           ))}
+          {!values.assets.every(isAssetComplete) && values.name.trim() ? (
+            <span className="project-assets-validation" role="status">
+              请完整填写资产信息；服务资产必须同时填写 Host 和有效端口。
+            </span>
+          ) : null}
         </div>
       </section>
     </ResourceModal>
@@ -326,7 +358,9 @@ function normalizeAsset(asset: AssetFormRow): WorkProjectAssetRequest {
 
 function isAssetComplete(asset: WorkProjectAssetRequest): boolean {
   if (asset.type === WORK_PROJECT_ASSET_TYPE.BINARY) return Boolean(asset.path.trim());
-  return Boolean(asset.host.trim());
+  if (!asset.host.trim()) return false;
+  if (asset.type !== WORK_PROJECT_ASSET_TYPE.SERVICE) return true;
+  return Number.isInteger(asset.port) && Number(asset.port) >= 1 && Number(asset.port) <= 65535;
 }
 
 function resetAssetForType(type: WorkProjectAssetRequest["type"]): Partial<AssetFormRow> {

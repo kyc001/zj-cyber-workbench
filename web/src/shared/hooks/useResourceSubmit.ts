@@ -10,14 +10,23 @@ type ResourceSubmitOptions = {
 export function useResourceSubmit({ onSuccess }: ResourceSubmitOptions = {}) {
   const [saving, setSaving] = useState(false);
   const mountedRef = useRef(true);
+  const savingRef = useRef(false);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    // React Strict Mode runs an extra setup/cleanup cycle in development.
+    // Restore the flag on every setup so completed submissions can still
+    // clear their busy state and refresh the page during the second pass.
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      savingRef.current = false;
+    };
   }, []);
 
   const submit = useCallback(
     async (action: () => Promise<CommonResponsePayload>) => {
-      if (saving) return;
+      if (savingRef.current) return;
+      savingRef.current = true;
       setSaving(true);
       try {
         const response = await action();
@@ -27,10 +36,11 @@ export function useResourceSubmit({ onSuccess }: ResourceSubmitOptions = {}) {
       } catch (error) {
         if (mountedRef.current) showApiError(error);
       } finally {
+        savingRef.current = false;
         if (mountedRef.current) setSaving(false);
       }
     },
-    [onSuccess, saving],
+    [onSuccess],
   );
 
   return { saving, submit };

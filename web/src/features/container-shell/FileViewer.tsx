@@ -1,10 +1,11 @@
-import { Button, Toast } from "@douyinfe/semi-ui";
-import { Download, Edit3, Save, X } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Popconfirm, Toast } from "@douyinfe/semi-ui";
+import { Download, Edit3, RefreshCw, Save, X } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { downloadContainerFiles, readContainerFile, writeContainerFile } from "../../shared/api/sandboxContainers";
-import { showApiError } from "../../shared/api/feedback";
+import { getApiErrorMessage, showApiError } from "../../shared/api/feedback";
 import type { ContainerFileInfo } from "../../shared/api/types";
 import { saveBlob } from "../../shared/lib/download";
+import { UI_TEXT } from "../../shared/lib/uiText";
 
 const CodeEditor = lazy(() => import("./CodeEditor").then((module) => ({ default: module.CodeEditor })));
 
@@ -14,6 +15,7 @@ type Props = {
   containerId: number;
   file: ContainerFileInfo;
   onClose: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 const TEXT_EXTENSIONS = new Set([
@@ -55,28 +57,66 @@ function determineViewerType(file: ContainerFileInfo): ViewerType {
   return "text";
 }
 
-export function FileViewer({ containerId, file, onClose }: Props) {
+export function FileViewer({ containerId, file, onClose, onDirtyChange }: Props) {
+  const titleId = useId();
   const viewerType = useMemo(() => determineViewerType(file), [file]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
+  const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
+  const savingRef = useRef(false);
+  const downloadingRef = useRef(false);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    mountedRef.current = true;
+    dialogRef.current?.focus();
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+      savingRef.current = false;
+      downloadingRef.current = false;
+      previouslyFocused?.focus();
+    };
+  }, []);
+
+  const load = useCallback(async (): Promise<void> => {
+    if (!mountedRef.current) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
+    setEditing(false);
+    setEditContent("");
+    setContent("");
+    setImageError(false);
+
+    if (viewerType === "binary") {
+      setLoading(false);
+      return;
+    }
+
     try {
       const params: { path: string; base64?: boolean } = { path: file.path };
       if (viewerType === "image") params.base64 = true;
       const response = await readContainerFile(containerId, params);
+      if (!mountedRef.current || requestIdRef.current !== requestId) return;
       setContent(response.data?.content ?? "");
     } catch (err) {
-      setError("Failed to read file");
-      showApiError(err);
+      if (mountedRef.current && requestIdRef.current === requestId) {
+        setError(getApiErrorMessage(err, "读取文件失败"));
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && requestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [containerId, file.path, viewerType]);
 
@@ -90,9 +130,27 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   }, [viewerType, content, file.name]);
 
   const lineCount = useMemo(() => {
-    if (viewerType !== "text") return 0;
+    if (viewerType !== "text" || !content) return 0;
     return content.split("\n").length;
   }, [viewerType, content]);
+
+  const dirty = editing && editContent !== content;
+
+  useEffect(() => {
+    if (!dirty) return;
+    const preventAccidentalUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventAccidentalUnload);
+    return () => window.removeEventListener("beforeunload", preventAccidentalUnload);
+  }, [dirty]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
   const handleEdit = useCallback(() => {
     setEditContent(content);
@@ -100,16 +158,20 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   }, [content]);
 
   const handleSave = useCallback(async () => {
+    if (!mountedRef.current || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await writeContainerFile(containerId, { path: file.path, content: editContent });
-      Toast.success("File saved");
+      if (!mountedRef.current) return;
+      Toast.success("文件已保存");
       setContent(editContent);
       setEditing(false);
     } catch (err) {
-      showApiError(err);
+      if (mountedRef.current) showApiError(err);
     } finally {
-      setSaving(false);
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
     }
   }, [containerId, file.path, editContent]);
 
@@ -119,43 +181,159 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   }, []);
 
   const handleDownload = useCallback(async () => {
+    if (!mountedRef.current || downloadingRef.current) return;
+    downloadingRef.current = true;
+    setDownloading(true);
     try {
       const { blob, filename } = await downloadContainerFiles(containerId, { path: [file.path] });
+      if (!mountedRef.current) return;
       saveBlob(blob, filename);
     } catch (err) {
-      showApiError(err);
+      if (mountedRef.current) showApiError(err);
+    } finally {
+      downloadingRef.current = false;
+      if (mountedRef.current) setDownloading(false);
     }
   }, [containerId, file.path]);
 
+  const handleDiscardAndClose = useCallback(() => {
+    setEditContent("");
+    setEditing(false);
+    onClose();
+  }, [onClose]);
+
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && editing) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (dirty && !savingRef.current && !downloadingRef.current) {
+        void handleSave();
+      }
+      return;
+    }
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    if (savingRef.current || downloadingRef.current) return;
+    if (dirty) {
+      Toast.warning("存在未保存的修改，请先保存或取消编辑");
+      return;
+    }
+    if (editing) {
+      handleCancelEdit();
+      return;
+    }
+    onClose();
+  }, [dirty, editing, handleCancelEdit, handleSave, onClose]);
+
+  const closeButton = (
+    <Button
+      icon={<X size={14} />}
+      theme="borderless"
+      size="small"
+      type="tertiary"
+      disabled={saving || downloading}
+      onClick={dirty ? undefined : onClose}
+      aria-label="关闭文件查看器"
+    >
+      关闭
+    </Button>
+  );
+
   return (
-    <div className="fv-body">
+    <div
+      ref={dialogRef}
+      className="fv-body"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
       <div className="fv-toolbar">
-        <span className="fv-title">{file.name}</span>
+        <span id={titleId} className="fv-title">{file.name}</span>
         <span className="fv-meta">
           {viewerType === "text" ? "文本" : viewerType === "image" ? "图片" : "二进制"}
           {" · "}{file.size.toLocaleString()} 字节
-          {viewerType === "text" ? ` · ${lineCount} 行` : ""}
+          {viewerType === "text" && !loading && !error ? ` · ${lineCount} 行` : ""}
         </span>
         <span className="fv-spacer" />
         {viewerType === "text" && !editing && (
-          <Button icon={<Edit3 size={14} />} theme="borderless" type="tertiary" size="small" onClick={handleEdit}>编辑</Button>
+          <Button
+            icon={<Edit3 size={14} />}
+            theme="borderless"
+            type="tertiary"
+            size="small"
+            disabled={loading || Boolean(error) || downloading}
+            title={loading ? "文件加载完成后可编辑" : error ? "请先重新加载文件" : "编辑文件"}
+            onClick={handleEdit}
+          >
+            编辑
+          </Button>
         )}
         {!editing && (
-          <Button icon={<Download size={14} />} theme="borderless" type="tertiary" size="small" onClick={() => void handleDownload()}>下载</Button>
+          <Button
+            icon={<Download size={14} />}
+            theme="borderless"
+            type="tertiary"
+            size="small"
+            loading={downloading}
+            disabled={loading}
+            onClick={() => void handleDownload()}
+          >
+            下载
+          </Button>
         )}
-        <Button icon={<X size={14} />} theme="borderless" size="small" type="tertiary" onClick={onClose}>关闭</Button>
+        {dirty ? (
+          <Popconfirm
+            title="放弃未保存的修改？"
+            content="关闭后，本次编辑内容将无法恢复。"
+            okType="danger"
+            okText="放弃并关闭"
+            cancelText={UI_TEXT.cancel}
+            onConfirm={handleDiscardAndClose}
+          >
+            {closeButton}
+          </Popconfirm>
+        ) : closeButton}
       </div>
 
       {loading ? (
         <div className="fv-loading">正在加载...</div>
       ) : error ? (
-        <div className="fv-error">{error}</div>
+        <div className="fv-error" role="alert">
+          <span>{error}</span>
+          <Button
+            icon={<RefreshCw size={14} />}
+            size="small"
+            theme="borderless"
+            type="primary"
+            onClick={() => void load()}
+          >
+            重试
+          </Button>
+        </div>
       ) : viewerType === "image" ? (
         <div className="fv-image-viewer">
-          {imageSrc ? (
-            <img src={imageSrc} alt={file.name} className="fv-image" />
+          {imageSrc && !imageError ? (
+            <img
+              src={imageSrc}
+              alt={file.name}
+              className="fv-image"
+              onError={() => setImageError(true)}
+            />
           ) : (
-            <div className="fv-error">图片渲染失败</div>
+            <div className="fv-error" role="alert">
+              <span>图片内容无法解码，请重新加载或下载后查看。</span>
+              <Button
+                icon={<RefreshCw size={14} />}
+                size="small"
+                theme="borderless"
+                type="primary"
+                onClick={() => void load()}
+              >
+                重新加载
+              </Button>
+            </div>
           )}
         </div>
       ) : viewerType === "text" ? (
@@ -171,8 +349,32 @@ export function FileViewer({ containerId, file, onClose }: Props) {
               </Suspense>
             </div>
             <div className="fv-editor-actions">
-              <Button icon={<Save size={14} />} size="small" type="primary" loading={saving} onClick={() => void handleSave()}>保存</Button>
-              <Button icon={<X size={14} />} size="small" type="tertiary" disabled={saving} onClick={handleCancelEdit}>取消</Button>
+              <Button
+                icon={<Save size={14} />}
+                size="small"
+                type="primary"
+                loading={saving}
+                disabled={!dirty || downloading}
+                aria-keyshortcuts="Control+S Meta+S"
+                title="保存（Ctrl/⌘ + S）"
+                onClick={() => void handleSave()}
+              >
+                保存
+              </Button>
+              {dirty ? (
+                <Popconfirm
+                  title="放弃未保存的修改？"
+                  content="取消后，本次编辑内容将无法恢复。"
+                  okType="danger"
+                  okText="放弃修改"
+                  cancelText={UI_TEXT.cancel}
+                  onConfirm={handleCancelEdit}
+                >
+                  <Button icon={<X size={14} />} size="small" type="tertiary" disabled={saving}>取消</Button>
+                </Popconfirm>
+              ) : (
+                <Button icon={<X size={14} />} size="small" type="tertiary" disabled={saving} onClick={handleCancelEdit}>取消</Button>
+              )}
             </div>
           </div>
         ) : (

@@ -1,8 +1,8 @@
-import { Empty, Modal, Spin, Tag } from "@douyinfe/semi-ui";
-import { Braces, FileText } from "lucide-react";
+import { Button, Empty, Modal, Spin, Tag } from "@douyinfe/semi-ui";
+import { Braces, CircleAlert, FileText, RefreshCw } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { getKnowledgeDocument, getKnowledgeVector } from "../../shared/api/knowledges";
-import { showApiError } from "../../shared/api/feedback";
+import { getApiErrorMessage } from "../../shared/api/feedback";
 import type { KnowledgeDocumentDetail, KnowledgeVectorDetail } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import { KNOWLEDGE_STATUS_COLORS } from "./knowledgeUi";
@@ -17,8 +17,8 @@ export type KnowledgeDetailTarget =
   | { kind: "vector"; id: string; label: string };
 
 type KnowledgeDetail =
-  | { kind: "document"; data: KnowledgeDocumentDetail }
-  | { kind: "vector"; data: KnowledgeVectorDetail };
+  | { targetKey: string; kind: "document"; data: KnowledgeDocumentDetail }
+  | { targetKey: string; kind: "vector"; data: KnowledgeVectorDetail };
 
 export function KnowledgeDetailModal({
   target,
@@ -29,10 +29,15 @@ export function KnowledgeDetailModal({
 }) {
   const [detail, setDetail] = useState<KnowledgeDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [retryVersion, setRetryVersion] = useState(0);
+  const targetKey = target ? `${target.kind}:${target.id}` : "";
+  const visibleDetail = detail?.targetKey === targetKey ? detail : null;
 
   useEffect(() => {
     let cancelled = false;
     setDetail(null);
+    setError("");
     if (!target) {
       setLoading(false);
       return () => { cancelled = true; };
@@ -44,21 +49,21 @@ export function KnowledgeDetailModal({
         if (target.kind === "document") {
           const response = await getKnowledgeDocument(target.id);
     if (!response.data) throw new Error("文档详情不可用");
-          if (!cancelled) setDetail({ kind: "document", data: response.data });
+          if (!cancelled) setDetail({ targetKey, kind: "document", data: response.data });
         } else {
           const response = await getKnowledgeVector(target.id);
     if (!response.data) throw new Error("向量详情不可用");
-          if (!cancelled) setDetail({ kind: "vector", data: response.data });
+          if (!cancelled) setDetail({ targetKey, kind: "vector", data: response.data });
         }
       } catch (error) {
-        if (!cancelled) showApiError(error);
+        if (!cancelled) setError(getApiErrorMessage(error, "详情加载失败"));
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [target]);
+  }, [retryVersion, target, targetKey]);
 
   return (
     <Modal
@@ -82,9 +87,26 @@ export function KnowledgeDetailModal({
       onCancel={onClose}
     >
       <Spin spinning={loading} wrapperClassName="knowledge-detail-spin">
-        {detail?.kind === "document" ? <DocumentDetail detail={detail.data} /> : null}
-        {detail?.kind === "vector" ? <VectorDetail detail={detail.data} /> : null}
-        {!loading && !detail ? (
+        {visibleDetail?.kind === "document" ? <DocumentDetail detail={visibleDetail.data} /> : null}
+        {visibleDetail?.kind === "vector" ? <VectorDetail detail={visibleDetail.data} /> : null}
+        {!loading && error ? (
+          <div className="knowledge-detail-error" role="alert">
+            <CircleAlert size={22} aria-hidden="true" />
+            <span>
+              <strong>无法加载详情</strong>
+              <span>{error}</span>
+            </span>
+            <Button
+              icon={<RefreshCw size={15} />}
+              theme="solid"
+              type="tertiary"
+              onClick={() => setRetryVersion((version) => version + 1)}
+            >
+              重试
+            </Button>
+          </div>
+        ) : null}
+        {!loading && !visibleDetail && !error ? (
           <Empty
             className="empty-state"
             image={target?.kind === "vector" ? <Braces size={42} /> : <FileText size={42} />}

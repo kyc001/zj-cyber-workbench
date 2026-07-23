@@ -1,6 +1,7 @@
 import { Empty, Modal, Progress, Spin } from "@douyinfe/semi-ui";
 import { FileText, UserRound } from "lucide-react";
 import type { WorkProject } from "../../shared/api/types";
+import { ResourceError } from "../../shared/components/ResourcePageShell";
 import { type ProjectRecordTab, WorkProjectRecordTabs } from "./ProjectRecordViews";
 import { useWorkProjectRecordSnapshot } from "./workProjectRecords";
 import {
@@ -12,7 +13,7 @@ import {
   workProjectOwnerNames,
 } from "./workProjectView";
 
-type WorkProjectInfoModalProps = {
+export type WorkProjectInfoModalProps = {
   open: boolean;
   projectId: number | null;
   initialTab?: ProjectRecordTab;
@@ -20,7 +21,7 @@ type WorkProjectInfoModalProps = {
 };
 
 export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", onClose }: WorkProjectInfoModalProps) {
-  const { project, records, loading } = useWorkProjectRecordSnapshot(projectId, open);
+  const { project, records, loading, error, refresh } = useWorkProjectRecordSnapshot(projectId, open);
 
   return (
     <Modal
@@ -31,8 +32,25 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
       onCancel={onClose}
     >
       <Spin spinning={loading}>
-        {project ? (
-          <div className="project-info-content project-record-content">
+        {error && !project && !loading ? (
+          <ResourceError
+            message={error}
+            title="无法加载项目详情"
+            onRetry={refresh}
+          />
+        ) : project ? (
+          <>
+            {error && !loading ? (
+              <div className="project-info-refresh-error">
+                <ResourceError
+                  compact
+                  message={error}
+                  title="项目详情刷新失败"
+                  onRetry={refresh}
+                />
+              </div>
+            ) : null}
+            <div className="project-info-content project-record-content">
             <section className="project-info-main">
               <section className="project-info-meta">
                 <div>
@@ -85,7 +103,8 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
                 initialTab={initialTab}
               />
             </section>
-          </div>
+            </div>
+          </>
         ) : (
           <Empty className="empty-state" image={<FileText size={42} />} title="未选择项目。" description="" />
         )}

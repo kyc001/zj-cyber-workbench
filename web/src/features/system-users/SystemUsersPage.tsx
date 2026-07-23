@@ -19,14 +19,15 @@ type ModalState = { mode: "create" } | { mode: "edit"; user: SystemUser } | null
 
 export function SystemUsersPage() {
   const {
-    items: users, page, keyword, loading, loadItems: loadUsers, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
+    items: users, page, keyword, activeKeyword, loading, error, loadItems: loadUsers, total, rangeStart, rangeEnd,
+    setKeyword, search, clearSearch, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<SystemUser>({ query: querySystemUsers });
   const [modal, setModal] = useState<ModalState>(null);
   const { run: deleteUser, busyId: deletingUserId } = useResourceAction<SystemUser>(
     (user) => deleteSystemUser(user.id),
     loadUsers,
   );
+  const rowActionBusy = deletingUserId !== null;
 
   useAdminResourceHeader({
     createLabel: "创建用户",
@@ -72,10 +73,12 @@ export function SystemUsersPage() {
       render: (user) => (
         <RowActions>
           <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary" aria-label={`编辑 ${user.username}`}
+            disabled={rowActionBusy}
             onClick={() => setModal({ mode: "edit", user })}
           />
           <Popconfirm title="删除用户" content={`确定删除 ${user.username} 吗？`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteUser(user)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
+              disabled={rowActionBusy && deletingUserId !== user.id}
               loading={deletingUserId === user.id} aria-label={`删除 ${user.username}`}
             />
           </Popconfirm>
@@ -89,11 +92,13 @@ export function SystemUsersPage() {
       <ResourcePageShell
         searchPlaceholder="搜索用户名或邮箱"
         keyword={keyword}
+        activeKeyword={activeKeyword}
         loading={loading}
+        error={error}
         metrics={[
           { label: "总数", value: total },
-          { label: "管理员", value: summary.admin },
-          { label: "普通用户", value: summary.user },
+          { label: "本页管理员", value: summary.admin },
+          { label: "本页普通用户", value: summary.user },
         ]}
         empty={users.length === 0}
         emptyIcon={<Users size={42} />}
@@ -106,8 +111,10 @@ export function SystemUsersPage() {
         canGoNext={canGoNext}
         onKeywordChange={setKeyword}
         onSearch={search}
+        onClearSearch={clearSearch}
         onPrevious={previous}
         onNext={next}
+        onRetry={loadUsers}
       >
         <ResourceTable<SystemUser>
           ariaLabel="系统用户"

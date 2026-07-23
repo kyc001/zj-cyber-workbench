@@ -1,5 +1,5 @@
-import { Button, Popconfirm, Select, TabPane, Tabs, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
-import { Braces, DatabaseZap, Eye, FileText, Network, Trash2, Upload } from "lucide-react";
+import { Button, Popconfirm, Select, TabPane, Tabs, Tag, Tooltip } from "@douyinfe/semi-ui";
+import { Braces, CircleAlert, DatabaseZap, Eye, FileText, Network, Trash2, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   deleteKnowledgeDocument,
@@ -9,7 +9,7 @@ import {
   searchKnowledgeGraph,
   uploadKnowledgeDocuments,
 } from "../../shared/api/knowledges";
-import { showApiError } from "../../shared/api/feedback";
+import { getApiErrorMessage, showApiError } from "../../shared/api/feedback";
 import {
   KNOWLEDGE_DOCUMENT_STATUSES,
   KNOWLEDGE_GRAPH_EXPANSION_NODES,
@@ -40,6 +40,11 @@ import { KnowledgeGraphView } from "./KnowledgeGraphView";
 import { KNOWLEDGE_STATUS_COLORS, KNOWLEDGE_STATUS_LABEL } from "./knowledgeUi";
 
 type KnowledgeTab = "documents" | "vectors" | "graph";
+type KnowledgeUploadSummary = {
+  queued: number;
+  rejected: Array<{ fileName: string; message: string }>;
+  requestError?: string;
+};
 
 const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], is_truncated: false };
 const DOCUMENT_POLL_INTERVAL_MS = 5_000;
@@ -65,14 +70,17 @@ export function KnowledgesPage() {
   const [graphQuery, setGraphQuery] = useState("");
   const [activeGraphQuery, setActiveGraphQuery] = useState("");
   const [graphLoading, setGraphLoading] = useState(false);
+  const [graphError, setGraphError] = useState("");
   const [graphExpansionLimits, setGraphExpansionLimits] = useState<Record<string, number>>({});
   const [expandedGraphNodeIds, setExpandedGraphNodeIds] = useState<Set<string>>(new Set());
   const [expandingGraphNodeIds, setExpandingGraphNodeIds] = useState<Set<string>>(new Set());
   const [awaitingUploadCompletion, setAwaitingUploadCompletion] = useState(false);
   const [processingCompletionVersion, setProcessingCompletionVersion] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [uploadSummary, setUploadSummary] = useState<KnowledgeUploadSummary | null>(null);
   const [detailTarget, setDetailTarget] = useState<KnowledgeDetailTarget | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadingRef = useRef(false);
   const graphRequestRef = useRef(0);
   const graphExpansionRequestsRef = useRef<Set<string>>(new Set());
   const latestInflightDocumentsRef = useRef(0);
@@ -120,6 +128,7 @@ export function KnowledgesPage() {
     setExpandingGraphNodeIds(new Set());
     if (!normalizedQuery) {
       setGraphLoading(false);
+      setGraphError("");
       setGraph(EMPTY_GRAPH);
       setGraphExpansionLimits({});
       setExpandedGraphNodeIds(new Set());
@@ -127,19 +136,23 @@ export function KnowledgesPage() {
       return;
     }
     setGraphLoading(true);
+    setGraphError("");
     try {
       const response = await searchKnowledgeGraph({
         query: normalizedQuery,
         max_nodes: KNOWLEDGE_GRAPH_MAX_NODES,
       });
       if (graphRequestRef.current === requestId) {
+        setGraphError("");
         setGraph(response.data ?? EMPTY_GRAPH);
         setGraphExpansionLimits({});
         setExpandedGraphNodeIds(new Set());
         setExpandingGraphNodeIds(new Set());
       }
     } catch (error) {
-      if (graphRequestRef.current === requestId) showApiError(error);
+      if (graphRequestRef.current === requestId) {
+        setGraphError(getApiErrorMessage(error, "加载知识图谱失败"));
+      }
     } finally {
       if (graphRequestRef.current === requestId) setGraphLoading(false);
     }
@@ -255,28 +268,36 @@ export function KnowledgesPage() {
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (files.length === 0) return;
+    if (files.length === 0 || uploadingRef.current) return;
 
+    uploadingRef.current = true;
     setUploading(true);
+    setUploadSummary(null);
     try {
       const response = await uploadKnowledgeDocuments(files);
       const result = response.data;
       if (!result) throw new Error("上传响应未包含批处理结果");
 
       const queued = result.queued_files.length;
+      const rejected = result.rejected_files.map((item) => ({
+        fileName: item.file_name,
+        message: item.message,
+      }));
+      setUploadSummary({ queued, rejected });
       if (queued > 0) {
-        Toast.success(`${queued} document${queued === 1 ? "" : "s"} queued`);
         setAwaitingUploadCompletion(true);
         setActiveTab("documents");
         if (documents.page === 1) await documents.loadItems();
         else documents.goToFirstPage();
       }
-      result.rejected_files.forEach((rejected) => {
-        showApiError(new Error(`${rejected.file_name}: ${rejected.message}`));
-      });
     } catch (error) {
-      showApiError(error);
+      setUploadSummary({
+        queued: 0,
+        rejected: [],
+        requestError: getApiErrorMessage(error, "上传文档失败"),
+      });
     } finally {
+      uploadingRef.current = false;
       setUploading(false);
     }
   };
@@ -289,10 +310,13 @@ export function KnowledgesPage() {
 
   useAdminResourceHeader({
     createLabel: "上传文档",
+    createDisabled: uploading || deletingDocumentId !== null,
     createIcon: <Upload size={16} />,
     refreshLabel: "刷新知识库",
     loading: activeLoading,
-    onCreate: () => fileInputRef.current?.click(),
+    onCreate: () => {
+      if (!uploadingRef.current && deletingDocumentId === null) fileInputRef.current?.click();
+    },
     onRefresh: refreshActive,
   });
 
@@ -311,15 +335,25 @@ export function KnowledgesPage() {
         type="file"
         accept=".md,.pdf"
         multiple
+        disabled={uploading || deletingDocumentId !== null}
         onChange={(event) => void handleUpload(event)}
       />
-      <MetricStrip metrics={metrics} />
+      <div className="knowledge-page-header">
+        {uploadSummary ? (
+          <KnowledgeUploadResult
+            summary={uploadSummary}
+            onClose={() => setUploadSummary(null)}
+          />
+        ) : null}
+        <MetricStrip metrics={metrics} />
+      </div>
       <Tabs type="line" activeKey={activeTab} onChange={handleTabChange} className="knowledge-tabs">
         <TabPane itemKey="documents" tab={<TabLabel icon={<FileText size={15} />} text="文档" />}>
           <DocumentsTab
             items={documents.items}
             status={status}
             loading={documents.loading || uploading || deletingDocumentId !== null}
+            error={documents.error}
             deletingId={deletingDocumentId}
             page={documents.page}
             rangeStart={documents.rangeStart}
@@ -333,6 +367,7 @@ export function KnowledgesPage() {
             }}
             onPrevious={documents.previous}
             onNext={documents.next}
+            onRetry={documents.loadItems}
             onView={(document) => setDetailTarget({
               kind: "document",
               id: document.id,
@@ -358,6 +393,7 @@ export function KnowledgesPage() {
               <ResourceSearchForm
                 value={graphQuery}
                 placeholder="搜索实体和关系"
+                loading={graphLoading}
                 onChange={setGraphQuery}
                 onSearch={() => {
                   const query = graphQuery.trim();
@@ -366,6 +402,10 @@ export function KnowledgesPage() {
                 }}
               />
             )}
+            loading={graphLoading}
+            error={graphError}
+            errorTitle="无法加载知识图谱"
+            onRetry={() => void loadGraph()}
             empty={graph.nodes.length === 0}
             emptyTitle={activeGraphQuery ? "未找到图谱结果" : "尚未加载图谱"}
             emptyIcon={<Network size={42} />}
@@ -383,6 +423,59 @@ export function KnowledgesPage() {
       </Tabs>
       <KnowledgeDetailModal target={detailTarget} onClose={() => setDetailTarget(null)} />
     </section>
+  );
+}
+
+function KnowledgeUploadResult({
+  summary,
+  onClose,
+}: {
+  summary: KnowledgeUploadSummary;
+  onClose: () => void;
+}) {
+  const hasError = Boolean(summary.requestError) || summary.rejected.length > 0;
+  const rejectedPreview = summary.rejected.slice(0, 5);
+  const hiddenRejected = summary.rejected.length - rejectedPreview.length;
+  const title = summary.requestError
+    ? "文档上传失败"
+    : summary.rejected.length > 0
+      ? summary.queued > 0
+        ? `${summary.queued} 个文档已加入队列，${summary.rejected.length} 个未上传`
+        : `${summary.rejected.length} 个文档未上传`
+      : summary.queued > 0
+        ? `${summary.queued} 个文档已加入处理队列`
+        : "没有可上传的文档";
+
+  return (
+    <div
+      className={`knowledge-upload-result${hasError ? " is-error" : " is-success"}`}
+      role={hasError ? "alert" : "status"}
+    >
+      {hasError ? <CircleAlert size={20} aria-hidden="true" /> : <Upload size={20} aria-hidden="true" />}
+      <div>
+        <strong>{title}</strong>
+        {summary.requestError ? <span>{summary.requestError}</span> : null}
+        {rejectedPreview.length > 0 ? (
+          <ul>
+            {rejectedPreview.map((item, index) => (
+              <li key={`${item.fileName}:${index}`}>
+                <span>{item.fileName}</span>
+                <span>{item.message}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {hiddenRejected > 0 ? <span>另有 {hiddenRejected} 个文件未显示</span> : null}
+      </div>
+      <Button
+        aria-label="关闭上传结果"
+        icon={<X size={15} />}
+        size="small"
+        theme="borderless"
+        type="tertiary"
+        onClick={onClose}
+      />
+    </div>
   );
 }
 
@@ -426,11 +519,23 @@ type PageProps = {
   canGoBack: boolean;
   canGoNext: boolean;
   loading: boolean;
+  error: string;
   onPrevious: () => void;
   onNext: () => void;
+  onRetry: () => void;
 };
 
-function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, ...page }: PageProps & {
+function DocumentsTab({
+  items,
+  status,
+  deletingId,
+  error,
+  onStatus,
+  onView,
+  onDelete,
+  onRetry,
+  ...page
+}: PageProps & {
   items: KnowledgeDocument[];
   status?: KnowledgeDocumentStatus;
   deletingId: string | null;
@@ -453,6 +558,7 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
               icon={<Eye size={15} />}
               theme="borderless"
               type="tertiary"
+              disabled={deletingId !== null}
               aria-label={`查看 ${item.file_name} 详情`}
               onClick={() => onView(item)}
             />
@@ -468,6 +574,7 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
               icon={<Trash2 size={15} />}
               theme="borderless"
               type="danger"
+              disabled={deletingId !== null && deletingId !== item.id}
               loading={deletingId === item.id}
               aria-label={`删除 ${item.file_name}`}
             />
@@ -488,6 +595,9 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
         />
       )}
       loading={page.loading}
+      error={error}
+      errorTitle="无法加载知识库文档"
+      onRetry={onRetry}
       empty={items.length === 0}
       emptyTitle="未找到文档"
       emptyIcon={<FileText size={42} />}
@@ -531,6 +641,9 @@ function VectorsTab({
   return (
     <ResourcePanel
       loading={vectors.loading}
+      error={vectors.error}
+      errorTitle="无法加载知识向量"
+      onRetry={vectors.loadItems}
       empty={vectors.items.length === 0}
       emptyTitle="未找到向量"
       emptyIcon={<DatabaseZap size={42} />}

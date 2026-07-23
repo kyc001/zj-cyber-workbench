@@ -40,6 +40,8 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
   const [values, setValues] = useState<HostFormValues>(() => initial(host));
   const editing = Boolean(host);
   const isLocalHostEdit = host?.id === DEFAULT_LOCAL_HOST_ID;
+  const dirty = open && JSON.stringify(values) !== JSON.stringify(initial(host));
+  const invalidAddress = !isLocalHostEdit && Boolean(values.ip_address.trim()) && !isValidIpAddress(values.ip_address);
 
   useEffect(() => {
     if (open) setValues(initial(host));
@@ -76,10 +78,12 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
   const submitDisabled = (
     (!isLocalHostEdit && (
       !values.ip_address.trim()
+      || invalidAddress
       || !values.host_account.trim()
       || (!editing && !values.host_password)
       || invalidPort(values.ssh_port)
     ))
+    || (editing && !dirty)
   );
 
   return (
@@ -87,6 +91,7 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
       open={open}
       title={editing ? "编辑主机" : "添加 SSH 主机"}
       saving={saving}
+      dirty={dirty}
       submitLabel={editing ? "保存" : "添加"}
       submitDisabled={submitDisabled}
       width={640}
@@ -110,8 +115,10 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
           <Input prefix={<Server size={16} />} value={values.ip_address} maxLength={255} required
             autoComplete="off"
             disabled={isLocalHostEdit}
+            aria-invalid={invalidAddress}
             onChange={(value) => setValue("ip_address", value)}
           />
+          {invalidAddress ? <small className="resource-field-error" role="status">请输入有效的 IPv4 或 IPv6 地址</small> : null}
         </label>
         <label>
           <span>SSH 端口</span>
@@ -144,5 +151,23 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
 }
 
 function invalidPort(port: number) {
-  return port < 1 || port > 65535;
+  return !Number.isInteger(port) || port < 1 || port > 65535;
+}
+
+function isValidIpAddress(rawValue: string) {
+  const value = rawValue.trim();
+  if (!value) return false;
+  if (!value.includes(":")) {
+    const parts = value.split(".");
+    return parts.length === 4 && parts.every((part) => (
+      /^(0|[1-9]\d{0,2})$/.test(part) && Number(part) <= 255
+    ));
+  }
+  if (value.includes("%")) return false;
+  try {
+    const parsed = new URL(`http://[${value}]/`);
+    return parsed.hostname.startsWith("[") && parsed.hostname.endsWith("]");
+  } catch {
+    return false;
+  }
 }

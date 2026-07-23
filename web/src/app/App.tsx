@@ -1,6 +1,13 @@
 import { lazy, Suspense, type ComponentType } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useOutletContext } from "react-router-dom";
+import {
+  Navigate,
+  Outlet,
+  RouterProvider,
+  createBrowserRouter,
+  useOutletContext,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
+import { AppErrorBoundary, AppRouteErrorBoundary } from "./AppErrorBoundary";
 import {
   loadEgressProxiesPage,
   loadHostsPage,
@@ -10,6 +17,8 @@ import {
   loadSandboxContainersPage,
   loadSandboxImagesPage,
   loadSystemConfigPage,
+  loadSystemUsersPage,
+  loadSkillHubPage,
   loadToolpackPage,
   loadWorkProjectWorkspacePage,
   loadWorkProjectsPage,
@@ -33,6 +42,8 @@ const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
 const SandboxContainersPage = lazyRoute(loadSandboxContainersPage, "SandboxContainersPage");
 const SandboxImagesPage = lazyRoute(loadSandboxImagesPage, "SandboxImagesPage");
 const ToolpackPage = lazyRoute(loadToolpackPage, "ToolpackPage");
+const SkillHubPage = lazyRoute(loadSkillHubPage, "SkillHubPage");
+const SystemUsersPage = lazyRoute(loadSystemUsersPage, "SystemUsersPage");
 
 function ProtectedRoute() {
   const { isAuthenticated, ready } = useAuth();
@@ -54,34 +65,54 @@ function HomeRoute() {
   return <Navigate to="/playground" replace />;
 }
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <HomeRoute />,
+  },
+  {
+    element: <ProtectedRoute />,
+    errorElement: <AppRouteErrorBoundary />,
+    children: [
+      {
+        element: <ProtectedAdminShell />,
+        children: [
+          { path: "/playground", element: <PlaygroundPage /> },
+          {
+            element: <AdminOnlyRoute />,
+            children: [
+              { path: "/hosts", element: <HostsPage /> },
+              { path: "/egress-proxies", element: <EgressProxiesPage /> },
+              { path: "/knowledges", element: <KnowledgesPage /> },
+              { path: "/work-projects", element: <WorkProjectsPage /> },
+              { path: "/work-projects/:projectId", element: <WorkProjectWorkspacePage /> },
+              { path: "/sandbox-images", element: <SandboxImagesPage /> },
+              { path: "/sandbox-containers", element: <SandboxContainersPage /> },
+              { path: "/toolpack", element: <ToolpackPage /> },
+              { path: "/skill-hub", element: <SkillHubPage /> },
+              { path: "/system-users", element: <SystemUsersPage /> },
+              { path: "/system-config", element: <SystemConfigPage /> },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    path: "*",
+    element: <Navigate to="/playground" replace />,
+  },
+]);
+
 export function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <AppErrorBoundary>
+      <AuthProvider>
         <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<HomeRoute />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<ProtectedAdminShell />}>
-                <Route path="/playground" element={<PlaygroundPage />} />
-                <Route element={<AdminOnlyRoute />}>
-                  <Route path="/hosts" element={<HostsPage />} />
-                  <Route path="/egress-proxies" element={<EgressProxiesPage />} />
-                  <Route path="/knowledges" element={<KnowledgesPage />} />
-                  <Route path="/work-projects" element={<WorkProjectsPage />} />
-                  <Route path="/work-projects/:projectId" element={<WorkProjectWorkspacePage />} />
-                  <Route path="/sandbox-images" element={<SandboxImagesPage />} />
-                  <Route path="/sandbox-containers" element={<SandboxContainersPage />} />
-                  <Route path="/toolpack" element={<ToolpackPage />} />
-                  <Route path="/system-config" element={<SystemConfigPage />} />
-                </Route>
-              </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/playground" replace />} />
-          </Routes>
+          <RouterProvider router={router} />
         </Suspense>
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </AppErrorBoundary>
   );
 }
 
@@ -95,8 +126,9 @@ function LocalSessionUnavailable() {
 
 function RouteFallback() {
   return (
-    <div className="route-fallback">
-      <div className="route-fallback-spinner" />
+    <div className="route-fallback" role="status" aria-live="polite">
+      <div className="route-fallback-spinner" aria-hidden="true" />
+      <span className="sr-only">正在加载页面</span>
     </div>
   );
 }

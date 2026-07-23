@@ -1,4 +1,4 @@
-import { Button, Modal, Popconfirm, Select, Tag, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Select, Tag, Tooltip } from "@douyinfe/semi-ui";
 import {
   Box,
   Boxes,
@@ -15,7 +15,7 @@ import {
   Trash2,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";
 import { queryManagedHosts } from "../../shared/api/hosts";
 import {
@@ -32,12 +32,12 @@ import {
 } from "../../shared/api/sandboxContainers";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { querySystemUsers } from "../../shared/api/systemUsers";
-import { showApiError } from "../../shared/api/feedback";
 import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { OwnerCell, ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
+import { ResourceFormLoadError, ResourceModal } from "../../shared/components/ResourceModal";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { useOptionList } from "../../shared/hooks/useOptionList";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
@@ -50,64 +50,97 @@ import { UI_TEXT } from "../../shared/lib/uiText";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { SandboxContainerFormModal } from "./SandboxContainerFormModal";
 
+type ContainerActionKind = "start" | "stop" | "pause" | "resume" | "delete";
+
+type ContainerActionRequest = {
+  id: number;
+  container: SandboxContainer;
+  kind: ContainerActionKind;
+};
+
+const CONTAINER_ACTION_LABEL: Record<ContainerActionKind, string> = {
+  start: "启动",
+  stop: "停止",
+  pause: "暂停",
+  resume: "恢复",
+  delete: "删除",
+};
+
 export function SandboxContainersPage() {
   const { user } = useAuth();
   const {
-    items: containers, page, keyword, loading, loadItems: loadContainers, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
+    items: containers, page, keyword, activeKeyword, loading, error, loadItems: loadContainers, total, rangeStart, rangeEnd,
+    setKeyword, search, clearSearch, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<SandboxContainer>({ query: querySandboxContainers });
   const [modalOpen, setModalOpen] = useState(false);
   const {
     items: images,
     loading: imagesLoading,
+    error: imagesError,
     load: loadReadyImages,
   } = useOptionList<SandboxImage>({ query: querySandboxImages });
   const {
     items: hosts,
     loading: hostsLoading,
+    error: hostsError,
     load: loadHosts,
   } = useOptionList<ManagedHost>({ query: queryManagedHosts });
   const {
     items: users,
     loading: usersLoading,
+    error: usersError,
     load: loadUsers,
   } = useOptionList<SystemUser>({ query: querySystemUsers });
   const {
     items: egressProxies,
     loading: egressProxiesLoading,
+    error: egressProxiesError,
     load: loadEgressProxies,
   } = useOptionList<EgressProxy>({ query: queryEgressProxies });
   const [egressModalContainer, setEgressModalContainer] = useState<SandboxContainer | null>(null);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
 
-  const refreshAll = useCallback(async () => {
-    await loadContainers();
-    await loadReadyImages();
-    await loadHosts();
-    await loadUsers();
-    await loadEgressProxies();
-  }, [loadContainers, loadReadyImages, loadHosts, loadUsers, loadEgressProxies]);
+  const refreshOptions = useCallback(async () => {
+    await Promise.all([
+      loadReadyImages(),
+      loadHosts(),
+      loadUsers(),
+      loadEgressProxies(),
+    ]);
+  }, [loadEgressProxies, loadHosts, loadReadyImages, loadUsers]);
 
-  const { run: startContainer, busyId: startingId } = useResourceAction<SandboxContainer>(
-    (container) => startSandboxContainer(container.id), loadContainers,
-  );
-  const { run: stopContainer, busyId: stoppingId } = useResourceAction<SandboxContainer>(
-    (container) => stopSandboxContainer(container.id), loadContainers,
-  );
-  const { run: pauseContainer, busyId: pausingId } = useResourceAction<SandboxContainer>(
-    (container) => pauseSandboxContainer(container.id), loadContainers,
-  );
-  const { run: resumeContainer, busyId: resumingId } = useResourceAction<SandboxContainer>(
-    (container) => resumeSandboxContainer(container.id), loadContainers,
-  );
-  const { run: deleteContainer, busyId: deletingId } = useResourceAction<SandboxContainer>(
-    (container) => deleteSandboxContainer(container.id), loadContainers,
-  );
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadContainers(), refreshOptions()]);
+  }, [loadContainers, refreshOptions]);
+
+  const executeContainerAction = useCallback((request: ContainerActionRequest) => {
+    switch (request.kind) {
+      case "start":
+        return startSandboxContainer(request.id);
+      case "stop":
+        return stopSandboxContainer(request.id);
+      case "pause":
+        return pauseSandboxContainer(request.id);
+      case "resume":
+        return resumeSandboxContainer(request.id);
+      case "delete":
+        return deleteSandboxContainer(request.id);
+    }
+  }, []);
+  const {
+    run: runContainerAction,
+    busyId: actionBusyId,
+    busyItem: busyAction,
+  } = useResourceAction<ContainerActionRequest>(executeContainerAction, loadContainers);
+  const requestContainerAction = useCallback((container: SandboxContainer, kind: ContainerActionKind) => (
+    runContainerAction({ id: container.id, container, kind })
+  ), [runContainerAction]);
 
   useAdminResourceHeader({
     createLabel: "创建执行工作区",
     refreshLabel: "刷新执行工作区",
-    loading: loading || imagesLoading || hostsLoading || usersLoading || egressProxiesLoading,
+    createDisabled: actionBusyId !== null,
+    loading: loading || imagesLoading || hostsLoading || usersLoading || egressProxiesLoading || actionBusyId !== null,
     onCreate: () => setModalOpen(true),
     onRefresh: refreshAll,
   });
@@ -182,46 +215,100 @@ export function SandboxContainersPage() {
       key: "actions", header: "操作", width: "256px",
       render: (container) => {
         const canManage = canManageSandboxContainer(container);
+        const rowBusy = actionBusyId === container.id;
+        const busyReason = busyAction
+          ? `正在${CONTAINER_ACTION_LABEL[busyAction.kind]} ${busyAction.container.container_name}，请稍候`
+          : "";
+        const permissionReason = canManage ? "" : "无权管理此执行工作区";
+        const serviceReason = container.status !== SANDBOX_CONTAINER_STATUS.RUNNING
+          ? "请先启动执行工作区"
+          : container.control_proxy_host_port <= 0 ? "文件与终端服务尚未就绪" : "";
+        const desktopReason = container.status !== SANDBOX_CONTAINER_STATUS.RUNNING
+          ? "请先启动执行工作区"
+          : !canOpenContainerNoVNC(container) ? "当前工具基线未提供远程桌面" : "";
+        const startReason = container.status === SANDBOX_CONTAINER_STATUS.CREATED
+          || container.status === SANDBOX_CONTAINER_STATUS.STOPPED ? "" : "仅已创建或已停止的工作区可以启动";
+        const runningReason = container.status === SANDBOX_CONTAINER_STATUS.RUNNING ? "" : "仅运行中的工作区可执行此操作";
+        const resumeReason = container.status === SANDBOX_CONTAINER_STATUS.PAUSED ? "" : "仅已暂停的工作区可以恢复";
+        const disabledReason = (reason = "") => busyReason || permissionReason || reason;
+        const deleteDisabledReason = disabledReason();
+        const deleteButton = (
+          <ContainerActionButton
+            icon={<Trash2 size={15} />}
+            label={`删除 ${container.container_name}`}
+            type="danger"
+            disabledReason={deleteDisabledReason}
+            loading={rowBusy && busyAction?.kind === "delete"}
+          />
+        );
         return (
           <RowActions>
-            <Button icon={<FolderOpen size={15} />} theme="borderless" type="tertiary"
-              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING}
-              aria-label={`浏览 ${container.container_name} 文件`} onClick={() => openFileManager(container)}
+            <ContainerActionButton
+              icon={<FolderOpen size={15} />}
+              label={`浏览 ${container.container_name} 文件`}
+              disabledReason={disabledReason(serviceReason)}
+              onClick={() => openFileManager(container)}
             />
-            <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
-              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING}
-              aria-label={`打开 ${container.container_name} 终端`} onClick={() => openShell(container)}
+            <ContainerActionButton
+              icon={<SquareTerminal size={15} />}
+              label={`打开 ${container.container_name} 终端`}
+              disabledReason={disabledReason(serviceReason)}
+              onClick={() => openShell(container)}
             />
-            <Button icon={<Monitor size={15} />} theme="borderless" type="tertiary"
-              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || !canOpenContainerNoVNC(container)}
-              aria-label={`打开 ${container.container_name} 桌面`} onClick={() => openNoVNC(container)}
+            <ContainerActionButton
+              icon={<Monitor size={15} />}
+              label={`打开 ${container.container_name} 桌面`}
+              disabledReason={disabledReason(desktopReason)}
+              onClick={() => openNoVNC(container)}
             />
-            <Button icon={<Network size={15} />} theme="borderless" type="tertiary"
-              disabled={!canManage}
-              aria-label={`设置 ${container.container_name} 网络出口`} onClick={() => setEgressModalContainer(container)}
+            <ContainerActionButton
+              icon={<Network size={15} />}
+              label={`设置 ${container.container_name} 网络出口`}
+              disabledReason={disabledReason()}
+              onClick={() => setEgressModalContainer(container)}
             />
-            <Button icon={<Play size={15} />} theme="borderless" type="primary"
-              disabled={!canManage || (container.status !== SANDBOX_CONTAINER_STATUS.CREATED && container.status !== SANDBOX_CONTAINER_STATUS.STOPPED)}
-              loading={startingId === container.id}
-              aria-label={`启动 ${container.container_name}`} onClick={() => void startContainer(container)}
+            <ContainerActionButton
+              icon={<Play size={15} />}
+              label={`启动 ${container.container_name}`}
+              type="primary"
+              disabledReason={disabledReason(startReason)}
+              loading={rowBusy && busyAction?.kind === "start"}
+              onClick={() => void requestContainerAction(container, "start")}
             />
-            <Button icon={<SquareStop size={15} />} theme="borderless" type="danger"
-              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={stoppingId === container.id}
-              aria-label={`停止 ${container.container_name}`} onClick={() => void stopContainer(container)}
+            <ContainerActionButton
+              icon={<SquareStop size={15} />}
+              label={`停止 ${container.container_name}`}
+              type="danger"
+              disabledReason={disabledReason(runningReason)}
+              loading={rowBusy && busyAction?.kind === "stop"}
+              onClick={() => void requestContainerAction(container, "stop")}
             />
-            <Button icon={<Pause size={15} />} theme="borderless" type="tertiary"
-              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={pausingId === container.id}
-              aria-label={`暂停 ${container.container_name}`} onClick={() => void pauseContainer(container)}
+            <ContainerActionButton
+              icon={<Pause size={15} />}
+              label={`暂停 ${container.container_name}`}
+              disabledReason={disabledReason(runningReason)}
+              loading={rowBusy && busyAction?.kind === "pause"}
+              onClick={() => void requestContainerAction(container, "pause")}
             />
-            <Button icon={<RotateCcw size={15} />} theme="borderless" type="primary"
-              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.PAUSED} loading={resumingId === container.id}
-              aria-label={`恢复 ${container.container_name}`} onClick={() => void resumeContainer(container)}
+            <ContainerActionButton
+              icon={<RotateCcw size={15} />}
+              label={`恢复 ${container.container_name}`}
+              type="primary"
+              disabledReason={disabledReason(resumeReason)}
+              loading={rowBusy && busyAction?.kind === "resume"}
+              onClick={() => void requestContainerAction(container, "resume")}
             />
-            <Popconfirm title="删除执行工作区" content={`确定删除 ${container.container_name}？`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteContainer(container)}>
-              <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-                disabled={!canManage} loading={deletingId === container.id} aria-label={`Delete ${container.container_name}`}
-              />
-            </Popconfirm>
+            {deleteDisabledReason ? deleteButton : (
+              <Popconfirm
+                title="删除执行工作区"
+                content={`确定删除 ${container.container_name}？工作区内尚未导出的文件将无法恢复。`}
+                okType="danger"
+                cancelText={UI_TEXT.cancel}
+                onConfirm={() => void requestContainerAction(container, "delete")}
+              >
+                {deleteButton}
+              </Popconfirm>
+            )}
           </RowActions>
         );
       },
@@ -233,13 +320,15 @@ export function SandboxContainersPage() {
       <ResourcePageShell
         searchPlaceholder="搜索工作区、工具基线、所有者或状态"
         keyword={keyword}
+        activeKeyword={activeKeyword}
         loading={loading}
+        error={error}
         metrics={[
           { label: "总数", value: total },
-          { label: "运行中", value: summary.running },
-          { label: "已暂停", value: summary.paused },
-          { label: "已创建", value: summary.created },
-          { label: "已停止", value: summary.stopped },
+          { label: "本页运行中", value: summary.running },
+          { label: "本页已暂停", value: summary.paused },
+          { label: "本页已创建", value: summary.created },
+          { label: "本页已停止", value: summary.stopped },
         ]}
         empty={containers.length === 0}
         emptyIcon={<Boxes size={42} />}
@@ -252,8 +341,10 @@ export function SandboxContainersPage() {
         canGoNext={canGoNext}
         onKeywordChange={setKeyword}
         onSearch={search}
+        onClearSearch={clearSearch}
         onPrevious={previous}
         onNext={next}
+        onRetry={loadContainers}
       >
         <ResourceTable<SandboxContainer>
           ariaLabel="执行工作区"
@@ -275,7 +366,15 @@ export function SandboxContainersPage() {
         usersLoading={usersLoading}
         egressProxies={egressProxies}
         egressProxiesLoading={egressProxiesLoading}
+        optionLoadIssues={[
+          ...(imagesError ? [{ label: "工具基线", message: imagesError }] : []),
+          ...(hostsError ? [{ label: "运行主机", message: hostsError }] : []),
+          ...(usersError ? [{ label: "所有者", message: usersError }] : []),
+          ...(egressProxiesError ? [{ label: "出口代理", message: egressProxiesError }] : []),
+        ]}
+        optionsLoading={imagesLoading || hostsLoading || usersLoading || egressProxiesLoading}
         currentUserId={user?.id ?? 0}
+        onRetryOptions={() => void refreshOptions()}
         onCancel={() => setModalOpen(false)}
         onSubmit={handleCreate}
       />
@@ -283,6 +382,8 @@ export function SandboxContainersPage() {
         container={egressModalContainer}
         egressProxies={egressProxies}
         loading={egressProxiesLoading}
+        error={egressProxiesError}
+        onRetry={() => void loadEgressProxies()}
         onClose={() => setEgressModalContainer(null)}
         onSaved={async () => {
           setEgressModalContainer(null);
@@ -297,60 +398,71 @@ function ContainerEgressModal({
   container,
   egressProxies,
   loading,
+  error,
+  onRetry,
   onClose,
   onSaved,
 }: {
   container: SandboxContainer | null;
   egressProxies: EgressProxy[];
   loading: boolean;
+  error: string;
+  onRetry: () => void;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [selectedProxyId, setSelectedProxyId] = useState<number | undefined>();
-  const [saving, setSaving] = useState(false);
+  const { saving, submit } = useResourceSubmit({ onSuccess: onSaved });
 
   useEffect(() => {
     setEgressMode(container?.egress_mode ?? SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
     setSelectedProxyId(container?.egress_proxy_id ?? undefined);
   }, [container]);
 
-  const save = async () => {
+  const nextProxyId = egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? selectedProxyId : undefined;
+  const currentProxyId = container?.egress_mode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY
+    ? container.egress_proxy_id ?? undefined
+    : undefined;
+  const dirty = Boolean(container) && (
+    egressMode !== container?.egress_mode
+    || nextProxyId !== currentProxyId
+  );
+
+  const save = () => {
     if (!container) return;
-    setSaving(true);
-    try {
-      await updateSandboxContainerEgress(container.id, {
+    return submit(() => (
+      updateSandboxContainerEgress(container.id, {
         egress_mode: egressMode,
-        egress_proxy_id: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? selectedProxyId : undefined,
-      });
-      await onSaved();
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setSaving(false);
-    }
+        egress_proxy_id: nextProxyId,
+      })
+    ));
   };
 
   return (
-    <Modal
+    <ResourceModal
       title={container ? `网络出口：${container.container_name}` : "网络出口"}
-      visible={Boolean(container)}
+      open={Boolean(container)}
       width={460}
-      okText={UI_TEXT.save}
-      cancelText={UI_TEXT.cancel}
-      confirmLoading={saving}
-      okButtonProps={{
-        type: "primary",
-        disabled: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !selectedProxyId,
-      }}
-      onOk={() => void save()}
+      saving={saving}
+      dirty={dirty}
+      submitLabel={UI_TEXT.save}
+      submitDisabled={!dirty || (egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !selectedProxyId)}
+      onSubmit={save}
       onCancel={onClose}
     >
-      <div className="resource-form">
+        {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && error ? (
+          <ResourceFormLoadError
+            issues={[{ label: "出口代理", message: error }]}
+            loading={loading}
+            onRetry={onRetry}
+          />
+        ) : null}
         <label>
           <span>网络出口模式</span>
           <Select
             prefix={<Route size={16} />}
+            aria-label="网络出口模式"
             value={egressMode}
             optionList={[
               { label: "直连", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
@@ -370,6 +482,7 @@ function ContainerEgressModal({
             <span>出口代理</span>
             <Select
               prefix={<Network size={16} />}
+              aria-label="出口代理"
               value={selectedProxyId}
               loading={loading}
               placeholder="选择出口代理"
@@ -379,8 +492,47 @@ function ContainerEgressModal({
             />
           </label>
         ) : null}
-      </div>
-    </Modal>
+    </ResourceModal>
+  );
+}
+
+function ContainerActionButton({
+  disabledReason = "",
+  icon,
+  label,
+  loading = false,
+  onClick,
+  type = "tertiary",
+}: {
+  disabledReason?: string;
+  icon: ReactNode;
+  label: string;
+  loading?: boolean;
+  onClick?: () => void;
+  type?: "primary" | "tertiary" | "danger";
+}) {
+  return (
+    <Tooltip content={disabledReason || label}>
+      <span
+        className="row-action-tooltip-target"
+        tabIndex={disabledReason ? 0 : undefined}
+        role={disabledReason ? "button" : undefined}
+        aria-disabled={disabledReason ? true : undefined}
+        aria-label={disabledReason ? `${label}：${disabledReason}` : undefined}
+      >
+        <Button
+          icon={icon}
+          theme="borderless"
+          type={type}
+          disabled={Boolean(disabledReason)}
+          loading={loading}
+          aria-label={label}
+          aria-hidden={disabledReason ? true : undefined}
+          tabIndex={disabledReason ? -1 : undefined}
+          onClick={onClick}
+        />
+      </span>
+    </Tooltip>
   );
 }
 

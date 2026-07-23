@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +18,7 @@ from schema.toolpack import ExecutionErrorCode, ToolRunRequest, ToolRunStatus
 from service import toolpack
 from service.host.hosts import DEFAULT_LOCAL_HOST_ID
 from service.sandbox.commands import SandboxContainerCommandResult
+from service.sandbox.local_runtime import shell_invocation
 from tests.unit._network_addresses import LOOPBACK_HOST
 
 
@@ -217,6 +221,52 @@ class ToolpackTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("http://example.test/", finished.result.structured["records"][0]["url"])
         command = execute.await_args.args[1]
         self.assertIn("python", command)
+
+    async def test_builtin_local_network_tools_encode_inline_python_scripts(self) -> None:
+        cases = {
+            "local.webcheck": {"url": "http://example.test/"},
+            "local.tls.inspect": {"host": "example.test"},
+            "local.port.scan": {"host": LOOPBACK_HOST, "ports": "80,443"},
+            "local.dns.lookup": {"host": "example.test"},
+            "local.ping": {"host": LOOPBACK_HOST},
+            "local.http.headers": {"url": "http://example.test/"},
+        }
+
+        for tool_id, payload in cases.items():
+            with self.subTest(tool_id=tool_id):
+                args = toolpack._TOOLS[tool_id].build_args(payload)
+                self.assertEqual(["python", "-c"], args[:2])
+                self.assertNotIn("\n", args[2])
+                decoded_script = base64.b64decode(args[3]).decode("utf-8")
+                self.assertIn("import ", decoded_script)
+
+    async def test_tool_input_schemas_publish_runtime_defaults(self) -> None:
+        response = await toolpack.list_toolpack_tools()
+        tools = {item.id: item for item in response.tools}
+
+        webcheck = tools["local.webcheck"].manifest.input_schema["properties"]
+        ping = tools["local.ping"].manifest.input_schema["properties"]
+
+        self.assertEqual("GET", webcheck["method"]["default"])
+        self.assertEqual(10, webcheck["timeout_seconds"]["default"])
+        self.assertEqual(4, ping["count"]["default"])
+        self.assertEqual(2, ping["timeout_seconds"]["default"])
+
+    @unittest.skipUnless(os.name == "nt", "PowerShell quoting is Windows-specific")
+    async def test_python_script_launcher_preserves_script_quotes_and_newlines(self) -> None:
+        script = 'import json\nprint(json.dumps({"value": "quoted"}))'
+        args = toolpack._python_script_args(sys.executable, script, [])
+        command = toolpack._powershell_command(args)
+
+        completed = subprocess.run(
+            shell_invocation(command),
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+
+        self.assertEqual(0, completed.returncode, completed.stderr.decode(errors="replace"))
+        self.assertEqual({"value": "quoted"}, toolpack.json.loads(completed.stdout.decode().strip()))
 
     async def test_system_info_tool_run_uses_builtin_python_script(self) -> None:
         command_result = SandboxContainerCommandResult(

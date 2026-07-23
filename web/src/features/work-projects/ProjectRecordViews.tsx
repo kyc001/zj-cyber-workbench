@@ -1,6 +1,6 @@
-import { Empty, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
+import { Empty, Spin, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
 import { Boxes, Bug, FileText, Network, Route, ShieldAlert } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, type ReactNode } from "react";
 import { WORK_PROJECT_ASSET_TYPE } from "../../shared/api/contract";
 import type {
   WorkProjectAsset,
@@ -23,10 +23,13 @@ import {
   WORK_PROJECT_FINDING_STATUS_COLOR,
   WORK_PROJECT_FINDING_STATUS_LABEL,
 } from "../../shared/lib/labels";
-import { ProjectGraphCanvas } from "./ProjectGraphCanvas";
 import { CveDiscoveryPanel } from "./CveDiscoveryPanel";
 import { filledDetailItems, type DetailItem } from "./workProjectDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
+
+const ProjectGraphCanvas = lazy(() => import("./ProjectGraphCanvas").then((module) => ({
+  default: module.ProjectGraphCanvas,
+})));
 
 export type ProjectRecordTab = "assets" | "findings" | "cve" | "attack-paths" | "graph";
 
@@ -50,6 +53,7 @@ export function WorkProjectRecordTabs({
       type="line"
       className={cx("project-record-tabs", className)}
       defaultActiveKey={initialTab}
+      lazyRender
     >
       <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="资产" />} itemKey="assets">
         <AssetList assets={records.assets} />
@@ -166,7 +170,18 @@ export function AttackPathList({ assets, graph }: { assets: WorkProjectAsset[]; 
 
 export function GraphView({ assets, graph }: { assets: WorkProjectAsset[]; graph: WorkProjectGraphSnapshot }) {
   if (!assets.length) return <RecordEmpty title="暂无可绘制的资产。" />;
-  return <ProjectGraphCanvas assets={assets} edges={graph.edges} />;
+  return (
+    <Suspense
+      fallback={(
+        <div className="project-graph-loading" role="status" aria-live="polite">
+          <Spin spinning />
+          <span>正在加载关系图</span>
+        </div>
+      )}
+    >
+      <ProjectGraphCanvas assets={assets} edges={graph.edges} />
+    </Suspense>
+  );
 }
 
 function useAssetLabels(assets: WorkProjectAsset[]) {

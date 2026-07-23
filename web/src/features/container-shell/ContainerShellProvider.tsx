@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button, Modal, Toast } from "@douyinfe/semi-ui";
 import { Maximize2, Minimize2, Minus, Monitor, FolderOpen, SquareTerminal, X } from "lucide-react";
 import {
   CSSProperties,
@@ -76,12 +76,16 @@ type NoVNCWindowState = WindowStateBase & {
 type FileManagerWindowState = WindowStateBase & {
   containerId: number;
   containerName: string;
+  hasUnsavedChanges: boolean;
+  initialPath: string;
+  navigationKey: number;
   isMaximized: boolean;
   restoreRect: Rect | null;
 };
 
 type ContainerShellContextValue = {
-  openFileManager: (container: SandboxContainer) => void;
+  fileManagerDirty: boolean;
+  openFileManager: (container: SandboxContainer, initialPath?: string) => void;
   openHostShell: (host: ManagedHost) => void;
   openNoVNC: (container: SandboxContainer) => void;
   openShell: (container: SandboxContainer) => void;
@@ -143,6 +147,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   const noVNCDragRef = useRef<DragState | null>(null);
   const fileManagerDragRef = useRef<DragState | null>(null);
   const fileManagerResizeRef = useRef<ResizeState | null>(null);
+  const fileManagerClosePromptRef = useRef(false);
 
   useLayoutEffect(() => {
     noVNCRef.current = noVNC;
@@ -180,7 +185,14 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openShell = useCallback((container: SandboxContainer) => {
-    if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
+    if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING) {
+      Toast.warning("请先启动执行工作区");
+      return;
+    }
+    if (container.control_proxy_host_port <= 0) {
+      Toast.warning("执行工作区的终端服务尚未就绪");
+      return;
+    }
     openShellTarget({
       key: `container:${container.id}`,
       title: `Workspace · ${container.container_name}`,
@@ -237,11 +249,43 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const closeFileManager = useCallback(() => {
+  const discardAndCloseFileManager = useCallback(() => {
     fileManagerDragRef.current = null;
     fileManagerResizeRef.current = null;
     fileManagerRef.current = null;
     setFileManager(null);
+  }, []);
+
+  const closeFileManager = useCallback(() => {
+    if (!fileManagerRef.current?.hasUnsavedChanges) {
+      discardAndCloseFileManager();
+      return;
+    }
+    if (fileManagerClosePromptRef.current) return;
+    fileManagerClosePromptRef.current = true;
+    Modal.confirm({
+      title: "放弃未保存的文件修改？",
+      content: "关闭文件管理器后，本次编辑内容将无法恢复。",
+      okType: "danger",
+      okText: "放弃并关闭",
+      cancelText: "继续编辑",
+      onOk: () => {
+        fileManagerClosePromptRef.current = false;
+        discardAndCloseFileManager();
+      },
+      onCancel: () => {
+        fileManagerClosePromptRef.current = false;
+      },
+    });
+  }, [discardAndCloseFileManager]);
+
+  const updateFileManagerDirty = useCallback((dirty: boolean) => {
+    setFileManager((current) => {
+      if (!current || current.hasUnsavedChanges === dirty) return current;
+      const next = { ...current, hasUnsavedChanges: dirty };
+      fileManagerRef.current = next;
+      return next;
+    });
   }, []);
 
   const minimizeFileManager = useCallback(() => {
@@ -265,11 +309,37 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const openFileManager = useCallback((container: SandboxContainer) => {
-    if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
+  const openFileManager = useCallback((
+    container: SandboxContainer,
+    initialPath = "/",
+    navigate = true,
+  ) => {
+    if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING) {
+      Toast.warning("请先启动执行工作区");
+      return;
+    }
+    if (container.control_proxy_host_port <= 0) {
+      Toast.warning("执行工作区的文件服务尚未就绪");
+      return;
+    }
+    const currentManager = fileManagerRef.current;
+    if (currentManager?.hasUnsavedChanges && (
+      currentManager.containerId !== container.id || navigate
+    )) {
+      Toast.warning("请先保存或放弃文件修改");
+      setFileManager((current) => current ? { ...current, dockState: "normal" } : current);
+      return;
+    }
     setFileManager((current) => {
       if (current?.containerId === container.id) {
-        const next = { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" as DockState };
+        const next = {
+          ...current,
+          title: container.container_name,
+          containerName: container.container_name,
+          initialPath: navigate ? initialPath : current.initialPath,
+          navigationKey: navigate ? current.navigationKey + 1 : current.navigationKey,
+          dockState: "normal" as DockState,
+        };
         fileManagerRef.current = next;
         return next;
       }
@@ -277,6 +347,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         containerId: container.id,
         title: container.container_name,
         containerName: container.container_name,
+        hasUnsavedChanges: false,
+        initialPath,
+        navigationKey: 0,
         dockState: "normal",
         isMaximized: false,
         restoreRect: null,
@@ -291,7 +364,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     const currentFileManager = fileManagerRef.current;
     const currentNoVNC = noVNCRef.current;
     if (currentFileManager) {
-      if (container && container.status === SANDBOX_CONTAINER_STATUS.RUNNING && container.control_proxy_host_port > 0) openFileManager(container);
+      if (container && container.status === SANDBOX_CONTAINER_STATUS.RUNNING && container.control_proxy_host_port > 0) {
+        openFileManager(container, currentFileManager.initialPath, false);
+      }
       else closeFileManager();
     }
     if (currentNoVNC) {
@@ -350,8 +425,15 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, [onPointerMove, stopPointerAction]);
 
   const contextValue = useMemo<ContainerShellContextValue>(
-    () => ({ openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows }),
-    [openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows],
+    () => ({
+      fileManagerDirty: Boolean(fileManager?.hasUnsavedChanges),
+      openFileManager,
+      openHostShell,
+      openNoVNC,
+      openShell,
+      syncContainerWindows,
+    }),
+    [fileManager?.hasUnsavedChanges, openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows],
   );
 
   return (
@@ -425,7 +507,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
             )}
           >
             <Suspense fallback={<div className="file-manager-loading">正在加载文件...</div>}>
-              <ContainerFileManager containerId={fileManager.containerId} />
+              <ContainerFileManager
+                containerId={fileManager.containerId}
+                initialPath={fileManager.initialPath}
+                navigationKey={fileManager.navigationKey}
+                onDirtyChange={updateFileManagerDirty}
+              />
             </Suspense>
           </FloatingWindow>
           {fileManager.dockState === "minimized" ? (

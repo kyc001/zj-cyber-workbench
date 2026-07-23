@@ -7,7 +7,9 @@ export function useResourceAction<Item extends { id: string | number }>(
   onAfter?: () => void | Promise<void>,
 ) {
   const [busyId, setBusyId] = useState<Item["id"] | null>(null);
+  const [busyItem, setBusyItem] = useState<Item | null>(null);
   const mountedRef = useRef(true);
+  const busyIdRef = useRef<Item["id"] | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -18,8 +20,10 @@ export function useResourceAction<Item extends { id: string | number }>(
 
   const run = useCallback(
     async (item: Item) => {
-      if (busyId !== null) return;
+      if (busyIdRef.current !== null) return;
+      busyIdRef.current = item.id;
       setBusyId(item.id);
+      setBusyItem(item);
       try {
         const response = await action(item);
         if (!mountedRef.current) return;
@@ -28,11 +32,15 @@ export function useResourceAction<Item extends { id: string | number }>(
       } catch (error) {
         if (mountedRef.current) showApiError(error);
       } finally {
-        if (mountedRef.current) setBusyId(null);
+        busyIdRef.current = null;
+        if (mountedRef.current) {
+          setBusyId(null);
+          setBusyItem(null);
+        }
       }
     },
-    [action, busyId, onAfter],
+    [action, onAfter],
   );
 
-  return { run, busyId };
+  return { run, busyId, busyItem };
 }
