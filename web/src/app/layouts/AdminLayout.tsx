@@ -1,5 +1,5 @@
-import { Avatar, SideSheet } from "@douyinfe/semi-ui";
-import { BookOpenText, Box, Boxes, Eye, FolderKanban, MessageCircleMore, MessageSquareCode, Network, Server, Settings, Users, Wrench } from "lucide-react";
+import { Avatar, Button, SideSheet } from "@douyinfe/semi-ui";
+import { BookOpenText, Box, Boxes, Eye, FolderKanban, LogOut, MessageCircleMore, MessageSquareCode, Network, Server, Settings, Users, Wrench } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
@@ -39,7 +39,7 @@ const navItems = [
 const MOBILE_LAYOUT_QUERY = "(max-width: 900px)";
 
 export function AdminLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [headerActions, setHeaderActionsState] = useState<ReactNode>(null);
@@ -101,13 +101,17 @@ export function AdminLayout() {
     }
   }, [location.pathname, navigate, selectSession]);
 
+  const handleLogout = useCallback(() => {
+    logout();
+    navigate("/", { replace: true });
+  }, [logout, navigate]);
+
   const outletContext = useMemo<AdminLayoutContext>(
     () => ({ setHeaderActions, refreshWorkProjects }),
     [refreshWorkProjects, setHeaderActions],
   );
 
-  const isAdmin = user?.role === "admin";
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNavItems = navItems;
   const activeItem = visibleNavItems.find((item) => location.pathname.startsWith(item.path));
   const contentMode = location.pathname.startsWith("/playground") ? "fixed" : "scroll";
   const sessionList = (
@@ -231,6 +235,14 @@ export function AdminLayout() {
             {headerActions ? <div className="topbar-resource-actions">{headerActions}</div> : null}
             <div className="topbar-session-actions">
               <RuntimePermissionControl />
+              <Button
+                icon={<LogOut size={15} />}
+                theme="borderless"
+                type="tertiary"
+                aria-label="退出登录"
+                title="退出登录"
+                onClick={handleLogout}
+              />
               <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
             </div>
           </div>

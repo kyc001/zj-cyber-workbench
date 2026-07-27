@@ -10,7 +10,11 @@ from handler.skill_hub import (
 from middleware.auth import require_admin
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, CONFLICT_RESPONSE
 from schema.common.responses import CommonResponse
-from schema.skill_hub import HubSkillDetailSchema, HubSkillListSchema, InstallHubSkillResponse
+from schema.skill_hub import (
+    HubSkillDetailSchema,
+    HubSkillListSchema,
+    InstallHubSkillResponse,
+)
 
 router = APIRouter(prefix="/skill-hub", tags=["skill-hub"])
 

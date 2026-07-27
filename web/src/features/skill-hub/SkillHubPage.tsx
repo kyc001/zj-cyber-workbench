@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Star,
   Trash2,
+  UserCircle,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -21,11 +22,13 @@ import {
   type HubSkillSummary,
   type InstalledHubSkill,
 } from "../../shared/api/skillHub";
+import { useAuth } from "../../shared/auth/AuthProvider";
 import "./skill-hub.css";
 
 const PORTAL_URL = import.meta.env.VITE_SKILL_HUB_PORTAL_URL || "http://118.31.221.165:3011";
 
 export function SkillHubPage() {
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
   const [sort, setSort] = useState("recent");
@@ -203,13 +206,21 @@ export function SkillHubPage() {
           </form>
         </div>
         <div className="zj-hub-hero-actions">
-          <Button icon={<RefreshCw size={16} />} loading={loading} onClick={loadSkills}>刷新</Button>
-          <Button
-            icon={<ExternalLink size={16} />}
-            onClick={() => window.open(PORTAL_URL, "_blank", "noopener,noreferrer")}
-          >
-            打开发布门户
-          </Button>
+          <div className="zj-hub-action-row">
+            <Button icon={<RefreshCw size={16} />} loading={loading} onClick={loadSkills}>刷新</Button>
+            <Button
+              icon={<ExternalLink size={16} />}
+              onClick={() => window.open(PORTAL_URL, "_blank", "noopener,noreferrer")}
+            >
+              打开发布门户
+            </Button>
+          </div>
+          <section className="zj-hub-auth-panel" aria-label="Skill Hub 身份状态">
+            <span className="zj-hub-auth-status"><UserCircle size={16} />已接入主工作台身份</span>
+            <strong>{user?.display_name || user?.username || "当前用户"}</strong>
+            <small>{user?.email || "desktop@localhost"} · {user?.role || "user"}</small>
+            <p>Skill Hub 的浏览、安装和卸载权限由当前工作台账号统一控制。</p>
+          </section>
         </div>
       </section>
 

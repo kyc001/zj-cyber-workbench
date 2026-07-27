@@ -26,6 +26,7 @@ from middleware.response import (
 from router.agent.agents import router as agent_router
 from router.agent.sessions import router as agent_session_router
 from router.approval import router as approval_router
+from router.auth import router as auth_router
 from router.common.fallback import api_not_found_router
 from router.desktop import router as desktop_router
 from router.egress_proxy.proxies import router as egress_proxy_router
@@ -169,6 +170,7 @@ def create_app() -> FastAPI:
     app.add_middleware(LocalIdentityMiddleware)
     logger.debug("middleware added")
 
+    app.include_router(auth_router, prefix=API_PREFIX)
     app.include_router(system_user_router, prefix=API_PREFIX)
     app.include_router(host_router, prefix=API_PREFIX)
     app.include_router(egress_proxy_router, prefix=API_PREFIX)

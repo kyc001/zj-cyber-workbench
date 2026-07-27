@@ -154,9 +154,21 @@ async def uninstall_hub_skill(name: str) -> None:
 
 
 async def _hub_json(path: str, *, params: dict[str, Any] | None = None) -> Any:
+    return await _hub_request_json("GET", path, params=params)
+
+
+async def _hub_request_json(
+    method: str,
+    path: str,
+    *,
+    params: dict[str, Any] | None = None,
+    json_payload: dict[str, Any] | None = None,
+    bearer_token: str = "",
+) -> Any:
+    headers = {"Authorization": f"Bearer {bearer_token}"} if bearer_token else None
     try:
         async with httpx.AsyncClient(base_url=skill_hub_base_url(), timeout=15, follow_redirects=False) as client:
-            response = await client.get(path, params=params)
+            response = await client.request(method, path, params=params, json=json_payload, headers=headers)
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
@@ -164,10 +176,13 @@ async def _hub_json(path: str, *, params: dict[str, Any] | None = None) -> Any:
         ) from exc
     if response.status_code == HTTPStatus.NOT_FOUND.value:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND.value, detail="Skill Hub resource not found")
+    if response.status_code in (HTTPStatus.UNAUTHORIZED.value, HTTPStatus.FORBIDDEN.value, HTTPStatus.CONFLICT.value):
+        detail = _response_detail(response) or f"Skill Hub returned HTTP {response.status_code}"
+        raise HTTPException(status_code=response.status_code, detail=detail)
     if response.status_code >= HTTPStatus.BAD_REQUEST.value:
         raise HTTPException(
             status_code=HTTPStatus.BAD_GATEWAY.value,
-            detail=f"Skill Hub returned HTTP {response.status_code}",
+            detail=_response_detail(response) or f"Skill Hub returned HTTP {response.status_code}",
         )
     try:
         return response.json()
@@ -176,6 +191,15 @@ async def _hub_json(path: str, *, params: dict[str, Any] | None = None) -> Any:
             status_code=HTTPStatus.BAD_GATEWAY.value,
             detail="Skill Hub returned an invalid JSON response",
         ) from exc
+
+
+def _response_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return ""
+    detail = payload.get("detail") if isinstance(payload, dict) else None
+    return detail if isinstance(detail, str) else ""
 
 
 async def _download_package(namespace: str, slug: str, version: str) -> bytes:

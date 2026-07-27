@@ -3,11 +3,17 @@
 import asyncio
 from typing import Any
 
-from fastapi import WebSocket, status as ws_status
+from fastapi import WebSocket
+from fastapi import status as ws_status
 
 from logger import get_logger
 from middleware.auth import AuthUser, local_desktop_user
-
+from service.auth import (
+    bearer_token_from_header,
+    ensure_local_user_for_remote,
+    remote_auth_enabled,
+    resolve_remote_user,
+)
 
 logger = get_logger(__name__)
 
@@ -43,7 +49,7 @@ async def finish_ws_reader_task(task: asyncio.Task | None) -> None:
         return
     try:
         await asyncio.wait_for(asyncio.shield(task), timeout=1)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         await cancel_ws_task(task)
     except asyncio.CancelledError:
         raise
@@ -53,7 +59,20 @@ async def finish_ws_reader_task(task: asyncio.Task | None) -> None:
 
 async def authenticate_local_websocket(websocket: WebSocket) -> AuthUser | None:
     """Resolve the single local desktop identity for a WebSocket."""
-    del websocket
+    if remote_auth_enabled():
+        token = websocket.query_params.get("access_token", "")
+        if not token:
+            token = bearer_token_from_header(websocket.headers.get("authorization"))
+        if not token:
+            return None
+        remote_user = await resolve_remote_user(token)
+        current_user = await ensure_local_user_for_remote(remote_user)
+        return AuthUser(
+            id=current_user.id,
+            role=current_user.role,
+            email=current_user.email,
+            username=current_user.username,
+        )
     return await local_desktop_user()
 
 

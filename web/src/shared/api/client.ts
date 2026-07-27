@@ -1,4 +1,5 @@
 import type { CommonResponsePayload } from "./types";
+import { getStoredAccessToken } from "../auth/session";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -45,6 +46,8 @@ function parseCommonResponseError(response: Response, parsed: unknown) {
 
 export async function apiRequest<ResponsePayload>(path: string, options: RequestOptions = {}) {
   const headers = new Headers({ Accept: "application/json" });
+  const token = getStoredAccessToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (options.body !== undefined) {
     headers.set("Content-Type", "application/json");
   }
@@ -86,6 +89,8 @@ export function apiDelete<ResponsePayload>(path: string) {
 
 async function rawApiRequest(path: string, options: RawRequestOptions = {}) {
   const headers = new Headers(options.headers);
+  const token = getStoredAccessToken();
+  if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
   try {
     return await fetch(path, {
       method: options.method || "GET",
@@ -126,7 +131,10 @@ export async function apiBlob(path: string) {
 
 export function buildWebSocketUrl(path: string) {
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${wsScheme}://${window.location.host}${path}`;
+  const url = new URL(`${wsScheme}://${window.location.host}${path}`);
+  const token = getStoredAccessToken();
+  if (token) url.searchParams.set("access_token", token);
+  return url.toString();
 }
 
 function parseContentDispositionFilename(header: string | null) {

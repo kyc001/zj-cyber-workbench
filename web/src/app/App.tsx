@@ -23,6 +23,7 @@ import {
   loadWorkProjectWorkspacePage,
   loadWorkProjectsPage,
 } from "./routePreload";
+import { LoginPage } from "../features/auth/LoginPage";
 
 function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends keyof TModule>(
   loader: () => Promise<TModule>,
@@ -48,16 +49,12 @@ const SystemUsersPage = lazyRoute(loadSystemUsersPage, "SystemUsersPage");
 function ProtectedRoute() {
   const { isAuthenticated, ready } = useAuth();
   if (!ready) return <RouteFallback />;
-  if (!isAuthenticated) return <LocalSessionUnavailable />;
+  if (!isAuthenticated) return <LoginPage />;
   return <Outlet />;
 }
 
 function AdminOnlyRoute() {
-  const { user } = useAuth();
   const outletContext = useOutletContext();
-  if (user?.role !== "admin") {
-    return <Navigate to="/playground" replace />;
-  }
   return <Outlet context={outletContext} />;
 }
 
