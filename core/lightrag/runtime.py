@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import partial
 
+import httpx
+import numpy as np
 from lightrag import LightRAG, QueryParam, RoleLLMConfig
 from lightrag.llm.openai import openai_complete, openai_embed
 from lightrag.utils import EmbeddingFunc
@@ -66,6 +69,46 @@ async def _configured_openai_embed(*args, base_url: str = "", **kwargs):
         base_url=_require_provider_url(base_url, "LightRAG 嵌入模型"),
         **kwargs,
     )
+
+
+def _is_minimax_api(base_url: str) -> bool:
+    return "minimax" in base_url.lower()
+
+
+async def _configured_minimax_embed(
+    texts: list[str],
+    model: str = "embo-01",
+    base_url: str = "",
+    api_key: str = "",
+    embedding_dim: int | None = None,
+    context: str = "document",
+    **_: object,
+) -> np.ndarray:
+    url = f"{_require_provider_url(base_url, 'LightRAG embedding')}/embeddings"
+    embedding_type = "query" if context == "query" else "db"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {"model": model, "type": embedding_type, "texts": texts}
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    data = response.json()
+    base_resp = data.get("base_resp") if isinstance(data, dict) else None
+    if isinstance(base_resp, dict) and base_resp.get("status_code") not in (0, None):
+        raise RuntimeError(f"MiniMax embedding failed: {base_resp.get('status_msg')}")
+    vectors = data.get("vectors") if isinstance(data, dict) else None
+    if not isinstance(vectors, list):
+        raise RuntimeError("MiniMax embedding response did not include vectors")
+    embeddings = np.asarray(vectors, dtype=np.float32)
+    if embeddings.ndim != 2:
+        raise RuntimeError("MiniMax embedding response has invalid vector shape")
+    if embedding_dim is not None and embeddings.shape[1] != embedding_dim:
+        raise RuntimeError(
+            f"MiniMax embedding dimension mismatch: expected {embedding_dim}, got {embeddings.shape[1]}"
+        )
+    return embeddings
 
 
 async def start_lightrag() -> None:
@@ -252,6 +295,10 @@ def _format_lightrag_context(context: str) -> str:
 
 def _build_lightrag(cfg: LightRAGConfig) -> LightRAG:
     LIGHTRAG_WORKING_DIR.mkdir(parents=True, exist_ok=True)
+    LIGHTRAG_INPUT_DIR.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("INPUT_DIR", str(LIGHTRAG_INPUT_DIR))
+    embedding_model = "embo-01" if _is_minimax_api(cfg.embedding_api) else cfg.embedding_model
+    embedding_func = _configured_minimax_embed if _is_minimax_api(cfg.embedding_api) else _configured_openai_embed
 
     extraction_llm = partial(
         _configured_openai_complete,
@@ -269,11 +316,11 @@ def _build_lightrag(cfg: LightRAGConfig) -> LightRAG:
         embedding_func=EmbeddingFunc(
             embedding_dim=cfg.embedding_dim,
             max_token_size=8192,
-            model_name=cfg.embedding_model,
+            model_name=embedding_model,
             supports_asymmetric=True,
             func=partial(
-                _configured_openai_embed,
-                model=cfg.embedding_model,
+                embedding_func,
+                model=embedding_model,
                 base_url=cfg.embedding_api,
                 api_key=cfg.embedding_key or "unused",
                 embedding_dim=cfg.embedding_dim,

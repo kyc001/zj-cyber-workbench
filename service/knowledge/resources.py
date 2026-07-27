@@ -26,7 +26,6 @@ from schema.knowledge.resources import (
     UploadKnowledgeDocumentsResponse,
 )
 
-
 MAX_KNOWLEDGE_DOCUMENT_BYTES = 25 * 1024 * 1024
 MAX_KNOWLEDGE_DOCUMENT_BATCH_SIZE = 50
 MAX_KNOWLEDGE_FILENAME_BYTES = 255
@@ -324,16 +323,25 @@ def _knowledge_document_schema(document_id: str, document: Any) -> KnowledgeDocu
 
 
 def _knowledge_vector_schema(row: dict[str, Any], dimension: int) -> KnowledgeVectorSchema:
+    row_id = row.get("id") or row.get("_id") or row.get("__id__")
+    created_at = row.get("create_time") or row.get("created_at") or row.get("__created_at__")
+    updated_at = (
+        row.get("update_time")
+        or row.get("updated_at")
+        or row.get("create_time")
+        or row.get("created_at")
+        or row.get("__created_at__")
+    )
     return KnowledgeVectorSchema(
-        id=str(row["id"]),
+        id=str(row_id),
         document_id=str(row["full_doc_id"]),
         chunk_index=max(int(row.get("chunk_order_index") or 0), 0),
         tokens=max(int(row.get("tokens") or 0), 0),
         content=str(row.get("content") or ""),
         file_name=Path(str(row.get("file_path") or "unknown")).name,
         dimension=dimension,
-        created_at=row.get("create_time") or row.get("created_at"),
-        updated_at=row.get("update_time") or row.get("create_time") or row.get("created_at"),
+        created_at=created_at,
+        updated_at=updated_at,
     )
 
 
@@ -599,5 +607,5 @@ def _knowledge_graph_from_search_result(
 
 def _knowledge_relationship_id(source: str, target: str) -> str:
     left, right = sorted((source, target))
-    digest = hashlib.sha256(f"{left}\0{right}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{left}\0{right}".encode()).hexdigest()
     return f"knowledge-relation:{digest}"

@@ -209,6 +209,12 @@ def _apply_provider_environment(cfg: GlobalConfig) -> None:
         cfg.lightrag.llm_key = api_key
     if model:
         cfg.lightrag.llm_model = model
+    if (
+        base_url
+        and "minimax" in base_url.lower()
+        and cfg.lightrag.embedding_model == "text-embedding-3-small"
+    ):
+        cfg.lightrag.embedding_model = "embo-01"
 
 
 def ensure_config_file() -> None:

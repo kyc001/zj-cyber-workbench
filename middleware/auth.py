@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from http import HTTPStatus
 
@@ -23,6 +24,11 @@ class AuthUser:
     role: SystemUserRole
     email: str
     username: str
+
+
+_REMOTE_AUTH_CACHE_TTL_SECONDS = 60
+_REMOTE_AUTH_CACHE_MAX_SIZE = 512
+_remote_auth_cache: dict[str, tuple[float, AuthUser]] = {}
 
 
 async def local_desktop_user() -> AuthUser | None:
@@ -52,14 +58,18 @@ class LocalIdentityMiddleware(BaseHTTPMiddleware):
                 token = bearer_token_from_header(request.headers.get("authorization"))
                 if not token:
                     raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="authentication required")
-                remote_user = await resolve_remote_user(token)
-                current_user = await ensure_local_user_for_remote(remote_user)
-                request.state.system_user = AuthUser(
-                    id=current_user.id,
-                    role=current_user.role,
-                    email=current_user.email,
-                    username=current_user.username,
-                )
+                cached_user = _cached_remote_auth_user(token)
+                if cached_user is None:
+                    remote_user = await resolve_remote_user(token)
+                    current_user = await ensure_local_user_for_remote(remote_user)
+                    cached_user = AuthUser(
+                        id=current_user.id,
+                        role=current_user.role,
+                        email=current_user.email,
+                        username=current_user.username,
+                    )
+                    _remember_remote_auth_user(token, cached_user)
+                request.state.system_user = cached_user
             else:
                 user = await local_desktop_user()
                 if user is None:
@@ -96,3 +106,26 @@ def _is_api_request(request: Request) -> bool:
 
 def _is_auth_request(request: Request) -> bool:
     return request.url.path == "/api/auth" or request.url.path.startswith("/api/auth/")
+
+
+def _cached_remote_auth_user(token: str) -> AuthUser | None:
+    cached = _remote_auth_cache.get(token)
+    if cached is None:
+        return None
+    expires_at, user = cached
+    if expires_at <= time.monotonic():
+        _remote_auth_cache.pop(token, None)
+        return None
+    return user
+
+
+def _remember_remote_auth_user(token: str, user: AuthUser) -> None:
+    now = time.monotonic()
+    if len(_remote_auth_cache) >= _REMOTE_AUTH_CACHE_MAX_SIZE:
+        expired_tokens = [key for key, (expires_at, _) in _remote_auth_cache.items() if expires_at <= now]
+        for key in expired_tokens:
+            _remote_auth_cache.pop(key, None)
+        if len(_remote_auth_cache) >= _REMOTE_AUTH_CACHE_MAX_SIZE:
+            oldest_key = min(_remote_auth_cache, key=lambda key: _remote_auth_cache[key][0])
+            _remote_auth_cache.pop(oldest_key, None)
+    _remote_auth_cache[token] = (now + _REMOTE_AUTH_CACHE_TTL_SECONDS, user)
