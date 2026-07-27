@@ -92,6 +92,11 @@ const AGENT_TEXT_FIELDS: AgentTextField[] = [
 const EMPTY_PROVIDER: ProviderDraft = { base_url: "", api_key: "", model: "" };
 const SKILL_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
+function selectAvailableModel(currentModel: string, fetchedModels: string[]) {
+  if (!fetchedModels.length || fetchedModels.includes(currentModel)) return currentModel;
+  return fetchedModels[0];
+}
+
 function toFormValue(config: InstanceConfig): ConfigFormValue {
   if (!config.agent_pool || !config.agent_runtime || !config.permissions || !config.lightrag) {
     throw new Error("实例配置不完整");
@@ -274,7 +279,23 @@ export function SystemConfigPage() {
   };
 
   const discardConfigChanges = useCallback(() => {
-    if (savedValues) setValues(cloneFormValue(savedValues));
+    if (!savedValues) return;
+    const restoredValues = cloneFormValue(savedValues);
+    const firstAgent = restoredValues.agents[0];
+    sharedModelsRequestRef.current += 1;
+    agentModelsRequestRef.current += 1;
+    sharedModelsBusyRef.current = false;
+    agentModelsBusyRef.current = false;
+    setValues(restoredValues);
+    setSharedProvider(firstAgent ? {
+      base_url: firstAgent.base_url,
+      api_key: firstAgent.api_key,
+      model: firstAgent.model,
+    } : EMPTY_PROVIDER);
+    setSharedModels([]);
+    setAgentModels({});
+    setSharedModelsLoading(false);
+    setLoadingAgentCode(null);
   }, [savedValues]);
 
   const handleCancel = useCallback(() => {
@@ -322,7 +343,20 @@ export function SystemConfigPage() {
     try {
       const models = await loadProviderModels(sharedProvider);
       if (!mountedRef.current || sharedModelsRequestRef.current !== requestId) return;
+      const selectedModel = selectAvailableModel(sharedProvider.model, models);
       setSharedModels(models);
+      setAgentModels(Object.fromEntries(
+        (values?.agents ?? []).map((agent) => [agent.code, models]),
+      ));
+      setSharedProvider((current) => (
+        selectedModel === current.model ? current : { ...current, model: selectedModel }
+      ));
+      setValues((current) => current && {
+        ...current,
+        agents: current.agents.map((agent) => (
+          selectedModel === agent.model ? agent : { ...agent, model: selectedModel }
+        )),
+      });
       models.length ? Toast.success(`已拉取 ${models.length} 个模型`) : Toast.warning("Provider 未返回可用模型");
     } catch (error) {
       if (mountedRef.current && sharedModelsRequestRef.current === requestId) showApiError(error);
@@ -332,7 +366,7 @@ export function SystemConfigPage() {
         if (mountedRef.current) setSharedModelsLoading(false);
       }
     }
-  }, [loadProviderModels, sharedProvider]);
+  }, [loadProviderModels, sharedProvider, values?.agents]);
 
   const handleSharedProviderChange = useCallback((patch: Partial<ProviderDraft>) => {
     if ("base_url" in patch || "api_key" in patch) {
@@ -342,6 +376,12 @@ export function SystemConfigPage() {
       setSharedModels([]);
     }
     setSharedProvider((current) => ({ ...current, ...patch }));
+    if ("model" in patch) {
+      setValues((current) => current && {
+        ...current,
+        agents: current.agents.map((agent) => ({ ...agent, model: patch.model ?? "" })),
+      });
+    }
   }, []);
 
   const handleApplySharedProvider = useCallback(() => {
@@ -365,6 +405,14 @@ export function SystemConfigPage() {
       const models = await loadProviderModels(agent);
       if (!mountedRef.current || agentModelsRequestRef.current !== requestId) return;
       setAgentModels((current) => ({ ...current, [agent.code]: models }));
+      setValues((current) => current && {
+        ...current,
+        agents: current.agents.map((item) => {
+          if (item.code !== agent.code) return item;
+          const model = selectAvailableModel(item.model, models);
+          return model === item.model ? item : { ...item, model };
+        }),
+      });
       models.length ? Toast.success(`已为 ${agent.name} 拉取 ${models.length} 个模型`) : Toast.warning("Provider 未返回可用模型");
     } catch (error) {
       if (mountedRef.current && agentModelsRequestRef.current === requestId) showApiError(error);
@@ -1109,11 +1157,17 @@ function ModelSelectField({ label, value, models, loading, onChange, onFetch }: 
   onFetch: () => void;
 }) {
   const options = Array.from(new Set([value, ...models].filter(Boolean)));
+  // Semi Select keeps an internal option cache. With `filter` and `allowCreate`
+  // enabled, updating optionList alone can leave an already mounted selector
+  // showing the pre-fetch options. Remount only when the fetched model set
+  // changes so the popup and its search index are rebuilt from the new list.
+  const modelSetKey = JSON.stringify(models);
   return (
     <label className="field">
       <span>{label}</span>
       <div className="model-select-row">
         <Select
+          key={modelSetKey}
           value={value}
           filter
           allowCreate

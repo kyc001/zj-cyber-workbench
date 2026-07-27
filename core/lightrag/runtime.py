@@ -7,6 +7,7 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import partial
+from pathlib import Path
 
 import httpx
 import numpy as np
@@ -23,7 +24,24 @@ logger = get_logger(__name__)
 
 LIGHTRAG_WORKSPACE = "zj"
 LIGHTRAG_WORKING_DIR = WORKSPACE / "lightrag"
-LIGHTRAG_INPUT_DIR = LIGHTRAG_WORKING_DIR / "inputs"
+
+
+def _configure_lightrag_input_dir(default_dir: Path) -> Path:
+    """Keep ZJ uploads and LightRAG's parser source lookup on one directory."""
+    configured = os.environ.get("INPUT_DIR", "").strip()
+    input_dir = (
+        Path(configured).expanduser().resolve()
+        if configured
+        else default_dir.expanduser().resolve()
+    )
+    # LightRAG resolves pending-parse source files through its INPUT_DIR
+    # environment setting. Export the absolute path even for ZJ's default so
+    # files written by the upload service can be found by background workers.
+    os.environ["INPUT_DIR"] = str(input_dir)
+    return input_dir
+
+
+LIGHTRAG_INPUT_DIR = _configure_lightrag_input_dir(LIGHTRAG_WORKING_DIR / "inputs")
 
 _NO_CONTEXT_SUFFIX = "[no-context]"
 _RAG_CONTEXT_HEADER = "# Current-Turn RAG Context"
