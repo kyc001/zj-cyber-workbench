@@ -55,7 +55,7 @@ async def login(request: LoginRequest) -> CommonResponse[AuthSessionSchema]:
 async def start_desktop_session() -> CommonResponse[AuthSessionSchema]:
     """Start a local desktop session regardless of auth mode.
 
-    This endpoint always creates a desktop session using the built‑in
+    This endpoint always creates a desktop session using the built-in
     desktop identity.  It is used by the login page's "本机模式" tab so
     operators can enter the workbench without Skill Hub credentials.
     """
@@ -78,6 +78,20 @@ async def start_desktop_session() -> CommonResponse[AuthSessionSchema]:
             auth_mode="desktop",
         ),
     ))
+
+
+@router.post("/logout", response_model=CommonResponse)
+async def logout() -> CommonResponse:
+    """Clear the desktop session flag so the next visit shows the login page."""
+    from config import DESKTOP_SESSION_FILE
+
+    try:
+        DESKTOP_SESSION_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
+    import config
+    config._desktop_session_cached = False
+    return CommonResponse(message="logged out")
 
 
 @router.post("/register", response_model=CommonResponse[AuthSessionSchema])

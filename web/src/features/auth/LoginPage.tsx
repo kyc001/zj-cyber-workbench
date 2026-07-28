@@ -24,7 +24,12 @@ export function LoginPage() {
     setError("");
     try {
       await apiPost<AuthResponse>("/api/auth/desktop-session");
-      storeAccessToken("desktop");
+      // Desktop sessions do not use a bearer token.  The backend
+      // recognises an active session via the .desktop-session flag
+      // file, so we must NOT inject a fake token (which would be
+      // rejected by the remote Skill Hub auth provider, causing an
+      // infinite login loop).
+      storeAccessToken("");
       Toast.success("已进入本地工作会话");
       window.location.replace("/playground");
     } catch (reason) {
@@ -57,11 +62,15 @@ export function LoginPage() {
       navigate("/playground", { replace: true });
     } catch (reason) {
       if (reason instanceof Error) {
-        // FastAPI returns validation error details in the response data.
         const detail = (reason as { response?: { data?: Array<{ loc: string[]; msg: string }> } }).response?.data
           ?.map((e) => e.msg)
           ?.join("；");
-        setError(detail || reason.message);
+        const msg = detail || reason.message;
+        if (msg.includes("unavailable") || msg.includes("connection")) {
+          setError(`${msg}。Skill Hub 服务暂不可达，请切换到"本机"标签进入工作台。`);
+        } else {
+          setError(msg);
+        }
       } else {
         setError("认证失败");
       }

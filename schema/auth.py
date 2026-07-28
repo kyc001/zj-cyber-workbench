@@ -29,5 +29,5 @@ class CurrentUserSchema(BaseModel):
 class AuthSessionSchema(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    expires_at: datetime
+    expires_at: datetime | None = None
     user: CurrentUserSchema

@@ -45,7 +45,7 @@ def auth_provider_base_url() -> str:
     configured = (
         os.environ.get("ZJ_AUTH_PROVIDER_URL", "").strip()
         or os.environ.get("ZJ_SKILL_HUB_URL", "").strip()
-        or "http://127.0.0.1:8011"
+        or "http://118.31.221.165:8011"
     )
     return configured.rstrip("/")
 
@@ -142,7 +142,6 @@ async def _provider_json(method: str, path: str, **kwargs: Any) -> dict[str, Any
             base_url=auth_provider_base_url(),
             timeout=httpx.Timeout(15, connect=5),
             follow_redirects=False,
-            trust_env=False,
         ) as client:
             response = await client.request(method, path, **kwargs)
     except httpx.TimeoutException as exc:
