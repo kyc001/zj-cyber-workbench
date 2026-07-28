@@ -75,7 +75,21 @@ async def open_host_shell(
 ) -> ShellSession:
     if host.id == DEFAULT_LOCAL_HOST_ID:
         shell = "powershell.exe" if os.name == "nt" else os.environ.get("SHELL", "/bin/sh")
-        args = ["-NoLogo", "-NoProfile"] if os.name == "nt" else []
+        args = [
+            "-NoLogo",
+            "-NoProfile",
+            "-NoExit",
+            "-Command",
+            (
+                "try { "
+                "chcp.com 65001 > $null; "
+                "$utf8 = [System.Text.UTF8Encoding]::new($false); "
+                "[Console]::InputEncoding = $utf8; "
+                "[Console]::OutputEncoding = $utf8; "
+                "$OutputEncoding = $utf8 "
+                "} catch {}"
+            ),
+        ] if os.name == "nt" else []
         process = await asyncio.create_subprocess_exec(
             shell,
             *args,

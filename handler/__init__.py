@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import WebSocket
 from fastapi import status as ws_status
 
+from config import is_desktop_session_active
 from logger import get_logger
 from middleware.auth import AuthUser, local_desktop_user
 from service.auth import (
@@ -64,6 +65,8 @@ async def authenticate_local_websocket(websocket: WebSocket) -> AuthUser | None:
         if not token:
             token = bearer_token_from_header(websocket.headers.get("authorization"))
         if not token:
+            if is_desktop_session_active():
+                return await local_desktop_user()
             return None
         remote_user = await resolve_remote_user(token)
         current_user = await ensure_local_user_for_remote(remote_user)

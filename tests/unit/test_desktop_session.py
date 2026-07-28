@@ -1,10 +1,13 @@
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 from app import _bootstrap_desktop_user, create_app
 from config import DatabaseConfig, get_config
 from database import close_engine, create_all_tables, init_engine
+from handler import authenticate_local_websocket
 from middleware.auth import local_desktop_user
 from schema.system_user.users import SystemUserRole
 from service.system_user.users import query_system_user_by_username
@@ -45,6 +48,17 @@ class DesktopSessionTests(unittest.IsolatedAsyncioTestCase):
     async def test_local_identity_has_no_disable_switch(self) -> None:
         await _bootstrap_desktop_user()
         self.assertIsNotNone(await local_desktop_user())
+
+    async def test_websocket_auth_uses_desktop_session_fallback_in_remote_mode(self) -> None:
+        expected = SimpleNamespace(id=1, role=SystemUserRole.ADMIN, email="desktop@localhost", username="desktop")
+        websocket = SimpleNamespace(query_params={}, headers={})
+
+        with (
+            patch("handler.remote_auth_enabled", return_value=True),
+            patch("handler.is_desktop_session_active", return_value=True),
+            patch("handler.local_desktop_user", new=AsyncMock(return_value=expected)),
+        ):
+            self.assertIs(await authenticate_local_websocket(websocket), expected)
 
     async def test_openapi_has_no_login_or_access_token_scheme(self) -> None:
         schema = create_app().openapi()
