@@ -30,8 +30,35 @@ async def login(request: LoginRequest) -> CommonResponse[AuthSessionSchema]:
         ))
 
     # Desktop mode: accept the local desktop identity on first launch.
-    # The login form credentials are discarded — the operator is logging
-    # into the built‑in desktop account.
+    user = await local_desktop_user()
+    if user is None:
+        raise HTTPException(
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+            detail="local desktop identity unavailable",
+        )
+    activate_desktop_session()
+    return CommonResponse(data=AuthSessionSchema(
+        access_token="desktop",
+        expires_at=None,
+        user=CurrentUserSchema(
+            id=user.id,
+            role=user.role,
+            email=user.email,
+            username=user.username,
+            display_name=user.username,
+            auth_mode="desktop",
+        ),
+    ))
+
+
+@router.post("/desktop-session", response_model=CommonResponse[AuthSessionSchema])
+async def start_desktop_session() -> CommonResponse[AuthSessionSchema]:
+    """Start a local desktop session regardless of auth mode.
+
+    This endpoint always creates a desktop session using the built‑in
+    desktop identity.  It is used by the login page's "本机模式" tab so
+    operators can enter the workbench without Skill Hub credentials.
+    """
     user = await local_desktop_user()
     if user is None:
         raise HTTPException(
@@ -78,14 +105,18 @@ async def register(request: RegisterRequest) -> CommonResponse[AuthSessionSchema
 async def me(authorization: str | None = Header(default=None)) -> CommonResponse[CurrentUserSchema]:
     if remote_auth_enabled():
         token = bearer_token_from_header(authorization)
-        if not token:
-            raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="authentication required")
-        remote_user = await resolve_remote_user(token)
-        return CommonResponse(data=await ensure_local_user_for_remote(remote_user))
+        if token:
+            remote_user = await resolve_remote_user(token)
+            return CommonResponse(data=await ensure_local_user_for_remote(remote_user))
+        # Fall back to desktop session when no Skill Hub token is present
+        # (operator used the login page's "本机" option).
+        if not is_desktop_session_active():
+            raise HTTPException(
+                status_code=HTTPStatus.UNAUTHORIZED.value,
+                detail="authentication required",
+            )
 
-    # Desktop mode: the operator must explicitly start a session on first
-    # launch.  Once the flag file exists, subsequent launches skip the login
-    # page automatically.
+    # Desktop mode (or remote mode with desktop-session fallback)
     if not is_desktop_session_active():
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED.value,

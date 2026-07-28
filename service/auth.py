@@ -34,7 +34,7 @@ class RemoteAuthSession:
 
 
 def auth_mode() -> str:
-    return os.environ.get("ZJ_AUTH_MODE", "desktop").strip().lower() or "desktop"
+    return os.environ.get("ZJ_AUTH_MODE", "remote").strip().lower() or "remote"
 
 
 def remote_auth_enabled() -> bool:

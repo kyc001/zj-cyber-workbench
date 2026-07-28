@@ -1,53 +1,38 @@
 import { Button, Input, Spin, Toast } from "@douyinfe/semi-ui";
 import { Cpu, LogIn, Mail, ShieldCheck, UserPlus } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../shared/auth/AuthProvider";
-import { getAuthMode } from "../../shared/api/auth";
+import { storeAccessToken } from "../../shared/auth/session";
+import { apiPost } from "../../shared/api/client";
+import type { AuthResponse } from "../../shared/api/auth";
 
 type AuthMode = "login" | "register";
-type BackendMode = "desktop" | "remote";
+type Tab = "desktop" | "remote";
 
 export function LoginPage() {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [tab, setTab] = useState<Tab>("remote");
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [backendMode, setBackendMode] = useState<BackendMode | null>(null);
-  const [backendModeReady, setBackendModeReady] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    let canceled = false;
-    getAuthMode()
-      .then((res) => {
-        if (!canceled) setBackendMode(res.data?.mode ?? "desktop");
-      })
-      .catch(() => {
-        if (!canceled) setBackendMode("desktop");
-      })
-      .finally(() => {
-        if (!canceled) setBackendModeReady(true);
-      });
-    return () => {
-      canceled = true;
-    };
-  }, []);
 
   const startDesktopSession = useCallback(async () => {
     setBusy(true);
     setError("");
     try {
-      await login({ username_or_email: "desktop", password: "" });
+      await apiPost<AuthResponse>("/api/auth/desktop-session");
+      storeAccessToken("desktop");
       Toast.success("已进入本地工作会话");
-      navigate("/playground", { replace: true });
+      window.location.replace("/playground");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "启动会话失败");
     } finally {
       setBusy(false);
     }
-  }, [login, navigate]);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +40,7 @@ export function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      if (mode === "login") {
+      if (authMode === "login") {
         await login({
           username_or_email: String(form.get("identity") || ""),
           password: String(form.get("password") || ""),
@@ -68,24 +53,21 @@ export function LoginPage() {
           password: String(form.get("password") || ""),
         });
       }
-      Toast.success(mode === "login" ? "登录成功" : "注册成功");
+      Toast.success(authMode === "login" ? "登录成功" : "注册成功");
       navigate("/playground", { replace: true });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "认证失败");
+      if (reason instanceof Error) {
+        // FastAPI returns validation error details in the response data.
+        const detail = (reason as { response?: { data?: Array<{ loc: string[]; msg: string }> } }).response?.data
+          ?.map((e) => e.msg)
+          ?.join("；");
+        setError(detail || reason.message);
+      } else {
+        setError("认证失败");
+      }
     } finally {
       setBusy(false);
     }
-  }
-
-  if (!backendModeReady) {
-    return (
-      <main className="auth-gate">
-        <div className="route-fallback" role="status" aria-live="polite">
-          <Spin size="large" />
-          <span>正在连接后端服务…</span>
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -97,18 +79,37 @@ export function LoginPage() {
             <span>ZJ</span>
           </div>
           <div className="auth-gate-copy">
-            <span>{backendMode === "desktop" ? "本机工作会话" : "统一账号登录"}</span>
+            <span>{tab === "desktop" ? "本机工作会话" : "统一账号登录"}</span>
             <h1>真君安全协作工作台</h1>
             <p>
-              {backendMode === "desktop"
+              {tab === "desktop"
                 ? "首次启动需要确认本机工作身份。确认后下次打开将直接进入工作台。"
-                : "登录后进入主工作台，Skill Hub、执行工作区和系统管理使用同一个当前用户身份。"}
+                : "使用 Skill Hub 统一账号登录，Skill Hub、执行工作区和系统管理使用同一个身份。"}
             </p>
           </div>
         </div>
 
         <div className="auth-gate-card">
-          {backendMode === "desktop" ? (
+          <div className="auth-gate-tabs" role="tablist" aria-label="认证方式">
+            <button
+              type="button"
+              className={tab === "desktop" ? "active" : ""}
+              aria-selected={tab === "desktop"}
+              onClick={() => { setTab("desktop"); setError(""); }}
+            >
+              <Cpu size={16} />本机
+            </button>
+            <button
+              type="button"
+              className={tab === "remote" ? "active" : ""}
+              aria-selected={tab === "remote"}
+              onClick={() => { setTab("remote"); setError(""); }}
+            >
+              <LogIn size={16} />统一账号
+            </button>
+          </div>
+
+          {tab === "desktop" ? (
             <div className="auth-gate-form">
               <p className="auth-desktop-hint">
                 当前为<strong>本机模式</strong>，所有数据存储在本地。
@@ -120,7 +121,7 @@ export function LoginPage() {
                 type="primary"
                 size="large"
                 loading={busy}
-                icon={<Cpu size={18} />}
+                icon={<ShieldCheck size={18} />}
                 onClick={startDesktopSession}
               >
                 开始使用
@@ -128,26 +129,26 @@ export function LoginPage() {
             </div>
           ) : (
             <>
-              <div className="auth-gate-tabs" role="tablist" aria-label="认证方式">
+              <div className="auth-gate-subtabs" role="tablist" aria-label="账号操作">
                 <button
                   type="button"
-                  className={mode === "login" ? "active" : ""}
-                  aria-selected={mode === "login"}
-                  onClick={() => setMode("login")}
+                  className={authMode === "login" ? "active" : ""}
+                  aria-selected={authMode === "login"}
+                  onClick={() => { setAuthMode("login"); setError(""); }}
                 >
-                  <LogIn size={16} />登录
+                  <LogIn size={14} />登录
                 </button>
                 <button
                   type="button"
-                  className={mode === "register" ? "active" : ""}
-                  aria-selected={mode === "register"}
-                  onClick={() => setMode("register")}
+                  className={authMode === "register" ? "active" : ""}
+                  aria-selected={authMode === "register"}
+                  onClick={() => { setAuthMode("register"); setError(""); }}
                 >
-                  <UserPlus size={16} />注册
+                  <UserPlus size={14} />注册
                 </button>
               </div>
               <form className="auth-gate-form" onSubmit={submit}>
-                {mode === "register" ? (
+                {authMode === "register" ? (
                   <>
                     <label>
                       <span>用户名</span>
@@ -188,10 +189,10 @@ export function LoginPage() {
                   <Input
                     name="password"
                     mode="password"
-                    minLength={mode === "register" ? 8 : 1}
+                    minLength={authMode === "register" ? 8 : 1}
                     maxLength={200}
                     required
-                    placeholder={mode === "register" ? "至少 8 个字符" : "输入密码"}
+                    placeholder={authMode === "register" ? "至少 8 个字符" : "输入密码"}
                   />
                 </label>
                 {error ? <div className="auth-gate-error" role="alert">{error}</div> : null}
@@ -201,9 +202,9 @@ export function LoginPage() {
                   theme="solid"
                   type="primary"
                   loading={busy}
-                  icon={mode === "login" ? <LogIn size={16} /> : <UserPlus size={16} />}
+                  icon={authMode === "login" ? <LogIn size={16} /> : <UserPlus size={16} />}
                 >
-                  {mode === "login" ? "登录工作台" : "创建账号"}
+                  {authMode === "login" ? "登录工作台" : "创建账号"}
                 </Button>
               </form>
             </>

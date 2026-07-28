@@ -56,21 +56,34 @@ class LocalIdentityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> StarletteResponse:
         if request.method != "OPTIONS" and _is_api_request(request) and not _is_auth_request(request):
             if remote_auth_enabled():
+                # Remote mode: prefer Skill Hub token, fall back to desktop session.
                 token = bearer_token_from_header(request.headers.get("authorization"))
-                if not token:
-                    raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="authentication required")
-                cached_user = _cached_remote_auth_user(token)
-                if cached_user is None:
-                    remote_user = await resolve_remote_user(token)
-                    current_user = await ensure_local_user_for_remote(remote_user)
-                    cached_user = AuthUser(
-                        id=current_user.id,
-                        role=current_user.role,
-                        email=current_user.email,
-                        username=current_user.username,
+                if token:
+                    cached_user = _cached_remote_auth_user(token)
+                    if cached_user is None:
+                        remote_user = await resolve_remote_user(token)
+                        current_user = await ensure_local_user_for_remote(remote_user)
+                        cached_user = AuthUser(
+                            id=current_user.id,
+                            role=current_user.role,
+                            email=current_user.email,
+                            username=current_user.username,
+                        )
+                        _remember_remote_auth_user(token, cached_user)
+                    request.state.system_user = cached_user
+                elif is_desktop_session_active():
+                    user = await local_desktop_user()
+                    if user is None:
+                        raise HTTPException(
+                            status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+                            detail="local desktop identity unavailable",
+                        )
+                    request.state.system_user = user
+                else:
+                    raise HTTPException(
+                        status_code=HTTPStatus.UNAUTHORIZED.value,
+                        detail="authentication required",
                     )
-                    _remember_remote_auth_user(token, cached_user)
-                request.state.system_user = cached_user
             elif not is_desktop_session_active():
                 raise HTTPException(
                     status_code=HTTPStatus.UNAUTHORIZED.value,
