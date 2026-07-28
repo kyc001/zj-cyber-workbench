@@ -49,6 +49,7 @@ artifacts/
 backups/
 .lightrag/
 /report/
+/tmp/
 
 # Local environment files
 .env
