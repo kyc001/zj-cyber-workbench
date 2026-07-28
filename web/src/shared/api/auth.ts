@@ -47,3 +47,13 @@ export function register(payload: {
 export function getCurrentUser() {
   return apiGet<CurrentUserResponse>(`${AUTH_PATH}/me`);
 }
+
+export type AuthModeResponse = {
+  code: number;
+  message: string;
+  data?: { mode: "desktop" | "remote" } | null;
+};
+
+export function getAuthMode() {
+  return apiGet<AuthModeResponse>(`${AUTH_PATH}/mode`);
+}

@@ -74,6 +74,9 @@ hiddenimports = [
     *collect_submodules("agents"),
     *collect_submodules("sqlalchemy.dialects.sqlite"),
     *collect_submodules("uvicorn"),
+    # pywin32 namespace packages in non-standard subdirectories that
+    # PyInstaller's static analysis may miss on Windows.
+    "win32timezone",
 ]
 
 a = Analysis(

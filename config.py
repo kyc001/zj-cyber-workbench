@@ -77,6 +77,31 @@ def resolve_workspace(
 WORKSPACE = resolve_workspace(ROOT_PATH)
 load_dotenv(WORKSPACE / ".env", override=False)
 CONFIG_FILE = WORKSPACE / "config.json"
+DESKTOP_SESSION_FILE = WORKSPACE / ".desktop-session"
+
+_desktop_session_cached: bool | None = None
+
+
+def is_desktop_session_active() -> bool:
+    """Check whether a desktop session has been explicitly started.
+
+    The desktop session is a local flag persisted to the workspace data
+    directory on disk.  When absent the packaged app MUST show the login
+    page so the operator can choose between Skill Hub authentication and
+    the built-in desktop identity.
+    """
+    global _desktop_session_cached
+    if _desktop_session_cached is None:
+        _desktop_session_cached = DESKTOP_SESSION_FILE.is_file()
+    return _desktop_session_cached
+
+
+def activate_desktop_session() -> None:
+    """Persist the desktop session flag so subsequent starts skip the login page."""
+    global _desktop_session_cached
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    DESKTOP_SESSION_FILE.touch()
+    _desktop_session_cached = True
 
 
 # strict type config base model

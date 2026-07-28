@@ -55,14 +55,26 @@ async def query_hub_skills(
             "page_size": page_size,
         },
     )
-    return HubSkillListSchema.model_validate(payload)
+    try:
+        return HubSkillListSchema.model_validate(payload)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_GATEWAY.value,
+            detail="Skill Hub returned an unexpected response format",
+        ) from exc
 
 
 async def get_hub_skill(namespace: str, slug: str) -> HubSkillDetailSchema:
     namespace_name = _safe_name(namespace, "namespace")
     skill_name = _safe_name(slug, "skill")
     payload = await _hub_json(f"/api/v1/skills/{namespace_name}/{skill_name}")
-    return HubSkillDetailSchema.model_validate(payload)
+    try:
+        return HubSkillDetailSchema.model_validate(payload)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_GATEWAY.value,
+            detail="Skill Hub returned an unexpected detail format",
+        ) from exc
 
 
 def list_installed_hub_skills() -> list[InstalledHubSkillSchema]:
@@ -174,6 +186,15 @@ async def _hub_request_json(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
             detail="Skill Hub is currently unavailable",
         ) from exc
+    except Exception as exc:
+        # httpx may re-raise low-level exceptions (OSError, asyncio errors,
+        # DNS failures) that do not inherit from httpx.HTTPError in edge-case
+        # environments such as packaged PyInstaller builds.
+        raise HTTPException(
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+            detail=f"Skill Hub request failed: {exc}",
+        ) from exc
+
     if response.status_code == HTTPStatus.NOT_FOUND.value:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND.value, detail="Skill Hub resource not found")
     if response.status_code in (HTTPStatus.UNAUTHORIZED.value, HTTPStatus.FORBIDDEN.value, HTTPStatus.CONFLICT.value):
@@ -228,6 +249,11 @@ async def _download_package(namespace: str, slug: str, version: str) -> bytes:
         raise HTTPException(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
             detail="Skill Hub download failed",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE.value,
+            detail=f"Skill Hub download failed: {exc}",
         ) from exc
     return b"".join(chunks)
 

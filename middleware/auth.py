@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response as StarletteResponse
 
+from config import is_desktop_session_active
 from schema.system_user.users import SystemUserRole
 from service.auth import (
     bearer_token_from_header,
@@ -70,6 +71,11 @@ class LocalIdentityMiddleware(BaseHTTPMiddleware):
                     )
                     _remember_remote_auth_user(token, cached_user)
                 request.state.system_user = cached_user
+            elif not is_desktop_session_active():
+                raise HTTPException(
+                    status_code=HTTPStatus.UNAUTHORIZED.value,
+                    detail="desktop session not started",
+                )
             else:
                 user = await local_desktop_user()
                 if user is None:

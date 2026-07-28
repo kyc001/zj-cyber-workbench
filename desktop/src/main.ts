@@ -10,6 +10,57 @@ const developmentRoot = path.resolve(__dirname, "..", "..");
 const appDataDirectoryName = "Zhenjun";
 let sidecar: SidecarManager | null = null;
 let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
+
+const SPLASH_HTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; background: #0b0f17; color: #c9d1d9;
+    font-family: -apple-system, "Microsoft YaHei", sans-serif;
+    user-select: none; -webkit-app-region: drag;
+  }
+  .splash {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 24px; padding: 40px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 28px; font-weight: 900; color: #e4e7ed;
+  }
+  .logo svg { color: #d92d3a; }
+  .title { font-size: 15px; color: #8b949e; letter-spacing: 0.04em; }
+  .loader {
+    width: 200px; height: 3px; background: #21262d; border-radius: 2px;
+    overflow: hidden; margin-top: 8px;
+  }
+  .loader-bar {
+    width: 30%; height: 100%; background: linear-gradient(90deg, #d92d3a, #e8797c);
+    border-radius: 2px; animation: slide 1.6s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(430%); }
+  }
+  .status { font-size: 12px; color: #6e7681; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="splash">
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span>ZJ</span>
+  </div>
+  <div class="title">真君安全工作台</div>
+  <div class="loader"><div class="loader-bar"></div></div>
+  <div class="status">正在启动服务…</div>
+</div>
+</body>
+</html>`;
 
 function packagedAppRoot(): string {
   const configured = process.env.ZJ_APP_DATA_DIR?.trim();
@@ -25,6 +76,34 @@ if (app.isPackaged) {
 
 function rendererUrl(): string {
   return process.env.ZJ_RENDERER_URL || (sidecar ? `${sidecar.baseUrl}/playground` : "http://127.0.0.1:5173/playground");
+}
+
+function showSplashWindow(): BrowserWindow {
+  const splash = new BrowserWindow({
+    width: 480,
+    height: 360,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    center: true,
+    resizable: false,
+    show: true,
+    backgroundColor: "#0b0f17",
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+    },
+  });
+  void splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`);
+  return splash;
+}
+
+function closeSplashWindow(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+    splashWindow = null;
+  }
 }
 
 function createWindow(): BrowserWindow {
@@ -46,7 +125,6 @@ function createWindow(): BrowserWindow {
 
   const target = rendererUrl();
   installNavigationPolicy(window.webContents, new URL(target).origin);
-  window.once("ready-to-show", () => window.show());
   void window.loadURL(target);
   return window;
 }
@@ -143,19 +221,33 @@ if (!hasSingleInstanceLock) {
     app.setAppUserModelId("io.github.zj-security.workbench");
     installContentSecurityPolicy(session.defaultSession);
     registerIpc();
-    const shouldStartSidecar = app.isPackaged || process.env.ZJ_START_SIDECAR === "1";
-    if (shouldStartSidecar) {
-      const runtimeRoot = app.isPackaged ? process.resourcesPath : developmentRoot;
-      const dataDir = runtimeDataDir();
-      await migrateLegacyPortableData(dataDir);
-      await fs.mkdir(dataDir, { recursive: true });
-      sidecar = new SidecarManager(runtimeRoot, dataDir, await findAvailablePort());
-      await sidecar.start();
+
+    // Show splash immediately so the operator sees feedback while the
+    // Python sidecar boots (can take 10–30 s on first launch).
+    splashWindow = showSplashWindow();
+
+    try {
+      const shouldStartSidecar = app.isPackaged || process.env.ZJ_START_SIDECAR === "1";
+      if (shouldStartSidecar) {
+        const runtimeRoot = app.isPackaged ? process.resourcesPath : developmentRoot;
+        const dataDir = runtimeDataDir();
+        await migrateLegacyPortableData(dataDir);
+        await fs.mkdir(dataDir, { recursive: true });
+        sidecar = new SidecarManager(runtimeRoot, dataDir, await findAvailablePort());
+        await sidecar.start();
+      }
+      mainWindow = createWindow();
+      mainWindow.once("ready-to-show", () => {
+        closeSplashWindow();
+        mainWindow?.show();
+      });
+      mainWindow.on("closed", () => {
+        mainWindow = null;
+      });
+    } catch (error: unknown) {
+      closeSplashWindow();
+      throw error;
     }
-    mainWindow = createWindow();
-    mainWindow.on("closed", () => {
-      mainWindow = null;
-    });
   }).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     dialog.showErrorBox(
