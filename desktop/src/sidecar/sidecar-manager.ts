@@ -37,8 +37,12 @@ export class SidecarManager extends EventEmitter {
 
     this.stopping = false;
     this.setStatus({ state: "STARTING", pid: null, lastError: null });
-    const packagedEntrypoint = path.join(this.runtimeRoot, "sidecar", "zj-core.exe");
-    const packaged = fs.existsSync(packagedEntrypoint);
+    const packagedEntrypoints = [
+      path.join(this.runtimeRoot, "sidecar", "zj-core", "zj-core.exe"),
+      path.join(this.runtimeRoot, "sidecar", "zj-core.exe"),
+    ];
+    const packagedEntrypoint = packagedEntrypoints.find((candidate) => fs.existsSync(candidate));
+    const packaged = packagedEntrypoint !== undefined;
     const command = packaged ? packagedEntrypoint : process.env.ZJ_PYTHON || "python";
     const args = packaged ? [] : [path.join(this.runtimeRoot, "main.py")];
     const child = spawn(command, args, {

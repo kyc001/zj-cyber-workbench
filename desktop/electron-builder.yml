@@ -1,18 +1,29 @@
 appId: io.github.zj-security.workbench
 productName: Zhenjun
 executableName: zhenjun
-artifactName: ZJ-${version}-win-${arch}-portable.${ext}
 directories:
   output: release
 files:
   - dist/**
   - package.json
 extraResources:
-  - from: ../dist/zj-core.exe
-    to: sidecar/zj-core.exe
+  - from: ../dist/zj-core
+    to: sidecar/zj-core
 asar: true
 win:
   target:
+    - nsis
     - portable
   requestedExecutionLevel: asInvoker
   signAndEditExecutable: false
+nsis:
+  artifactName: ZJ-${version}-win-${arch}-setup.${ext}
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 真君安全工作台
+  uninstallDisplayName: 真君安全工作台
+portable:
+  artifactName: ZJ-${version}-win-${arch}-portable.${ext}

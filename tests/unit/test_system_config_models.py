@@ -1,12 +1,13 @@
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from unittest.mock import patch
 
 from fastapi import HTTPException
 
 from config import LightRAGConfig
 from core.lightrag.runtime import _configured_openai_complete, _configured_openai_embed
-from service.system_config.config import fetch_provider_models
+from service.system_config.config import _ensure_embedding_storage_compatible, fetch_provider_models
 from tests.unit._network_addresses import LOOPBACK_HOST
 
 
@@ -58,6 +59,19 @@ class ProviderModelTests(unittest.IsolatedAsyncioTestCase):
             await fetch_provider_models("file:///tmp/models", "")
 
         self.assertEqual(400, context.exception.status_code)
+
+    async def test_initial_embedding_provider_setup_allows_failed_documents(self) -> None:
+        current = LightRAGConfig()
+        configured = current.model_copy(update={
+            "embedding_api": "https://embedding.example/v1",
+            "embedding_key": "test-key",
+            "embedding_model": "embedding-model",
+        })
+
+        with patch("service.system_config.config.lightrag_client") as client:
+            await _ensure_embedding_storage_compatible(current, configured)
+
+        client.assert_not_called()
 
 
 if __name__ == "__main__":

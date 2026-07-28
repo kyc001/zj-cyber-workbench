@@ -45,6 +45,7 @@ type ConfigFormValue = {
 };
 
 type ProviderDraft = Pick<AgentConfig, "base_url" | "api_key" | "model">;
+type LightRAGProviderKind = "embedding" | "llm";
 
 type FieldKey<T, Value> = {
   [Key in keyof T]: T[Key] extends Value ? Key : never;
@@ -90,6 +91,14 @@ const AGENT_TEXT_FIELDS: AgentTextField[] = [
 ];
 
 const EMPTY_PROVIDER: ProviderDraft = { base_url: "", api_key: "", model: "" };
+const EMPTY_LIGHTRAG_MODELS: Record<LightRAGProviderKind, string[]> = {
+  embedding: [],
+  llm: [],
+};
+const EMPTY_LIGHTRAG_MODEL_LOADING: Record<LightRAGProviderKind, boolean> = {
+  embedding: false,
+  llm: false,
+};
 const SKILL_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 function selectAvailableModel(currentModel: string, fetchedModels: string[]) {
@@ -159,6 +168,12 @@ export function SystemConfigPage() {
   const [sharedModelsLoading, setSharedModelsLoading] = useState(false);
   const [agentModels, setAgentModels] = useState<Record<string, string[]>>({});
   const [loadingAgentCode, setLoadingAgentCode] = useState<string | null>(null);
+  const [lightRAGModels, setLightRAGModels] = useState<Record<LightRAGProviderKind, string[]>>(
+    EMPTY_LIGHTRAG_MODELS,
+  );
+  const [lightRAGModelsLoading, setLightRAGModelsLoading] = useState<
+    Record<LightRAGProviderKind, boolean>
+  >(EMPTY_LIGHTRAG_MODEL_LOADING);
   const [customizationDirty, setCustomizationDirty] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [refreshConfirmOpen, setRefreshConfirmOpen] = useState(false);
@@ -170,6 +185,14 @@ export function SystemConfigPage() {
   const sharedModelsBusyRef = useRef(false);
   const agentModelsRequestRef = useRef(0);
   const agentModelsBusyRef = useRef(false);
+  const lightRAGModelsRequestRef = useRef<Record<LightRAGProviderKind, number>>({
+    embedding: 0,
+    llm: 0,
+  });
+  const lightRAGModelsBusyRef = useRef<Record<LightRAGProviderKind, boolean>>({
+    embedding: false,
+    llm: false,
+  });
 
   useEffect(() => {
     mountedRef.current = true;
@@ -182,6 +205,10 @@ export function SystemConfigPage() {
       configSavingRef.current = false;
       sharedModelsBusyRef.current = false;
       agentModelsBusyRef.current = false;
+      for (const kind of ["embedding", "llm"] as const) {
+        lightRAGModelsRequestRef.current[kind] += 1;
+        lightRAGModelsBusyRef.current[kind] = false;
+      }
     };
   }, []);
 
@@ -207,6 +234,8 @@ export function SystemConfigPage() {
         } : EMPTY_PROVIDER);
         setSharedModels([]);
         setAgentModels({});
+        setLightRAGModels(EMPTY_LIGHTRAG_MODELS);
+        setLightRAGModelsLoading(EMPTY_LIGHTRAG_MODEL_LOADING);
       } else {
         setConfigError("服务端未返回系统配置");
       }
@@ -257,9 +286,32 @@ export function SystemConfigPage() {
     setValues((current) => current && { ...current, agent_runtime: { ...current.agent_runtime, ...patch } });
   };
 
-  const updateLightRAG = (patch: Partial<LightRAGFormValue>) => {
+  const updateLightRAG = useCallback((patch: Partial<LightRAGFormValue>) => {
+    const resetKinds: LightRAGProviderKind[] = [];
+    if ("embedding_api" in patch || "embedding_key" in patch) resetKinds.push("embedding");
+    if ("llm_api" in patch || "llm_key" in patch) resetKinds.push("llm");
+    if (resetKinds.length) {
+      resetKinds.forEach((kind) => {
+        lightRAGModelsRequestRef.current[kind] += 1;
+        lightRAGModelsBusyRef.current[kind] = false;
+      });
+      setLightRAGModels((current) => {
+        const next = { ...current };
+        resetKinds.forEach((kind) => {
+          next[kind] = [];
+        });
+        return next;
+      });
+      setLightRAGModelsLoading((current) => {
+        const next = { ...current };
+        resetKinds.forEach((kind) => {
+          next[kind] = false;
+        });
+        return next;
+      });
+    }
     setValues((current) => current && { ...current, lightrag: { ...current.lightrag, ...patch } });
-  };
+  }, []);
 
   const updateAgent = (code: string, patch: Partial<AgentConfig>) => {
     if ("base_url" in patch || "api_key" in patch) {
@@ -294,8 +346,14 @@ export function SystemConfigPage() {
     } : EMPTY_PROVIDER);
     setSharedModels([]);
     setAgentModels({});
+    setLightRAGModels(EMPTY_LIGHTRAG_MODELS);
+    setLightRAGModelsLoading(EMPTY_LIGHTRAG_MODEL_LOADING);
     setSharedModelsLoading(false);
     setLoadingAgentCode(null);
+    for (const kind of ["embedding", "llm"] as const) {
+      lightRAGModelsRequestRef.current[kind] += 1;
+      lightRAGModelsBusyRef.current[kind] = false;
+    }
   }, [savedValues]);
 
   const handleCancel = useCallback(() => {
@@ -333,6 +391,50 @@ export function SystemConfigPage() {
     });
     return response.data?.models ?? [];
   }, []);
+
+  const handleFetchLightRAGModels = useCallback(async (kind: LightRAGProviderKind) => {
+    const config = values?.lightrag;
+    if (!config || lightRAGModelsBusyRef.current[kind]) return;
+    const provider = kind === "embedding"
+      ? { base_url: config.embedding_api, api_key: config.embedding_key }
+      : { base_url: config.llm_api, api_key: config.llm_key };
+    if (!provider.base_url.trim()) return;
+
+    const requestId = lightRAGModelsRequestRef.current[kind] + 1;
+    lightRAGModelsRequestRef.current[kind] = requestId;
+    lightRAGModelsBusyRef.current[kind] = true;
+    setLightRAGModelsLoading((current) => ({ ...current, [kind]: true }));
+    try {
+      const models = await loadProviderModels(provider);
+      if (!mountedRef.current || lightRAGModelsRequestRef.current[kind] !== requestId) return;
+      setLightRAGModels((current) => ({ ...current, [kind]: models }));
+      setValues((current) => {
+        if (!current) return current;
+        const currentModel = kind === "embedding"
+          ? current.lightrag.embedding_model
+          : current.lightrag.llm_model;
+        const selectedModel = selectAvailableModel(currentModel, models);
+        if (selectedModel === currentModel) return current;
+        const lightrag = kind === "embedding"
+          ? { ...current.lightrag, embedding_model: selectedModel }
+          : { ...current.lightrag, llm_model: selectedModel };
+        return { ...current, lightrag };
+      });
+      const providerLabel = kind === "embedding" ? "Embedding" : "抽取模型";
+      models.length
+        ? Toast.success(`${providerLabel} 已拉取 ${models.length} 个模型`)
+        : Toast.warning(`${providerLabel} Provider 未返回可用模型`);
+    } catch (error) {
+      if (mountedRef.current && lightRAGModelsRequestRef.current[kind] === requestId) showApiError(error);
+    } finally {
+      if (lightRAGModelsRequestRef.current[kind] === requestId) {
+        lightRAGModelsBusyRef.current[kind] = false;
+        if (mountedRef.current) {
+          setLightRAGModelsLoading((current) => ({ ...current, [kind]: false }));
+        }
+      }
+    }
+  }, [loadProviderModels, values?.lightrag]);
 
   const handleFetchSharedModels = useCallback(async () => {
     if (!sharedProvider.base_url.trim() || sharedModelsBusyRef.current) return;
@@ -510,7 +612,13 @@ export function SystemConfigPage() {
             </ConfigPanel>
 
             <ConfigPanel icon={<DatabaseZap size={18} />} title="知识检索（LightRAG）">
-              <LightRAGConfigEditor value={values.lightrag} onChange={updateLightRAG} />
+              <LightRAGConfigEditor
+                value={values.lightrag}
+                models={lightRAGModels}
+                modelsLoading={lightRAGModelsLoading}
+                onChange={updateLightRAG}
+                onFetchModels={(kind) => void handleFetchLightRAGModels(kind)}
+              />
             </ConfigPanel>
 
             <ConfigPanel icon={<Bot size={18} />} title="智能体与模型">
@@ -1021,26 +1129,41 @@ function AgentCustomizationPanel({
   );
 }
 
-function LightRAGConfigEditor({ value, onChange }: {
+function LightRAGConfigEditor({ value, models, modelsLoading, onChange, onFetchModels }: {
   value: LightRAGFormValue;
+  models: Record<LightRAGProviderKind, string[]>;
+  modelsLoading: Record<LightRAGProviderKind, boolean>;
   onChange: (patch: Partial<LightRAGFormValue>) => void;
+  onFetchModels: (kind: LightRAGProviderKind) => void;
 }) {
   return (
     <div className="config-grid lightrag-config-grid">
-        <Field kind="text" label="嵌入 API" value={value.embedding_api}
+      <Field kind="text" label="Embedding Base URL" value={value.embedding_api}
         onChange={(embedding_api) => onChange({ embedding_api })} />
-      <Field kind="text" label="嵌入 Key" value={value.embedding_key} password
+      <Field kind="text" label="Embedding API Key" value={value.embedding_key} password
         onChange={(embedding_key) => onChange({ embedding_key })} />
-      <Field kind="text" label="嵌入模型" value={value.embedding_model}
-        onChange={(embedding_model) => onChange({ embedding_model })} />
+      <ModelSelectField
+        label="Embedding 模型"
+        value={value.embedding_model}
+        models={models.embedding}
+        loading={modelsLoading.embedding}
+        onChange={(embedding_model) => onChange({ embedding_model })}
+        onFetch={() => onFetchModels("embedding")}
+      />
       <Field kind="number" label="嵌入维度" value={value.embedding_dim} min={1}
         onChange={(embedding_dim) => onChange({ embedding_dim })} />
-      <Field kind="text" label="抽取 LLM API" value={value.llm_api}
+      <Field kind="text" label="抽取模型 Base URL" value={value.llm_api}
         onChange={(llm_api) => onChange({ llm_api })} />
-      <Field kind="text" label="抽取 LLM Key" value={value.llm_key} password
+      <Field kind="text" label="抽取模型 API Key" value={value.llm_key} password
         onChange={(llm_key) => onChange({ llm_key })} />
-      <Field kind="text" label="抽取 LLM 模型" value={value.llm_model}
-        onChange={(llm_model) => onChange({ llm_model })} />
+      <ModelSelectField
+        label="抽取模型"
+        value={value.llm_model}
+        models={models.llm}
+        loading={modelsLoading.llm}
+        onChange={(llm_model) => onChange({ llm_model })}
+        onFetch={() => onFetchModels("llm")}
+      />
       <Field kind="number" label="图谱匹配数" value={value.graph_matches} min={1} max={50}
         onChange={(graph_matches) => onChange({ graph_matches })} />
       <Field kind="number" label="分块匹配数" value={value.chunk_matches} min={1} max={50}

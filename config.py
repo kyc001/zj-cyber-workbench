@@ -5,12 +5,13 @@ import sys
 import tempfile
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
 ROOT_PATH = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+APP_DATA_DIR_NAME = "Zhenjun"
 
 
 def _load_environment_files() -> None:
@@ -34,8 +35,46 @@ BUNDLED_AGENT_DIR = ROOT_PATH / ".z3r0" / "agents"
 BUNDLED_SKILLS_DIR = ROOT_PATH / "skills"
 BUNDLED_TOOLS_DIR = ROOT_PATH / "portable-tools"
 DEFAULT_CONFIG_FILE = ROOT_PATH / ".z3r0" / "config.json.example"
-_data_dir = os.environ.get("ZJ_DATA_DIR", "").strip()
-WORKSPACE = Path(_data_dir).expanduser().resolve() if _data_dir else ROOT_PATH / ".zj"
+
+
+def resolve_workspace(
+    root_path: Path,
+    *,
+    environ: Mapping[str, str] | None = None,
+    frozen: bool | None = None,
+    platform: str | None = None,
+    home: Path | None = None,
+) -> Path:
+    """Resolve the writable per-user runtime directory.
+
+    Source checkouts keep using ``<repo>/.zj`` for developer isolation.
+    Packaged binaries default to the operating system's per-user local data
+    directory, while ``ZJ_DATA_DIR`` remains an explicit override for tests,
+    managed deployments, and portable troubleshooting.
+    """
+    current_environ = os.environ if environ is None else environ
+    configured = current_environ.get("ZJ_DATA_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+
+    is_frozen = bool(getattr(sys, "frozen", False)) if frozen is None else frozen
+    current_platform = sys.platform if platform is None else platform
+    if not is_frozen:
+        return (root_path / ".zj").resolve()
+
+    user_home = Path.home() if home is None else home
+    if current_platform == "win32":
+        base = current_environ.get("LOCALAPPDATA", "").strip()
+        local_data = Path(base) if base else user_home / "AppData" / "Local"
+    elif current_platform == "darwin":
+        local_data = user_home / "Library" / "Application Support"
+    else:
+        base = current_environ.get("XDG_DATA_HOME", "").strip()
+        local_data = Path(base) if base else user_home / ".local" / "share"
+    return (local_data / APP_DATA_DIR_NAME / "Data").expanduser().resolve()
+
+
+WORKSPACE = resolve_workspace(ROOT_PATH)
 load_dotenv(WORKSPACE / ".env", override=False)
 CONFIG_FILE = WORKSPACE / "config.json"
 

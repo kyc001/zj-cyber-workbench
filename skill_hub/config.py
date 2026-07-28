@@ -7,6 +7,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from config import WORKSPACE
+
 
 class SkillHubSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -34,7 +36,7 @@ def _default_data_dir() -> Path:
     configured = os.environ.get("SKILL_HUB_DATA_DIR", "").strip()
     if configured:
         return Path(configured).expanduser().resolve()
-    return (Path(__file__).resolve().parents[1] / ".zj" / "skill-hub").resolve()
+    return (WORKSPACE / "skill-hub").resolve()
 
 
 @lru_cache(maxsize=1)

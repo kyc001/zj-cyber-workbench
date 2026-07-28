@@ -197,6 +197,11 @@ async def _ensure_embedding_storage_compatible(current: LightRAGConfig, next_cfg
     )
     if not embedding_changed:
         return
+    # With no configured endpoint the existing runtime cannot have produced
+    # embeddings, so first-time provider setup is safe even when failed
+    # document records are present.
+    if not current.embedding_api.strip():
+        return
 
     async with lightrag_client() as rag:
         status_counts = await rag.get_processing_status()
